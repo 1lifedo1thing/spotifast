@@ -152,6 +152,13 @@ Use your desktop's window rule or shortcut instead. In KDE Plasma, configure
 Window Management**. Your saved preference remains available when you use
 Fastpotify on a supported backend again.
 
+On `main`, after 0.7.1, the top bar reserves room for the device and update
+badges beside Search. In narrow windows those badges show only their icons.
+The bar spans above the page and Queue or Lyrics; opening either right panel
+keeps its width available to Search. Library keeps its full height.
+Hover to read the device name or available version; click to open the device
+picker or update window.
+
 ## Recent
 
 The queue panel's second tab combines Spotify's history with tracks played

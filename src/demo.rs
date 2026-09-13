@@ -4850,4 +4850,140 @@ mod tests {
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(root);
     }
+
+    /// The badges at the right end of the top bar sit in a right-to-left
+    /// layout, which does not wrap and does not clip: anything that does not
+    /// fit marches left over the search field. Draw the real bar and check
+    /// that it never does.
+    #[test]
+    fn the_top_bar_badges_never_cover_the_search_field() {
+        use crate::updates::{
+            DownloadState,
+            install::{Installation, Kind, Prepared},
+        };
+        use egui::accesskit::{Action as AccessibleAction, Role};
+        // `widgets::search_field` insets its text this far from the pill's
+        // right edge, so the pill reaches past the rect the field reports.
+        const FIELD_RIGHT_INSET: f32 = 30.0;
+        let (ctx, mut app) = accessible_app("topbar-badges");
+        app.open(Page::Playlist("pl1".into()));
+        for panel in [None, Some("queue"), Some("lyrics")] {
+            app.show_queue_panel = panel == Some("queue");
+            app.show_lyrics_panel = panel == Some("lyrics");
+            for (label, state) in [
+                (None, DownloadState::Idle),
+                (Some("Update to 9.9.9"), DownloadState::Idle),
+                (
+                    Some("Downloading update…"),
+                    DownloadState::Downloading {
+                        received: 1,
+                        total: 2,
+                    },
+                ),
+                (
+                    Some("Update ready"),
+                    DownloadState::Ready(Box::new(Prepared {
+                        installation: Installation {
+                            executable: "/test/fastpotify".into(),
+                            kind: Kind::Portable,
+                        },
+                        directory: "/test/stage".into(),
+                        payload: "/test/stage/payload".into(),
+                        version: "9.9.9".into(),
+                        sha256: String::new(),
+                    })),
+                ),
+            ] {
+                app.update_download = state;
+                app.update = label.map(|_| crate::updates::Release {
+                    version: "9.9.9".into(),
+                    url: "https://example.invalid/releases".into(),
+                });
+                // From the narrowest window the app allows up to a wide one,
+                // across the width where the badges give up their labels.
+                for width in [
+                    760.0_f32, 800.0, 860.0, 900.0, 1000.0, 1080.0, 1200.0, 1280.0, 1440.0, 1600.0,
+                    1920.0,
+                ] {
+                    let mut draw = || {
+                        let mut output = ctx.run_ui(
+                            egui::RawInput {
+                                screen_rect: Some(egui::Rect::from_min_size(
+                                    egui::Pos2::ZERO,
+                                    egui::vec2(width, 620.0),
+                                )),
+                                ..Default::default()
+                            },
+                            |ui| app.frame_ui(ui),
+                        );
+                        output.textures_delta.clear();
+                        output
+                            .platform_output
+                            .accesskit_update
+                            .expect("screen-reader tree")
+                    };
+                    // The first frame settles the new window size.
+                    draw();
+                    let tree = draw();
+                    let badge = |label: &str| {
+                        tree.nodes
+                            .iter()
+                            .find(|(_, node)| {
+                                node.role() == Role::Button
+                                    && node.label().is_some_and(|name| name.starts_with(label))
+                            })
+                            .and_then(|(_, node)| node.bounds())
+                            .map(|bounds| bounds.x0 as f32)
+                    };
+                    let field = ctx
+                        .read_response(egui::Id::new("global-search"))
+                        .expect("the search field")
+                        .rect
+                        .right()
+                        + FIELD_RIGHT_INSET;
+                    // Collapsed to an icon a badge keeps its label for a screen
+                    // reader, so it is found at every width.
+                    let device = badge("Playing on").expect("the device badge");
+                    assert!(
+                        device >= field,
+                        "the device badge covers {} px of the search field at {width} px",
+                        field - device
+                    );
+                    if let Some(label) = label {
+                        let release = badge(label).expect("the update badge");
+                        assert!(
+                            release >= field,
+                            "the update badge covers {} px of the search field at {width} px",
+                            field - release
+                        );
+                        if width == 760.0 {
+                            let button = accessible_node(&tree, label, Role::Button);
+                            let mut output = ctx.run_ui(
+                                egui::RawInput {
+                                    screen_rect: Some(egui::Rect::from_min_size(
+                                        egui::Pos2::ZERO,
+                                        egui::vec2(width, 620.0),
+                                    )),
+                                    events: vec![accessible_action(
+                                        button,
+                                        AccessibleAction::Click,
+                                        None,
+                                    )],
+                                    ..Default::default()
+                                },
+                                |ui| app.frame_ui(ui),
+                            );
+                            output.textures_delta.clear();
+                            assert!(
+                                app.show_update,
+                                "the collapsed {label} badge must open the updater"
+                            );
+                            app.show_update = false;
+                        }
+                    }
+                }
+            }
+        }
+        app.backend.shutdown();
+    }
 }

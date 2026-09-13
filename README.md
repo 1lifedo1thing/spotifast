@@ -51,6 +51,10 @@ everyday use, and connection details.
   Text fields offer Cut, Copy, Paste and Select all from their right-click menu.
   On `main`, after 0.7.1, a personal app searches the catalogue while shared
   access finds playlists. Each part appears independently, even if the other fails.
+
+  On `main`, after 0.7.1, the search field stays clear of the device and update
+  badges in narrow windows; hover their icons to read the labels. The bar
+  spans above the page and Queue or Lyrics so opening a right panel keeps Search usable.
 - **Home** with Made for you, Recently played, your top artists and songs, and
   recommendations. Right-click playlist shortcuts and shelf cards for their actions.
 - **Artist pages** with popular songs, a filterable discography, and related

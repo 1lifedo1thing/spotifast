@@ -50,6 +50,26 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     if app.settings.sidebar_visible {
         sidebar::show(app, ui);
     }
+    // Keep navigation and Search above both the page and its right panel.
+    // Opening Queue or Lyrics must not take width away from the header.
+    let controls = window_controls_reservation(ctx, ui.available_width());
+    let header_height = theme::TOP_BAR_HEIGHT + theme::titlebar_inset(ctx) + controls.topbar_top;
+    let fill = page_tint(app).map_or(app.palette.window, |tint| {
+        let strength = if matches!(
+            app.page(),
+            Page::Home | Page::Search | Page::Settings | Page::Queue
+        ) {
+            0.45
+        } else {
+            0.85
+        };
+        blend(app.palette.window, tint, strength)
+    });
+    egui::Panel::top("main-header")
+        .exact_size(header_height)
+        .show_separator_line(false)
+        .frame(Frame::new().fill(fill))
+        .show(ui, |ui| topbar::show(app, ui));
     if app.show_queue_panel {
         queue::side_panel(app, ui);
     }
@@ -126,7 +146,6 @@ fn central(app: &mut App, ui: &mut egui::Ui) {
                 widgets::paint_vertical_gradient(ui, header, top, palette.window);
             }
             ui.spacing_mut().item_spacing = vec2(8.0, 6.0);
-            topbar::show(app, ui);
             let page = app.page().clone();
             egui::ScrollArea::vertical()
                 .id_salt(("page", page.encode()))
@@ -203,8 +222,6 @@ const WINDOWS_MIN_INLINE_TOPBAR_WIDTH: f32 = 510.0 + WINDOWS_WINDOW_CONTROLS_WID
 pub(super) struct WindowControlsReservation {
     pub topbar_width: f32,
     pub topbar_top: f32,
-    pub queue_top: f32,
-    pub lyrics_top: f32,
 }
 
 const fn windows_chrome_visible(on_windows: bool, fullscreen: bool) -> bool {
@@ -219,22 +236,14 @@ fn windows_chrome_visible_here(ctx: &egui::Context) -> bool {
 const fn windows_controls_reservation(
     on_windows: bool,
     fullscreen: bool,
-    queue: bool,
-    lyrics: bool,
     topbar_width: f32,
 ) -> WindowControlsReservation {
     let mut space = WindowControlsReservation {
         topbar_width: 0.0,
         topbar_top: 0.0,
-        queue_top: 0.0,
-        lyrics_top: 0.0,
     };
     if windows_chrome_visible(on_windows, fullscreen) {
-        if queue {
-            space.queue_top = WINDOWS_WINDOW_CONTROLS_HEIGHT;
-        } else if lyrics {
-            space.lyrics_top = WINDOWS_WINDOW_CONTROLS_HEIGHT;
-        } else if topbar_width < WINDOWS_MIN_INLINE_TOPBAR_WIDTH {
+        if topbar_width < WINDOWS_MIN_INLINE_TOPBAR_WIDTH {
             space.topbar_top = WINDOWS_WINDOW_CONTROLS_HEIGHT;
         } else {
             space.topbar_width = WINDOWS_WINDOW_CONTROLS_WIDTH;
@@ -245,12 +254,10 @@ const fn windows_controls_reservation(
 
 pub(super) fn window_controls_reservation(
     ctx: &egui::Context,
-    queue: bool,
-    lyrics: bool,
     topbar_width: f32,
 ) -> WindowControlsReservation {
     let fullscreen = ctx.input(|input| input.viewport().fullscreen.unwrap_or(false));
-    windows_controls_reservation(cfg!(windows), fullscreen, queue, lyrics, topbar_width)
+    windows_controls_reservation(cfg!(windows), fullscreen, topbar_width)
 }
 
 /// Draws the Windows caption controls over the outermost top-right header.
@@ -441,57 +448,35 @@ mod window_chrome_tests {
     }
 
     #[test]
-    fn caption_space_belongs_to_the_outermost_header() {
-        let values = |queue, lyrics| {
-            let space = windows_controls_reservation(true, false, queue, lyrics, f32::INFINITY);
-            [
-                space.topbar_width,
-                space.topbar_top,
-                space.queue_top,
-                space.lyrics_top,
-            ]
-        };
+    fn caption_space_belongs_to_the_shared_header() {
         assert_eq!(
-            values(false, false),
-            [WINDOWS_WINDOW_CONTROLS_WIDTH, 0.0, 0.0, 0.0]
-        );
-        assert_eq!(
-            values(true, false),
-            [0.0, 0.0, WINDOWS_WINDOW_CONTROLS_HEIGHT, 0.0]
-        );
-        assert_eq!(
-            values(false, true),
-            [0.0, 0.0, 0.0, WINDOWS_WINDOW_CONTROLS_HEIGHT]
-        );
-        assert_eq!(
-            values(true, true),
-            [0.0, 0.0, WINDOWS_WINDOW_CONTROLS_HEIGHT, 0.0]
-        );
-        assert_eq!(
-            windows_controls_reservation(true, true, true, true, f32::INFINITY),
+            windows_controls_reservation(true, false, f32::INFINITY),
             WindowControlsReservation {
-                topbar_width: 0.0,
+                topbar_width: WINDOWS_WINDOW_CONTROLS_WIDTH,
                 topbar_top: 0.0,
-                queue_top: 0.0,
-                lyrics_top: 0.0,
             }
         );
+        for (on_windows, fullscreen) in [(true, true), (false, false), (false, true)] {
+            for width in [510.0, f32::INFINITY] {
+                assert_eq!(
+                    windows_controls_reservation(on_windows, fullscreen, width),
+                    WindowControlsReservation {
+                        topbar_width: 0.0,
+                        topbar_top: 0.0,
+                    }
+                );
+            }
+        }
     }
 
     #[test]
     fn minimum_windows_window_stacks_caption_space_above_the_topbar() {
         let available = 760.0 - 250.0;
-        let space = windows_controls_reservation(true, false, false, false, available);
+        let space = windows_controls_reservation(true, false, available);
         assert_eq!(space.topbar_width, 0.0);
         assert_eq!(space.topbar_top, WINDOWS_WINDOW_CONTROLS_HEIGHT);
 
-        let inline = windows_controls_reservation(
-            true,
-            false,
-            false,
-            false,
-            WINDOWS_MIN_INLINE_TOPBAR_WIDTH,
-        );
+        let inline = windows_controls_reservation(true, false, WINDOWS_MIN_INLINE_TOPBAR_WIDTH);
         assert_eq!(inline.topbar_width, WINDOWS_WINDOW_CONTROLS_WIDTH);
         assert_eq!(inline.topbar_top, 0.0);
     }

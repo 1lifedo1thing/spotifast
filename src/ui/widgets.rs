@@ -912,8 +912,10 @@ fn track_row_contents(ui: &mut Ui, app: &mut App, row: TrackRow<'_>) -> Option<R
     }
     let right_fixed = cols.heart + cols.duration + cols.more + 8.0;
     let text_right = rect.right() - right_fixed - cols.added - cols.added_by - cols.album;
-    let title_rect =
-        Rect::from_min_max(pos2(x, rect.top()), pos2(text_right - 12.0, rect.bottom()));
+    let title_rect = Rect::from_min_max(
+        pos2(x, rect.top()),
+        pos2((text_right - 12.0).max(x), rect.bottom()),
+    );
 
     // Title and artists.
     let title_color = if unavailable {
