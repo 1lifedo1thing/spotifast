@@ -86,6 +86,9 @@ everyday use, and connection details.
 - On `main`, after 0.7.1, a playlist's **Play** button explicitly starts at
   its first available song when Shuffle is off and the original order is
   selected. Double-click a row to start there; use the player bar to resume.
+  Cached playlists must match Spotify's revision and song count before their
+  rows can determine playback order. Pending playlist edits stay visible and
+  are saved to that cache only after all writes succeed.
 - **Resumes the last session.** On startup, the last song is paused where it
   stopped. Play resumes it, and the other playback controls work before it
   starts.

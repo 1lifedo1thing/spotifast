@@ -5357,6 +5357,9 @@ impl App {
         let mut adders: Vec<String> = Vec::new();
         let mut tracks = Vec::new();
         if let Some(page) = self.playlist_pages.get_mut(id) {
+            if page.pending_writes > 0 {
+                return;
+            }
             let Some(snapshot_now) = page
                 .playlist
                 .get()
@@ -5364,10 +5367,20 @@ impl App {
             else {
                 return;
             };
+            let confirmed_total = page.playlist.get().and_then(|playlist| {
+                playlist
+                    .items_count
+                    .as_ref()
+                    .or(playlist.tracks.as_ref())
+                    .map(|count| count.total)
+            });
             match &page.pending_cache {
-                Some(cache) if cache.snapshot == snapshot_now => {}
+                Some(cache)
+                    if cache.snapshot == snapshot_now
+                        && confirmed_total.is_none_or(|total| cache.total == total) => {}
                 Some(_) => {
-                    // The playlist changed since; the cache is history.
+                    // A revision alone cannot validate an inconsistent cache.
+                    // Let the live item request establish the rows and order.
                     page.pending_cache = None;
                     return;
                 }
@@ -5469,6 +5482,7 @@ impl App {
                 || page.items.items.is_empty()
                 || page.items.base_offset != 0
                 || page.items_generation != page.generation
+                || page.pending_writes > 0
             {
                 return None;
             }
@@ -12250,6 +12264,106 @@ mod tests {
 
         assert!(app.dialog.is_none());
         assert!(app.playlist_busy, "the playlist write follows the check");
+    }
+
+    #[test]
+    fn playlist_cache_count_must_match_spotify_before_it_can_choose_the_first_song() {
+        for cache_first in [true, false] {
+            let mut app = headless_app();
+            app.backend.set_offline(true);
+            app.user = Some(User {
+                id: "alice".into(),
+                ..Default::default()
+            });
+            app.playlist_pages
+                .insert("mix".into(), PlaylistPage::default());
+            let header = ApiResponse::Playlist {
+                id: "mix".into(),
+                generation: 0,
+                result: Ok(Playlist {
+                    id: "mix".into(),
+                    snapshot_id: Some("same-revision".into()),
+                    items_count: Some(TrackCount { total: 3 }),
+                    ..Default::default()
+                }),
+            };
+            let cache = Some(PlaylistCache {
+                snapshot: "same-revision".into(),
+                items: vec![cached_playlist_row("spotify:track:wrong"); 4],
+                total: 4,
+                next_offset: None,
+            });
+            if cache_first {
+                app.receive_playlist_cache("alice", "mix", 0, cache);
+                app.handle_api(header);
+            } else {
+                app.handle_api(header);
+                app.receive_playlist_cache("alice", "mix", 0, cache);
+            }
+            assert_eq!(
+                app.playlist_start("mix"),
+                (None, Some(0)),
+                "a matching revision cannot make a cache with the wrong count authoritative"
+            );
+            app.handle_api(ApiResponse::PlaylistItems {
+                id: "mix".into(),
+                offset: 0,
+                generation: 0,
+                result: Ok(crate::api::models::Page {
+                    items: vec![cached_playlist_row("spotify:track:right"); 3],
+                    total: 3,
+                    limit: 50,
+                    ..Default::default()
+                }),
+            });
+            assert_eq!(
+                app.playlist_start("mix"),
+                (Some("spotify:track:right".into()), None)
+            );
+            assert_eq!(app.playlist_pages["mix"].items.items.len(), 3);
+        }
+    }
+
+    #[test]
+    fn playlist_cache_waits_until_all_optimistic_writes_are_confirmed() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.playlist_pages.insert(
+            "mix".into(),
+            PlaylistPage {
+                playlist: Loadable::Loaded(Playlist {
+                    id: "mix".into(),
+                    snapshot_id: Some("before".into()),
+                    items_count: Some(TrackCount { total: 2 }),
+                    ..Default::default()
+                }),
+                items: PagedList {
+                    items: vec![cached_playlist_row("spotify:track:shown"); 2],
+                    total: Some(2),
+                    next_offset: None,
+                    loaded_once: true,
+                    ..Default::default()
+                },
+                cache_checked: true,
+                pending_writes: 2,
+                ..Default::default()
+            },
+        );
+        app.checkpoint_playlist_cache("mix");
+        assert_eq!(app.playlist_pages["mix"].cache_saved_through, None);
+        for (snapshot, saved) in [("first-write", None), ("both-writes", Some(2))] {
+            app.handle_api(ApiResponse::PlaylistItemsChanged {
+                id: "mix".into(),
+                message: String::new(),
+                result: Ok(Some(snapshot.into())),
+            });
+            assert_eq!(app.playlist_pages["mix"].cache_saved_through, saved);
+            assert_eq!(
+                app.playlist_pages["mix"].items.items.len(),
+                2,
+                "pending edits stay visible while disk persistence waits"
+            );
+        }
     }
 
     #[test]

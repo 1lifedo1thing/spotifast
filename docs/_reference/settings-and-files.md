@@ -76,10 +76,13 @@ and diagnostic uploads.
 Progress through a playlist is periodically cached as a contiguous prefix.
 When the playlist has not changed on Spotify, reopening it resumes from that
 prefix instead of requesting the same pages again. Fastpotify validates the
-cache against Spotify's playlist snapshot before showing it.
+cache against Spotify's playlist snapshot and reported song count before
+showing it. A cache with a mismatched count is replaced by live rows even if
+its snapshot matches, so stale cached songs cannot choose the playback order.
 Successful playlist edits keep that loaded prefix and save it under Spotify's
-new snapshot. Fastpotify reloads the playlist only if the write fails and the
-optimistic edit must be reconciled.
+new snapshot after all pending writes have succeeded. Pending edits remain
+visible immediately, but are not saved as confirmed playlist rows. A failed
+write reloads the playlist to reconcile the edit.
 
 The following Liked Songs caching behavior is on `main`, for the release
 after 0.7.1.
