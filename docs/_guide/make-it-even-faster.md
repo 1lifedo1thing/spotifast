@@ -43,6 +43,12 @@ songs are not held up when the shared app is busy. Your app returns ten results
 for each type where the shared app returns twenty, a Development Mode limit.
 The shared app handles the rest.
 
+Playlists are the exception. While local playback is signed in, Fastpotify
+reads the ones the shared app would serve, other people's and, without a
+personal app, your own, over the same connection that streams the audio, as
+Spotify's own apps do, so they open without waiting on the shared app's quota
+at all.
+
 ## Make a Spotify app
 
 1. Open the [Spotify developer dashboard](https://developer.spotify.com/dashboard)

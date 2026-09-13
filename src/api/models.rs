@@ -436,8 +436,30 @@ impl Playlist {
             .map_or(0, |count| count.total)
     }
 
+    /// The owner as shown: the display name, else the id of anyone but
+    /// Spotify, whose lists carry no name over the streaming session.
+    /// Take from the library list's entry what this header lacks: the
+    /// streaming session's header carries no public flag, may leave the
+    /// owner unnamed, and has no picture for a playlist without a cover of
+    /// its own. What Spotify did say stays.
+    pub fn fill_from(&mut self, listed: &Playlist) {
+        if self.public.is_none() {
+            self.public = listed.public;
+        }
+        if self.owner.display_name.is_none() {
+            self.owner.display_name = listed.owner.display_name.clone();
+        }
+        if self.images.is_empty() {
+            self.images = listed.images.clone();
+        }
+    }
+
     pub fn owner_name(&self) -> &str {
-        self.owner.display_name.as_deref().unwrap_or("Spotify")
+        self.owner
+            .display_name
+            .as_deref()
+            .or_else(|| self.owner.id.as_deref().filter(|id| *id != "spotify"))
+            .unwrap_or("Spotify")
     }
 
     pub fn owned_by(&self, user_id: &str) -> bool {
@@ -803,6 +825,64 @@ mod tests {
         assert_eq!(playlist.track_total(), 12);
         assert!(playlist.owned_by("me"));
         assert_eq!(playlist.owner_name(), "Me");
+    }
+
+    /// An owner without a display name shows as the id, except Spotify,
+    /// whose lists carry no name over the streaming session.
+    /// A header takes from the library list only what it lacks.
+    #[test]
+    fn a_header_takes_from_the_list_only_what_it_lacks() {
+        let listed = Playlist {
+            public: Some(true),
+            owner: Owner {
+                id: Some("alice".into()),
+                display_name: Some("Alice".into()),
+                ..Default::default()
+            },
+            images: vec![Image {
+                url: "mosaic".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let mut bare = Playlist::default();
+        bare.fill_from(&listed);
+        assert_eq!(bare.public, Some(true));
+        assert_eq!(bare.owner.display_name.as_deref(), Some("Alice"));
+        assert_eq!(bare.images[0].url, "mosaic");
+
+        let mut told = Playlist {
+            public: Some(false),
+            owner: Owner {
+                display_name: Some("Spotify".into()),
+                ..Default::default()
+            },
+            images: vec![Image {
+                url: "cover".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        told.fill_from(&listed);
+        assert_eq!(told.public, Some(false));
+        assert_eq!(told.owner.display_name.as_deref(), Some("Spotify"));
+        assert_eq!(told.images[0].url, "cover");
+    }
+
+    #[test]
+    fn owner_name_falls_back_to_the_id_but_not_for_spotify() {
+        let named = |id: Option<&str>, name: Option<&str>| Playlist {
+            owner: Owner {
+                id: id.map(str::to_string),
+                display_name: name.map(str::to_string),
+                uri: None,
+            },
+            ..Playlist::default()
+        };
+        assert_eq!(named(Some("1263908142"), None).owner_name(), "1263908142");
+        assert_eq!(named(Some("1263908142"), Some("mgc")).owner_name(), "mgc");
+        assert_eq!(named(Some("spotify"), None).owner_name(), "Spotify");
+        assert_eq!(named(None, None).owner_name(), "Spotify");
     }
 
     #[test]

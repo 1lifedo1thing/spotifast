@@ -3402,7 +3402,7 @@ mod tests {
                 id: "pl1".into(),
                 name: "x".into(),
                 description: String::new(),
-                public: false,
+                public: Some(false),
             },
             Dialog::ConfirmDeletePlaylist {
                 id: "pl1".into(),

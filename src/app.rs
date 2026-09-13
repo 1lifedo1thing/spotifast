@@ -296,6 +296,10 @@ pub struct App {
     /// Spotify may expose one recording under several market-specific track
     /// URIs. Map those URIs to the recording identity returned by the API.
     track_recordings: HashMap<String, String>,
+    /// Known playlist-track availability for this account. Keep positive
+    /// answers too, so an older disk cache cannot make a song unavailable
+    /// again after the Web API has confirmed it can play.
+    playlist_availability: HashMap<String, bool>,
     /// Recording identities for which at least one known URI is saved.
     saved_recordings: HashSet<String>,
     /// Optimistic library writes that a stale contains response must not undo.
@@ -615,6 +619,7 @@ impl App {
             saved: HashMap::new(),
             saved_pending: HashSet::new(),
             track_recordings: HashMap::new(),
+            playlist_availability: HashMap::new(),
             saved_recordings: HashSet::new(),
             saved_writes: HashMap::new(),
             accents: HashMap::new(),
@@ -819,6 +824,24 @@ impl App {
 
     pub fn user_id(&self) -> Option<&str> {
         self.user.as_ref().map(|user| user.id.as_str())
+    }
+
+    /// The library list's entry for a playlist, when it holds one.
+    fn library_entry(&self, id: &str) -> Option<&Playlist> {
+        self.library
+            .playlists
+            .get()?
+            .iter()
+            .find(|playlist| playlist.id == id)
+    }
+
+    /// The signed-in account's display name, when `owner` is that account.
+    fn own_name(&self, owner: Option<&str>) -> Option<String> {
+        self.user
+            .as_ref()
+            .filter(|user| Some(user.id.as_str()) == owner)?
+            .display_name
+            .clone()
     }
 
     pub fn is_saved(&self, uri: &str) -> Option<bool> {
@@ -1427,18 +1450,7 @@ impl App {
                     generation,
                     cache,
                 } => {
-                    if self.user_id() != Some(account_id.as_str()) {
-                        continue;
-                    }
-                    if let Some(page) = self.playlist_pages.get_mut(&id) {
-                        if page.generation != generation {
-                            continue;
-                        }
-                        page.cache_checked = true;
-                        page.pending_cache = cache;
-                    }
-                    self.try_adopt_playlist_cache(&id);
-                    self.checkpoint_playlist_cache(&id);
+                    self.receive_playlist_cache(&account_id, &id, generation, cache);
                 }
                 Event::LikedSongsCache {
                     account_id,
@@ -1598,6 +1610,7 @@ impl App {
         self.saved.clear();
         self.saved_pending.clear();
         self.track_recordings.clear();
+        self.playlist_availability.clear();
         self.saved_recordings.clear();
         self.saved_writes.clear();
         self.queue = Loadable::NotLoaded;
@@ -1834,10 +1847,7 @@ impl App {
         let (name, page) = match kind {
             "playlist" => {
                 let name = self
-                    .library
-                    .playlists
-                    .get()
-                    .and_then(|list| list.iter().find(|playlist| playlist.id == id))
+                    .library_entry(&id)
                     .map(|playlist| playlist.name.clone())
                     .or_else(|| {
                         self.playlist_pages
@@ -3967,8 +3977,18 @@ impl App {
                         self.backend.send(Command::Rootlist);
                     }
                     if let Some(playlists) = self.library.playlists.get() {
-                        for playlist in playlists {
-                            self.saved.insert(playlist.uri.clone(), true);
+                        for listed in playlists {
+                            self.saved.insert(listed.uri.clone(), true);
+                            // A header read over the streaming session
+                            // lacks what the list carries; pages that
+                            // arrived before the list take it now.
+                            if let Some(playlist) = self
+                                .playlist_pages
+                                .get_mut(&listed.id)
+                                .and_then(|page| page.playlist.get_mut())
+                            {
+                                playlist.fill_from(listed);
+                            }
                         }
                     }
                 }
@@ -3983,7 +4003,7 @@ impl App {
             ApiResponse::Playlist {
                 id,
                 generation,
-                result,
+                mut result,
             } => {
                 if self
                     .playlist_pages
@@ -4018,10 +4038,19 @@ impl App {
                     }
                     return;
                 }
-                if let Ok(playlist) = &result
-                    && let Some(image) = pick_image(&playlist.images, 300)
-                {
-                    self.tint_for(Some(image));
+                if let Ok(playlist) = &mut result {
+                    // A header read over the streaming session lacks what
+                    // the Web API gave: the account's own name, and the
+                    // library list's public flag, owner name, and cover.
+                    if playlist.owner.display_name.is_none() {
+                        playlist.owner.display_name = self.own_name(playlist.owner.id.as_deref());
+                    }
+                    if let Some(listed) = self.library_entry(&id) {
+                        playlist.fill_from(listed);
+                    }
+                    if let Some(image) = pick_image(&playlist.images, 300) {
+                        self.tint_for(Some(image));
+                    }
                 }
                 if let Some(page) = self.playlist_pages.get_mut(&id) {
                     let old_snapshot = page
@@ -4071,7 +4100,9 @@ impl App {
                             // The initial request was already in flight when
                             // a longer cached prefix was restored.
                         }
-                        Ok(items) => {
+                        Ok(mut items) => {
+                            note_availability(&mut self.playlist_availability, &items.items);
+                            fill_availability(&self.playlist_availability, &mut items.items);
                             tracks = items
                                 .items
                                 .iter()
@@ -5277,6 +5308,49 @@ impl App {
         }
     }
 
+    /// A playlist's disk cache has been read. Whether or not the page
+    /// still matches it, what the Web API said about each song's
+    /// availability holds, for rows already shown and rows to come.
+    fn receive_playlist_cache(
+        &mut self,
+        account_id: &str,
+        id: &str,
+        generation: u64,
+        mut cache: Option<PlaylistCache>,
+    ) {
+        if self.user_id() != Some(account_id) {
+            return;
+        }
+        if let Some(page) = self.playlist_pages.get_mut(id) {
+            if page.generation != generation {
+                return;
+            }
+            page.cache_checked = true;
+            if let Some(cache) = &mut cache {
+                for (uri, playable) in known_availability(&cache.items) {
+                    self.playlist_availability
+                        .entry(uri.to_string())
+                        .or_insert(playable);
+                }
+                // A cache may arrive after a fresh answer from another page.
+                // Correct its flags before this prefix can be adopted.
+                for row in &mut cache.items {
+                    if let Some(PlayableItem::Track(track)) = row.item.as_mut()
+                        && let Some(playable) = self.playlist_availability.get(&track.uri)
+                    {
+                        track.is_playable = Some(*playable);
+                    }
+                }
+                if fill_availability(&self.playlist_availability, &mut page.items.items) {
+                    page.items.revision = page.items.revision.wrapping_add(1);
+                }
+            }
+            page.pending_cache = cache;
+        }
+        self.try_adopt_playlist_cache(id);
+        self.checkpoint_playlist_cache(id);
+    }
+
     /// Adopt a playlist's cached prefix once Spotify confirms its snapshot.
     fn try_adopt_playlist_cache(&mut self, id: &str) {
         let mut uris = Vec::new();
@@ -6357,7 +6431,7 @@ impl App {
                     id,
                     name: Some(name),
                     description: Some(description),
-                    public: Some(public),
+                    public,
                 });
             }
             Action::DeletePlaylist(id) => {
@@ -7575,6 +7649,39 @@ fn remote_action_label(action: RemoteAction) -> &'static str {
     }
 }
 
+/// Availability explicitly reported for a song; session-only rows are unknown.
+fn known_availability(items: &[PlaylistItem]) -> impl Iterator<Item = (&str, bool)> {
+    items.iter().filter_map(|item| match item.playable()? {
+        PlayableItem::Track(track) => Some((track.uri.as_str(), track.is_playable?)),
+        _ => None,
+    })
+}
+
+/// A fresh Web API answer takes precedence over anything remembered from disk.
+fn note_availability(availability: &mut HashMap<String, bool>, items: &[PlaylistItem]) {
+    availability
+        .extend(known_availability(items).map(|(uri, playable)| (uri.to_string(), playable)));
+}
+
+/// Grey out the songs the Web API has said this account cannot play,
+/// among rows that do not say. A page read over the streaming session
+/// says nothing of the account's market; a song the Web API had greyed
+/// out stays so wherever it recurs, and rows it never described stay
+/// unknown.
+fn fill_availability(availability: &HashMap<String, bool>, items: &mut [PlaylistItem]) -> bool {
+    let mut changed = false;
+    for item in items {
+        if let Some(PlayableItem::Track(track)) = item.item.as_mut()
+            && track.is_playable.is_none()
+            && availability.get(&track.uri) == Some(&false)
+        {
+            track.is_playable = Some(false);
+            changed = true;
+        }
+    }
+    changed
+}
+
 fn friendly_page_error(error: &crate::api::ApiError) -> String {
     match error.status() {
         Some(403) | Some(404) => {
@@ -7697,6 +7804,7 @@ fn evict_lru_map<V>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::models::Image;
 
     #[test]
     fn shift_wheel_moves_the_shelf_without_scrolling_the_page() {
@@ -7866,6 +7974,558 @@ mod tests {
             app.playing_context_uri().as_deref(),
             Some("spotify:playlist:phone")
         );
+    }
+
+    /// A song the Web API had greyed out stays greyed out when the session
+    /// reads the rows, at every place it recurs, whether the Web API's word
+    /// came from an earlier page or from the disk cache of a visit the
+    /// playlist has changed since. Rows it never described stay unknown,
+    /// and a song it later calls playable is no longer greyed out.
+    #[test]
+    fn a_session_read_keeps_a_songs_known_unavailability() {
+        let mut app = headless_app();
+        app.user = Some(User {
+            id: "alice".into(),
+            ..Default::default()
+        });
+        let row = |uri: &str, is_playable: Option<bool>| crate::api::models::PlaylistItem {
+            item: Some(PlayableItem::Track(Track {
+                uri: uri.into(),
+                is_playable,
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+        let items =
+            |id: &str, rows: Vec<crate::api::models::PlaylistItem>| ApiResponse::PlaylistItems {
+                id: id.into(),
+                offset: 0,
+                generation: 0,
+                result: Ok(crate::api::models::Page {
+                    total: rows.len() as u32,
+                    limit: 50,
+                    items: rows,
+                    ..Default::default()
+                }),
+            };
+        let rows = |app: &App, id: &str| {
+            app.playlist_pages[id]
+                .items
+                .items
+                .iter()
+                .map(|item| match item.playable() {
+                    Some(PlayableItem::Track(track)) => track.is_playable,
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        };
+
+        // The Web API's word from an earlier page of the same list.
+        app.playlist_pages
+            .insert("pl1".into(), PlaylistPage::default());
+        app.handle_api(items(
+            "pl1",
+            vec![
+                row("spotify:track:gone", Some(false)),
+                row("spotify:track:fine", Some(true)),
+                row("spotify:track:gone", Some(false)),
+            ],
+        ));
+        app.handle_api(items(
+            "pl1",
+            vec![
+                row("spotify:track:gone", None),
+                row("spotify:track:fine", None),
+                row("spotify:track:new", None),
+                row("spotify:track:gone", None),
+            ],
+        ));
+        assert_eq!(rows(&app, "pl1"), [Some(false), None, None, Some(false)]);
+
+        // The Web API's word from the disk cache of another visit, read
+        // after the session page arrived and never adopted, the playlist
+        // having changed since.
+        app.playlist_pages.insert(
+            "pl2".into(),
+            PlaylistPage {
+                playlist: Loadable::Loaded(Playlist {
+                    id: "pl2".into(),
+                    snapshot_id: Some("now".into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        );
+        app.handle_api(items(
+            "pl2",
+            vec![
+                row("spotify:track:other", None),
+                row("spotify:track:fine", None),
+            ],
+        ));
+        app.receive_playlist_cache(
+            "alice",
+            "pl2",
+            0,
+            Some(PlaylistCache {
+                snapshot: "then".into(),
+                items: vec![row("spotify:track:other", Some(false))],
+                total: 1,
+                next_offset: None,
+            }),
+        );
+        assert_eq!(
+            rows(&app, "pl2"),
+            [Some(false), None],
+            "the cache's word reaches the rows already shown"
+        );
+        assert!(
+            app.playlist_pages["pl2"].pending_cache.is_none(),
+            "though the stale cache itself is not adopted"
+        );
+
+        // A song the Web API later calls playable is no longer greyed out.
+        app.handle_api(items("pl2", vec![row("spotify:track:other", Some(true))]));
+        app.handle_api(items("pl2", vec![row("spotify:track:other", None)]));
+        assert_eq!(rows(&app, "pl2"), [None]);
+    }
+
+    fn availability_row(playable: Option<bool>) -> PlaylistItem {
+        PlaylistItem {
+            item: Some(PlayableItem::Track(Track {
+                uri: "spotify:track:availability".into(),
+                is_playable: playable,
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+    }
+
+    fn receive_availability_rows(app: &mut App, id: &str, playable: Option<bool>) {
+        app.playlist_pages
+            .entry(id.into())
+            .or_insert_with(|| PlaylistPage {
+                playlist: Loadable::Loaded(Playlist {
+                    id: id.into(),
+                    snapshot_id: Some("now".into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            });
+        app.handle_api(ApiResponse::PlaylistItems {
+            id: id.into(),
+            offset: 0,
+            generation: 0,
+            result: Ok(crate::api::models::Page {
+                items: vec![availability_row(playable)],
+                total: 1,
+                limit: 50,
+                ..Default::default()
+            }),
+        });
+    }
+
+    fn shown_availability(app: &mut App, id: &str) -> Option<bool> {
+        let page = &app.playlist_pages[id];
+        let generation = page.generation;
+        let revision = page.items.revision;
+        let rows = page
+            .items
+            .items
+            .iter()
+            .filter_map(|row| row.playable().cloned().map(|item| (item, None, None)))
+            .collect();
+        let rows = crate::ui::collection::cached_table_items(
+            app,
+            Page::Playlist(id.into()),
+            generation,
+            revision,
+            app.user_names_revision,
+            || rows,
+        );
+        match &rows[0].0 {
+            PlayableItem::Track(track) => track.is_playable,
+            _ => panic!("a track row"),
+        }
+    }
+
+    fn old_availability_cache(playable: bool) -> Option<PlaylistCache> {
+        Some(PlaylistCache {
+            snapshot: "then".into(),
+            items: vec![availability_row(Some(playable))],
+            total: 1,
+            next_offset: None,
+        })
+    }
+
+    #[test]
+    fn playlist_availability_does_not_follow_an_account_switch() {
+        let mut app = headless_app();
+        app.user = Some(User {
+            id: "alice".into(),
+            ..Default::default()
+        });
+        receive_availability_rows(&mut app, "pl1", Some(false));
+        app.handle_auth(AuthStatus::SignedOut);
+        app.handle_auth(AuthStatus::Connected {
+            username: "bob".into(),
+        });
+        app.user = Some(User {
+            id: "bob".into(),
+            ..Default::default()
+        });
+        receive_availability_rows(&mut app, "pl1", None);
+        app.receive_playlist_cache("alice", "pl1", 0, old_availability_cache(false));
+        assert_eq!(shown_availability(&mut app, "pl1"), None);
+    }
+
+    #[test]
+    fn playlist_availability_prefers_fresh_answers_to_late_disk_caches() {
+        for fresh in [true, false] {
+            let mut app = headless_app();
+            app.user = Some(User {
+                id: "alice".into(),
+                ..Default::default()
+            });
+            receive_availability_rows(&mut app, "pl1", Some(fresh));
+            receive_availability_rows(&mut app, "pl2", None);
+            app.receive_playlist_cache("alice", "pl2", 0, old_availability_cache(!fresh));
+            receive_availability_rows(&mut app, "pl3", None);
+            assert_eq!(
+                shown_availability(&mut app, "pl3"),
+                (!fresh).then_some(false)
+            );
+        }
+    }
+
+    #[test]
+    fn playlist_availability_from_disk_reaches_rows_already_drawn() {
+        let mut app = headless_app();
+        app.user = Some(User {
+            id: "alice".into(),
+            ..Default::default()
+        });
+        receive_availability_rows(&mut app, "pl1", None);
+        assert_eq!(shown_availability(&mut app, "pl1"), None);
+        app.receive_playlist_cache("alice", "pl1", 0, old_availability_cache(false));
+        assert_eq!(shown_availability(&mut app, "pl1"), Some(false));
+    }
+
+    #[test]
+    fn playlist_availability_stays_fresh_when_a_cached_prefix_is_adopted() {
+        let mut app = headless_app();
+        app.user = Some(User {
+            id: "alice".into(),
+            ..Default::default()
+        });
+        receive_availability_rows(&mut app, "pl1", Some(true));
+        app.playlist_pages.insert(
+            "pl2".into(),
+            PlaylistPage {
+                playlist: Loadable::Loaded(Playlist {
+                    id: "pl2".into(),
+                    snapshot_id: Some("then".into()),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+        );
+        app.receive_playlist_cache("alice", "pl2", 0, old_availability_cache(false));
+        assert_eq!(shown_availability(&mut app, "pl2"), Some(true));
+    }
+
+    /// Saving the edit dialog sends the public flag only when its switch
+    /// was used; a playlist nothing has described keeps whatever it was.
+    #[test]
+    fn saving_playlist_details_leaves_an_unknown_public_flag_alone() {
+        let mut app = headless_app();
+        let ctx = egui::Context::default();
+        let save = |app: &mut App, public| {
+            app.apply(
+                Action::UpdatePlaylist {
+                    id: "pl1".into(),
+                    name: "Renamed".into(),
+                    description: String::new(),
+                    public,
+                },
+                &ctx,
+            );
+            match app.backend.take_playlist_add_requests().as_slice() {
+                [ApiRequest::UpdatePlaylist { public, .. }] => *public,
+                sent => panic!("{sent:?}"),
+            }
+        };
+        assert_eq!(save(&mut app, None), None);
+        assert_eq!(save(&mut app, Some(false)), Some(false));
+    }
+
+    /// A header read over the streaming session carries no public flag,
+    /// and the edit dialog fills its switch from it, so the library list's
+    /// answer stands in.
+    #[test]
+    fn a_header_without_a_public_flag_takes_the_library_lists() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.library.playlists = Loadable::Loaded(vec![Playlist {
+            id: "pl1".into(),
+            public: Some(true),
+            ..Playlist::default()
+        }]);
+        app.playlist_pages.insert(
+            "pl1".into(),
+            PlaylistPage {
+                generation: 1,
+                ..Default::default()
+            },
+        );
+        app.handle_api(ApiResponse::Playlist {
+            id: "pl1".into(),
+            generation: 1,
+            result: Ok(Playlist {
+                id: "pl1".into(),
+                name: "Mine".into(),
+                ..Playlist::default()
+            }),
+        });
+        let playlist = app.playlist_pages["pl1"].playlist.get().unwrap();
+        assert_eq!(playlist.public, Some(true));
+        assert_eq!(playlist.name, "Mine", "the rest is Spotify's answer");
+
+        // Spotify's own answer outranks the list, and a playlist the list
+        // does not hold stays unknown rather than guessed.
+        app.handle_api(ApiResponse::Playlist {
+            id: "pl1".into(),
+            generation: 1,
+            result: Ok(Playlist {
+                id: "pl1".into(),
+                public: Some(false),
+                ..Playlist::default()
+            }),
+        });
+        assert_eq!(
+            app.playlist_pages["pl1"].playlist.get().unwrap().public,
+            Some(false)
+        );
+        app.playlist_pages.insert(
+            "pl2".into(),
+            PlaylistPage {
+                generation: 1,
+                ..Default::default()
+            },
+        );
+        app.handle_api(ApiResponse::Playlist {
+            id: "pl2".into(),
+            generation: 1,
+            result: Ok(Playlist {
+                id: "pl2".into(),
+                ..Playlist::default()
+            }),
+        });
+        assert_eq!(
+            app.playlist_pages["pl2"].playlist.get().unwrap().public,
+            None
+        );
+
+        // The list can arrive after the header: the page takes the flag
+        // then, and a flag Spotify already gave stays.
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            result: Ok(crate::api::models::Page {
+                items: vec![
+                    Playlist {
+                        id: "pl1".into(),
+                        public: Some(true),
+                        ..Playlist::default()
+                    },
+                    Playlist {
+                        id: "pl2".into(),
+                        public: Some(true),
+                        ..Playlist::default()
+                    },
+                ],
+                ..Default::default()
+            }),
+        });
+        assert_eq!(
+            app.playlist_pages["pl2"].playlist.get().unwrap().public,
+            Some(true)
+        );
+        assert_eq!(
+            app.playlist_pages["pl1"].playlist.get().unwrap().public,
+            Some(false)
+        );
+    }
+
+    /// The streaming session does not always name a playlist's owner. The
+    /// account's own name stands in for its own lists, the library list's
+    /// for the rest it holds, in whichever order the answers arrive, and
+    /// a name Spotify gave stays.
+    #[test]
+    fn a_header_without_an_owner_name_takes_a_known_one() {
+        use crate::api::models::{Owner, User};
+        let owned_by = |id: &str, name: Option<&str>| Owner {
+            id: Some(id.into()),
+            display_name: name.map(str::to_string),
+            uri: None,
+        };
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.user = Some(User {
+            id: "me".into(),
+            display_name: Some("Mine".into()),
+            ..User::default()
+        });
+        app.library.playlists = Loadable::Loaded(vec![Playlist {
+            id: "pl2".into(),
+            owner: owned_by("other", Some("Molly C.")),
+            ..Playlist::default()
+        }]);
+        for id in ["pl1", "pl2", "pl3"] {
+            app.playlist_pages.insert(
+                id.into(),
+                PlaylistPage {
+                    generation: 1,
+                    ..Default::default()
+                },
+            );
+        }
+        let header = |id: &str, owner: Owner| ApiResponse::Playlist {
+            id: id.into(),
+            generation: 1,
+            result: Ok(Playlist {
+                id: id.into(),
+                owner,
+                ..Playlist::default()
+            }),
+        };
+        let shown = |app: &App, id: &str| {
+            app.playlist_pages[id]
+                .playlist
+                .get()
+                .unwrap()
+                .owner_name()
+                .to_string()
+        };
+        app.handle_api(header("pl1", owned_by("me", None)));
+        app.handle_api(header("pl2", owned_by("other", None)));
+        app.handle_api(header("pl3", owned_by("nobody", None)));
+        assert_eq!(shown(&app, "pl1"), "Mine", "the account's own name");
+        assert_eq!(shown(&app, "pl2"), "Molly C.", "the library list's");
+        assert_eq!(
+            shown(&app, "pl3"),
+            "nobody",
+            "the id until someone names them"
+        );
+
+        // The list can arrive after the header: the page takes the name
+        // then, and a name Spotify already gave stays.
+        app.handle_api(header("pl2", owned_by("other", Some("Molly"))));
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            result: Ok(crate::api::models::Page {
+                items: vec![
+                    Playlist {
+                        id: "pl2".into(),
+                        owner: owned_by("other", Some("Molly C.")),
+                        ..Playlist::default()
+                    },
+                    Playlist {
+                        id: "pl3".into(),
+                        owner: owned_by("nobody", Some("Nobody")),
+                        ..Playlist::default()
+                    },
+                ],
+                ..Default::default()
+            }),
+        });
+        assert_eq!(shown(&app, "pl3"), "Nobody");
+        assert_eq!(shown(&app, "pl2"), "Molly");
+    }
+
+    /// The streaming session carries no cover for a playlist without one
+    /// of its own, where the Web API composes a mosaic; the library list
+    /// holds that mosaic, in whichever order the answers arrive.
+    #[test]
+    fn a_header_without_a_cover_takes_the_library_lists() {
+        let cover = |url: &str| {
+            vec![Image {
+                url: url.into(),
+                width: Some(640),
+                height: Some(640),
+            }]
+        };
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.library.playlists = Loadable::Loaded(vec![Playlist {
+            id: "pl1".into(),
+            images: cover("https://mosaic.scdn.co/640/pl1"),
+            ..Playlist::default()
+        }]);
+        for id in ["pl1", "pl2", "pl3"] {
+            app.playlist_pages.insert(
+                id.into(),
+                PlaylistPage {
+                    generation: 1,
+                    ..Default::default()
+                },
+            );
+        }
+        let header = |id: &str, images: Vec<Image>| ApiResponse::Playlist {
+            id: id.into(),
+            generation: 1,
+            result: Ok(Playlist {
+                id: id.into(),
+                images,
+                ..Playlist::default()
+            }),
+        };
+        let shown = |app: &App, id: &str| {
+            app.playlist_pages[id]
+                .playlist
+                .get()
+                .unwrap()
+                .images
+                .iter()
+                .map(|image| image.url.clone())
+                .collect::<Vec<_>>()
+        };
+        app.handle_api(header("pl1", Vec::new()));
+        app.handle_api(header("pl2", cover("https://i.scdn.co/image/own")));
+        app.handle_api(header("pl3", Vec::new()));
+        assert_eq!(
+            shown(&app, "pl1"),
+            ["https://mosaic.scdn.co/640/pl1"],
+            "the library list's mosaic"
+        );
+        assert_eq!(
+            shown(&app, "pl2"),
+            ["https://i.scdn.co/image/own"],
+            "a cover of its own stays"
+        );
+        assert!(shown(&app, "pl3").is_empty(), "nothing to take it from");
+
+        // The list can arrive after the header: the page takes the cover
+        // then, and one the header carried stays.
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            result: Ok(crate::api::models::Page {
+                items: vec![
+                    Playlist {
+                        id: "pl2".into(),
+                        images: cover("https://mosaic.scdn.co/640/pl2"),
+                        ..Playlist::default()
+                    },
+                    Playlist {
+                        id: "pl3".into(),
+                        images: cover("https://mosaic.scdn.co/640/pl3"),
+                        ..Playlist::default()
+                    },
+                ],
+                ..Default::default()
+            }),
+        });
+        assert_eq!(shown(&app, "pl3"), ["https://mosaic.scdn.co/640/pl3"]);
+        assert_eq!(shown(&app, "pl2"), ["https://i.scdn.co/image/own"]);
     }
 
     #[test]
