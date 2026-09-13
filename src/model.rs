@@ -637,12 +637,12 @@ pub enum RowContext {
 /// Track data held during a drag.
 #[derive(Clone, Debug)]
 pub struct DragTrack {
-    pub uri: String,
     pub title: String,
     /// Cover art for the drag preview.
     pub image: Option<String>,
     /// Full row data, so dropping can update an open playlist immediately.
-    pub item: PlayableItem,
+    /// A picked table row carries the whole selection in table order.
+    pub items: Vec<PlayableItem>,
     /// Source playlist ID and row index for moves within an editable playlist.
     pub from: Option<(String, u32)>,
 }
@@ -770,11 +770,11 @@ pub enum Action {
         playlist_name: String,
         items: Vec<PlayableItem>,
     },
-    /// Copy a dragged song into an open playlist at an absolute position.
+    /// Copy dragged songs into an open playlist at an absolute position.
     InsertInPlaylist {
         playlist_id: String,
         position: u32,
-        item: Box<PlayableItem>,
+        items: Vec<PlayableItem>,
     },
     ConfirmAddToPlaylist {
         playlist_id: String,

@@ -6340,7 +6340,7 @@ impl App {
             Action::InsertInPlaylist {
                 playlist_id,
                 position,
-                item,
+                items,
             } => {
                 let name = self
                     .playlist_pages
@@ -6349,7 +6349,7 @@ impl App {
                     .filter(|playlist| self.can_edit_playlist(playlist))
                     .map(|playlist| playlist.name.clone());
                 if let Some(name) = name {
-                    self.request_playlist_add(playlist_id, name, vec![*item], Some(position));
+                    self.request_playlist_add(playlist_id, name, items, Some(position));
                 }
             }
             Action::ConfirmAddToPlaylist {

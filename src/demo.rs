@@ -3491,9 +3491,20 @@ mod tests {
     /// A drag in flight renders, and releasing it over an owned playlist
     /// row lands in the same add-to-playlist plumbing the row menu uses.
     #[test]
+    fn dropping_selected_songs_on_a_sidebar_playlist_adds_them_all() {
+        drop_songs_on_sidebar(2);
+    }
+
+    #[test]
     fn dropping_a_song_on_a_sidebar_playlist_adds_it() {
-        let root =
-            std::env::temp_dir().join(format!("fastpotify-drag-test-{}", std::process::id()));
+        drop_songs_on_sidebar(1);
+    }
+
+    fn drop_songs_on_sidebar(count: usize) {
+        let root = std::env::temp_dir().join(format!(
+            "fastpotify-drag-test-{}-{count}",
+            std::process::id()
+        ));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -3514,10 +3525,32 @@ mod tests {
         );
         app.attach(&ctx);
         populate(&mut app);
+        app.library
+            .playlists
+            .get_mut()
+            .expect("the demo library")
+            .retain(|playlist| playlist.id == "pl1");
         app.open(Page::Playlist("pl1".into()));
         for _ in 0..3 {
             frame(&ctx, &mut app);
         }
+        let before = app.playlist_pages["pl1"].items.items.len();
+        let mut dragged = vec![
+            PlayableItem::Track(Track {
+                id: Some("not-in-demo-playlists".into()),
+                uri: "spotify:track:not-in-demo-playlists".into(),
+                name: "A new song".into(),
+                ..Default::default()
+            }),
+            PlayableItem::Track(Track {
+                id: Some("also-not-in-demo-playlists".into()),
+                uri: "spotify:track:also-not-in-demo-playlists".into(),
+                name: "Another new song".into(),
+                ..Default::default()
+            }),
+        ];
+
+        dragged.truncate(count);
 
         // Sweep a held track down the sidebar; somewhere along the sweep
         // the pointer crosses an owned playlist row, and releasing there
@@ -3530,15 +3563,9 @@ mod tests {
             egui::DragAndDrop::set_payload(
                 &ctx,
                 DragTrack {
-                    uri: "spotify:track:not-in-demo-playlists".into(),
                     title: "A new song".into(),
                     image: None,
-                    item: PlayableItem::Track(Track {
-                        id: Some("not-in-demo-playlists".into()),
-                        uri: "spotify:track:not-in-demo-playlists".into(),
-                        name: "A new song".into(),
-                        ..Default::default()
-                    }),
+                    items: dragged.clone(),
                     from: None,
                 },
             );
@@ -3560,8 +3587,184 @@ mod tests {
             }
         }
         assert!(dropped, "no sweep position landed on an owned playlist row");
+        assert_eq!(app.playlist_pages["pl1"].items.items.len(), before + count);
+        assert_eq!(
+            app.playlist_pages["pl1"].items.items[before..]
+                .iter()
+                .map(|row| row.playable().unwrap().uri())
+                .collect::<Vec<_>>(),
+            dragged.iter().map(PlayableItem::uri).collect::<Vec<_>>()
+        );
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn selecting_album_rows_then_dragging_to_a_playlist_copies_display_order() {
+        use egui::accesskit::Role;
+        for compact in [false, true] {
+            for sorted in [false, true] {
+                let (ctx, mut app) =
+                    accessible_app(&format!("album-selection-drag-{compact}-{sorted}"));
+                app.settings.tracklist_compact = compact;
+                let source = Page::Album("alb0".into());
+                app.open(source.clone());
+                let tracks = &mut app.album_pages.get_mut("alb0").unwrap().tracks;
+                tracks.items.truncate(3);
+                for (index, name) in ["Charlie", "Bravo", "Alpha"].iter().enumerate() {
+                    tracks.items[index].name = name.to_string();
+                    tracks.items[index].uri = format!("spotify:track:source{index}");
+                    tracks.items[index].id = Some(format!("source{index}"));
+                }
+                tracks.total = Some(3);
+                tracks.next_offset = None;
+                tracks.revision += 1;
+                if sorted {
+                    app.table_sorts.insert(
+                        source.clone(),
+                        crate::model::TableSort {
+                            column: crate::model::SortColumn::Title,
+                            ascending: true,
+                        },
+                    );
+                }
+                let draw = |app: &mut App, mut events: Vec<egui::Event>, modifiers| {
+                    events.insert(0, egui::Event::ModifiersChanged(modifiers));
+                    accessible_frame(&ctx, app, events)
+                };
+                draw(&mut app, vec![], egui::Modifiers::NONE);
+                let tree = draw(&mut app, vec![], egui::Modifiers::NONE);
+                let row = |name: &str| {
+                    let prefix = format!("Play {name},");
+                    let bounds = tree
+                        .nodes
+                        .iter()
+                        .find(|(_, node)| {
+                            node.role() == Role::Button
+                                && node.label().is_some_and(|label| label.starts_with(&prefix))
+                        })
+                        .unwrap()
+                        .1
+                        .bounds()
+                        .unwrap();
+                    egui::pos2(bounds.x0 as f32 + 130.0, bounds.y0 as f32 + 8.0)
+                };
+                let first = row(if sorted { "Alpha" } else { "Charlie" });
+                let last = row(if sorted { "Charlie" } else { "Alpha" });
+                // Pick in reverse order, using Cmd on macOS or Ctrl elsewhere.
+                draw(
+                    &mut app,
+                    pointer_click(last, egui::PointerButton::Primary),
+                    egui::Modifiers::NONE,
+                );
+                assert_eq!(
+                    app.picked_rows(&source)
+                        .map(|rows| rows.iter().copied().collect::<Vec<_>>()),
+                    Some(vec![2]),
+                    "first click at {last:?}, page {:?}",
+                    app.page()
+                );
+                let modifier = egui::Modifiers {
+                    command: true,
+                    mac_cmd: cfg!(target_os = "macos"),
+                    ctrl: !cfg!(target_os = "macos"),
+                    ..Default::default()
+                };
+                let mut click = pointer_click(first, egui::PointerButton::Primary);
+                for event in &mut click {
+                    if let egui::Event::PointerButton { modifiers, .. } = event {
+                        *modifiers = modifier;
+                    }
+                }
+                draw(&mut app, click, modifier);
+                assert_eq!(
+                    app.picked_rows(&source)
+                        .unwrap()
+                        .iter()
+                        .copied()
+                        .collect::<Vec<_>>(),
+                    [0, 2]
+                );
+                draw(
+                    &mut app,
+                    vec![
+                        egui::Event::PointerMoved(last),
+                        egui::Event::PointerButton {
+                            pos: last,
+                            button: egui::PointerButton::Primary,
+                            pressed: true,
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                    ],
+                    egui::Modifiers::NONE,
+                );
+                draw(
+                    &mut app,
+                    vec![egui::Event::PointerMoved(last + egui::vec2(15.0, 0.0))],
+                    egui::Modifiers::NONE,
+                );
+                let payload = egui::DragAndDrop::payload::<DragTrack>(&ctx)
+                    .expect("drag from a selected row");
+                let expected = if sorted {
+                    ["spotify:track:source2", "spotify:track:source0"]
+                } else {
+                    ["spotify:track:source0", "spotify:track:source2"]
+                };
+                assert_eq!(
+                    payload
+                        .items
+                        .iter()
+                        .map(PlayableItem::uri)
+                        .collect::<Vec<_>>(),
+                    expected
+                );
+                assert_eq!(payload.from, None);
+                let bounds = tree
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| {
+                        node.role() == Role::Button && node.label() == Some("Late night focus")
+                    })
+                    .unwrap()
+                    .1
+                    .bounds()
+                    .unwrap();
+                let target = egui::pos2(
+                    ((bounds.x0 + bounds.x1) / 2.0) as f32,
+                    ((bounds.y0 + bounds.y1) / 2.0) as f32,
+                );
+                let before = app.playlist_pages["pl1"].items.items.len();
+                let playing = app.current_track_uri();
+                draw(
+                    &mut app,
+                    vec![egui::Event::PointerMoved(target)],
+                    egui::Modifiers::NONE,
+                );
+                draw(
+                    &mut app,
+                    vec![egui::Event::PointerButton {
+                        pos: target,
+                        button: egui::PointerButton::Primary,
+                        pressed: false,
+                        modifiers: egui::Modifiers::NONE,
+                    }],
+                    egui::Modifiers::NONE,
+                );
+                assert_eq!(
+                    app.playlist_pages["pl1"].items.items[before..]
+                        .iter()
+                        .map(|row| row.playable().unwrap().uri())
+                        .collect::<Vec<_>>(),
+                    expected
+                );
+                let sent = app.backend.take_playlist_add_requests();
+                assert!(
+                    matches!(sent.as_slice(), [crate::backend::ApiRequest::AddToPlaylist { playlist_id, uris, position: None, .. }] if playlist_id == "pl1" && uris == &expected)
+                );
+                assert_eq!(app.current_track_uri(), playing);
+                app.backend.shutdown();
+            }
+        }
     }
 
     /// Double-clicking a playable Library row plays its context, in both the
@@ -3734,8 +3937,8 @@ mod tests {
 
         let payload = egui::DragAndDrop::payload::<DragTrack>(&ctx)
             .expect("dragging the bottom-left song should create a song payload");
-        assert_eq!(payload.uri, "spotify:track:trk0");
-        assert_eq!(payload.item.uri(), "spotify:track:trk0");
+        assert_eq!(payload.items.len(), 1);
+        assert_eq!(payload.items[0].uri(), "spotify:track:trk0");
         assert_eq!(payload.from, None, "this is an add, not a playlist move");
 
         egui::DragAndDrop::clear_payload(&ctx);
@@ -4060,7 +4263,7 @@ mod tests {
                 vec![egui::Event::PointerMoved(source + egui::vec2(16.0, 0.0))],
             );
             assert_eq!(
-                egui::DragAndDrop::payload::<DragTrack>(&ctx).unwrap().uri,
+                egui::DragAndDrop::payload::<DragTrack>(&ctx).unwrap().items[0].uri(),
                 "spotify:track:trk0"
             );
             accessible_frame(&ctx, &mut app, vec![egui::Event::PointerMoved(target)]);
@@ -4176,7 +4379,7 @@ mod tests {
                     );
                     let payload =
                         egui::DragAndDrop::payload::<DragTrack>(&ctx).expect("real source drag");
-                    assert_eq!(payload.item.uri(), source_item.uri());
+                    assert_eq!(payload.items[0].uri(), source_item.uri());
                     assert_eq!(payload.from, None);
                     frame_events(&ctx, &mut app, vec![egui::Event::PointerMoved(end)]);
                     frame_events(
@@ -4216,7 +4419,9 @@ mod tests {
 
     #[test]
     fn playlist_drop_targets_cover_empty_lists_and_preserve_editing_boundaries() {
-        for mode in ["foreign", "empty", "readonly", "sorted", "filtered"] {
+        for mode in [
+            "foreign", "empty", "multiple", "readonly", "sorted", "filtered",
+        ] {
             let (ctx, mut app) = accessible_app(&format!("playlist-drop-target-{mode}"));
             let mut target = track(0);
             target.name = "Drop target".into();
@@ -4295,14 +4500,15 @@ mod tests {
                     bounds.y0 as f32 + 2.0
                 },
             );
-            let item = app.queue.get().unwrap().queue[0].clone();
+            let dragged =
+                app.queue.get().unwrap().queue[..if mode == "multiple" { 2 } else { 1 }].to_vec();
+            let expected: Vec<_> = dragged.iter().map(|item| item.uri().to_string()).collect();
             egui::DragAndDrop::set_payload(
                 &ctx,
                 DragTrack {
-                    uri: item.uri().into(),
-                    title: item.name().into(),
+                    title: dragged[0].name().into(),
                     image: None,
-                    item,
+                    items: dragged,
                     from: (mode == "foreign").then(|| ("pl2".into(), 5)),
                 },
             );
@@ -4330,9 +4536,9 @@ mod tests {
                 }],
                 mode == "empty",
             );
-            if matches!(mode, "foreign" | "empty") {
+            if matches!(mode, "foreign" | "empty" | "multiple") {
                 assert!(
-                    matches!(app.actions.as_slice(), [Action::InsertInPlaylist { playlist_id, position, .. }] if playlist_id == "pl1" && *position == if mode == "empty" { 0 } else { 100 }),
+                    matches!(app.actions.as_slice(), [Action::InsertInPlaylist { playlist_id, position, items }] if playlist_id == "pl1" && *position == if mode == "empty" { 0 } else { 100 } && items.iter().map(PlayableItem::uri).collect::<Vec<_>>() == expected),
                     "{mode}: {:?}",
                     app.actions
                 );
@@ -4645,14 +4851,13 @@ mod tests {
         let original = order(&app);
         let from = 5usize;
         let held = |from: usize, uri: &str| DragTrack {
-            uri: uri.to_string(),
             title: "Closer".into(),
             image: None,
-            item: PlayableItem::Track(Track {
+            items: vec![PlayableItem::Track(Track {
                 uri: uri.to_string(),
                 name: "Closer".into(),
                 ..Default::default()
-            }),
+            })],
             from: Some(("pl1".into(), from as u32)),
         };
 

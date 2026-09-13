@@ -625,7 +625,7 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
                 app.actions.push(Action::InsertInPlaylist {
                     playlist_id,
                     position: to,
-                    item: Box::new(track.item.clone()),
+                    items: track.items.clone(),
                 });
             }
         }

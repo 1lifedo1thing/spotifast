@@ -25,6 +25,15 @@ playlist accepts its first song. The source song stays in its list or queue,
 and playback continues unchanged. Dragging a row within the same playlist
 still moves that row.
 
+On `main`, after 0.7.1, select several songs with `Ctrl`-click (`Cmd`-click
+on macOS) or `Shift`-click, then drag any selected row. The whole selection
+travels together in its displayed order, even if you selected the rows in
+a different order. The preview names the first song and counts the rest.
+Drop it on a sidebar playlist to append, between rows of another editable
+playlist to insert, or on Liked Songs to save every selected song.
+Dragging an unselected row copies just that song. Reordering within a
+playlist still moves one song at a time.
+
 Clear any playlist filter or sort before placing songs between rows, so the
 visible positions match Spotify's order. A duplicate confirmation keeps the
 chosen position when you select **Add anyway**. Dragging near the top or bottom
