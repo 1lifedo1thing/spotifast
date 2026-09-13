@@ -4899,12 +4899,19 @@ mod tests {
                     version: "9.9.9".into(),
                     url: "https://example.invalid/releases".into(),
                 });
-                // From the narrowest window the app allows up to a wide one,
-                // across the width where the badges give up their labels.
-                for width in [
-                    760.0_f32, 800.0, 860.0, 900.0, 1000.0, 1080.0, 1200.0, 1280.0, 1440.0, 1600.0,
-                    1920.0,
-                ] {
+                // Keep the original 760-point coverage without a right panel,
+                // and the reported 1080-point size with one. Full-height panel
+                // placement at 760 points is checked independently below.
+                let widths: &[f32] = if panel.is_some() {
+                    &[1080.0, 1120.0, 1200.0, 1280.0, 1440.0, 1600.0, 1920.0]
+                } else {
+                    &[
+                        760.0, 800.0, 860.0, 900.0, 1000.0, 1080.0, 1200.0, 1280.0, 1440.0, 1600.0,
+                        1920.0,
+                    ]
+                };
+                for &width in widths {
+                    let narrowest = width == widths[0];
                     let mut draw = || {
                         let mut output = ctx.run_ui(
                             egui::RawInput {
@@ -4956,7 +4963,7 @@ mod tests {
                             "the update badge covers {} px of the search field at {width} px",
                             field - release
                         );
-                        if width == 760.0 {
+                        if narrowest {
                             let button = accessible_node(&tree, label, Role::Button);
                             let mut output = ctx.run_ui(
                                 egui::RawInput {
@@ -4985,5 +4992,51 @@ mod tests {
             }
         }
         app.backend.shutdown();
+    }
+    #[test]
+    fn side_panels_keep_their_full_height_beside_the_page_toolbar() {
+        for theme in ["dark", "light"] {
+            let (ctx, mut app) = accessible_app(&format!("full-height-panels-{theme}"));
+            app.open(Page::Playlist("pl1".into()));
+            app.settings.theme = if theme == "light" {
+                crate::settings::ThemeChoice::Light
+            } else {
+                crate::settings::ThemeChoice::Dark
+            };
+            app.actions.push(Action::SettingsChanged);
+            for panel in ["queue", "lyrics"] {
+                app.show_queue_panel = panel == "queue";
+                app.show_lyrics_panel = panel == "lyrics";
+                for width in [760.0, 1080.0, 1600.0] {
+                    for _ in 0..3 {
+                        let mut output = ctx.run_ui(
+                            egui::RawInput {
+                                screen_rect: Some(egui::Rect::from_min_size(
+                                    egui::Pos2::ZERO,
+                                    egui::vec2(width, 800.0),
+                                )),
+                                ..Default::default()
+                            },
+                            |ui| app.frame_ui(ui),
+                        );
+                        output.textures_delta.clear();
+                    }
+                    let rect = |name: &str| {
+                        egui::containers::panel::PanelState::load(&ctx, egui::Id::new(name))
+                            .expect("the panel was drawn")
+                            .outer_rect
+                    };
+                    let side = rect(&format!("{panel}-panel"));
+                    let library = rect("sidebar");
+                    let player = rect("player-bar");
+                    assert_eq!(side.top(), library.top(), "{panel} at {width} in {theme}");
+                    assert_eq!(side.top(), 0.0, "{panel} must start at the window top");
+                    assert_eq!(side.bottom(), player.top());
+                    let search = ctx.read_response(egui::Id::new("global-search")).unwrap();
+                    assert!(side.top() < search.rect.top());
+                }
+            }
+            app.backend.shutdown();
+        }
     }
 }

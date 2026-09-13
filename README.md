@@ -53,8 +53,7 @@ everyday use, and connection details.
   access finds playlists. Each part appears independently, even if the other fails.
 
   On `main`, after 0.7.1, the search field stays clear of the device and update
-  badges in narrow windows; hover their icons to read the labels. The bar
-  spans above the page and Queue or Lyrics so opening a right panel keeps Search usable.
+  badges in narrow windows; hover their icons to read the labels.
 - **Home** with Made for you, Recently played, your top artists and songs, and
   recommendations. Right-click playlist shortcuts and shelf cards for their actions.
 - **Artist pages** with popular songs, a filterable discography, and related

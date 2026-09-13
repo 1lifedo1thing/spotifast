@@ -29,6 +29,9 @@ const UPDATE_BADGE_PADDING: f32 = 32.0;
 const SEARCH_IDEAL: f32 = 200.0;
 const SEARCH_MAX: f32 = 440.0;
 const SEARCH_FLOOR: f32 = 130.0;
+// After the badges collapse, a right panel can leave less than 130 points.
+// Keep the original 80-point minimum inside the page's own toolbar.
+const SEARCH_MIN: f32 = 80.0;
 /// Everything at the right end whose width never changes: the page padding,
 /// the avatar, the gap the account menu leaves, the three icon buttons, and
 /// the spacing between them. The cursor stops at the left edge of the last
@@ -58,7 +61,7 @@ fn topbar_fit(room: f32, controls: f32, labelled: f32, icons: f32) -> TopbarFit 
     let labels = room - controls - labelled >= SEARCH_FLOOR;
     let badges = if labels { labelled } else { icons };
     TopbarFit {
-        search: (room - controls - badges).clamp(SEARCH_FLOOR, ideal),
+        search: (room - controls - badges).clamp(SEARCH_MIN, ideal),
         labels,
     }
 }
@@ -164,7 +167,12 @@ fn nav_button(
 pub fn show(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let width = ui.available_width();
-    let window_controls = super::window_controls_reservation(ui.ctx(), width);
+    let window_controls = super::window_controls_reservation(
+        ui.ctx(),
+        app.show_queue_panel,
+        app.show_lyrics_panel,
+        width,
+    );
     // Where the titlebar used to be: the bar grows upwards into that space and
     // its empty parts drag the window.
     let inset = theme::titlebar_inset(ui.ctx());
@@ -540,6 +548,15 @@ mod topbar_fit_tests {
             }
             room += 1.0;
         }
+    }
+
+    #[test]
+    fn a_right_panel_can_narrow_search_after_the_badges_collapse() {
+        let room = RIGHT_CONTROLS_WIDTH + CHIP * 2.0 + 100.0;
+        let fit = topbar_fit(room, RIGHT_CONTROLS_WIDTH, DEVICE + UPDATE, CHIP * 2.0);
+        assert!(!fit.labels);
+        assert_eq!(fit.search, 100.0);
+        assert_eq!(right_end(room, DEVICE + UPDATE, CHIP * 2.0), 0.0);
     }
 
     #[test]
