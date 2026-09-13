@@ -677,13 +677,7 @@ async fn run_events(
         {
             continue;
         }
-        match &event {
-            PlayerEvent::TrackChanged { .. } | PlayerEvent::Seeked { .. } => {
-                audio.track_changed();
-            }
-            PlayerEvent::Stopped { .. } => audio.stopped(),
-            _ => {}
-        }
+        audio.handle_player_event(&event);
         let snapshot = {
             let mut current = state.lock().unwrap_or_else(|p| p.into_inner());
             if apply_event(&mut current, event) {

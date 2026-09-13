@@ -33,6 +33,13 @@ On `main`, for the release after 0.7.1, local playback retains the artist IDs
 already supplied by librespot. Artist links in the player bar work before the
 Web API's track metadata arrives, without an extra request.
 
+On `main`, after 0.7.1, local seeks discard audio queued from the previous
+position once librespot confirms the seek. This also applies when another
+Spotify client controls playback on this computer. Natural track transitions
+retain their queue for gapless playback. The seek still waits for librespot to
+find and fetch the requested audio, and sound already handed to the device
+cannot be recalled. Seeking adds no Web API request or full-track download.
+
 On `main`, for the release after 0.7.1, requests that need a grant still being
 verified wait for it instead of showing "not signed in". Sign-out cancels
 pending requests, and their late results cannot undo a new sign-in. If Spotify
