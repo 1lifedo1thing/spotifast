@@ -151,6 +151,15 @@ successful write advances the cached playlist to Spotify's returned snapshot
 instead of downloading the playlist again. If Spotify cannot answer the scan,
 Fastpotify preserves the requested edit and lets the write report its result.
 
+On `main`, after 0.7.1, manually reloading an edited playlist waits for all
+pending writes and confirmation of the returned Spotify revision before
+requesting replacement rows. Current rows, filtering, sorting, and selection
+stay visible while it loads. Automatic paging also waits for those edits.
+If metadata still reports an older revision after three immediate rechecks,
+or the request fails, the page keeps the edits and offers a retry. Refreshing
+again retries confirmation without losing the local changes. This uses the
+existing playlist requests and adds no periodic polling.
+
 ## Receivers on the local network
 
 Spotify's device list only shows signed-in receivers. A new librespot or

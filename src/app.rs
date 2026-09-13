@@ -3061,6 +3061,13 @@ impl App {
                 }
             }
             Page::Playlist(id) => {
+                if self.playlist_pages.get(&id).is_some_and(|page| {
+                    page.pending_writes > 0
+                        || page.optimistic_snapshot.is_some()
+                        || page.items.error.is_some()
+                }) {
+                    return;
+                }
                 let restart_from_top = self.playlist_pages.get(&id).is_some_and(|page| {
                     page.items.base_offset > 0
                         && (!page.filter.trim().is_empty()
@@ -3125,6 +3132,7 @@ impl App {
             page.local_additions.clear();
             page.optimistic_snapshot = None;
             page.snapshot_rechecks = 0;
+            page.refresh_after_write = false;
             page.generation
         };
         self.clear_picked_rows();
@@ -3166,9 +3174,25 @@ impl App {
             Page::Episodes => self.library.episodes.reset(),
             Page::Playlist(id) => {
                 if let Some(playlist) = self.playlist_pages.get_mut(id) {
+                    playlist.items.loading = true;
+                    playlist.items.error = None;
+                    if playlist.pending_writes > 0 || playlist.optimistic_snapshot.is_some() {
+                        // A refresh must not turn pre-write rows into a new,
+                        // apparently current generation. Wait for the write's
+                        // metadata confirmation before asking for rows.
+                        playlist.refresh_after_write = true;
+                        playlist.snapshot_rechecks = 0;
+                        if playlist.pending_writes == 0 {
+                            self.backend.api(ApiRequest::Playlist {
+                                id: id.clone(),
+                                generation: playlist.generation,
+                            });
+                        }
+                        return;
+                    }
+                    playlist.refresh_after_write = false;
                     self.load_generation += 1;
                     playlist.generation = self.load_generation;
-                    playlist.items.loading = true;
                     playlist.cache_checked = true;
                     playlist.cache_restored_through = None;
                     playlist.pending_cache = None;
@@ -4010,7 +4034,7 @@ impl App {
                 if self
                     .playlist_pages
                     .get(&id)
-                    .is_none_or(|page| page.generation != generation)
+                    .is_none_or(|page| page.generation != generation || page.pending_writes > 0)
                 {
                     return;
                 }
@@ -4034,9 +4058,15 @@ impl App {
                     }
                 });
                 if stale_write_snapshot {
-                    let page = &self.playlist_pages[&id];
+                    let page = self.playlist_pages.get_mut(&id).unwrap();
                     if page.snapshot_rechecks <= 3 {
                         self.backend.api(ApiRequest::Playlist { id, generation });
+                    } else {
+                        page.refresh_after_write = false;
+                        page.items.fail(
+                            "Spotify hasn't confirmed your playlist changes yet. Try refreshing again."
+                                .into(),
+                        );
                     }
                     return;
                 }
@@ -4054,7 +4084,17 @@ impl App {
                         self.tint_for(Some(image));
                     }
                 }
+                let mut refresh_rows = false;
                 if let Some(page) = self.playlist_pages.get_mut(&id) {
+                    if page.refresh_after_write || page.optimistic_snapshot.is_some() {
+                        match &result {
+                            Ok(_) => refresh_rows = page.refresh_after_write,
+                            Err(error) => {
+                                page.refresh_after_write = false;
+                                page.items.fail(friendly_page_error(error));
+                            }
+                        }
+                    }
                     let old_snapshot = page
                         .playlist
                         .get()
@@ -4076,6 +4116,9 @@ impl App {
                 }
                 self.try_adopt_playlist_cache(&id);
                 self.checkpoint_playlist_cache(&id);
+                if refresh_rows {
+                    self.reload(Page::Playlist(id));
+                }
             }
             ApiResponse::PlaylistItems {
                 id,
@@ -4083,11 +4126,11 @@ impl App {
                 generation,
                 result,
             } => {
-                if self
-                    .playlist_pages
-                    .get(&id)
-                    .is_none_or(|page| page.generation != generation)
-                {
+                if self.playlist_pages.get(&id).is_none_or(|page| {
+                    page.generation != generation
+                        || page.pending_writes > 0
+                        || page.optimistic_snapshot.is_some()
+                }) {
                     return;
                 }
                 let mut uris = Vec::new();
@@ -5944,7 +5987,7 @@ impl App {
         page.items_generation = page.generation;
         // Reads issued before the edit describe the old snapshot and must not
         // be allowed to replace the optimistic rows when they arrive.
-        page.items.loading = false;
+        page.items.loading = page.refresh_after_write;
         page.cache_saved_through = None;
         page.cache_restored_through = None;
         page.pending_cache = None;
@@ -11307,7 +11350,11 @@ mod tests {
         };
         app.handle_api(metadata("first-write"));
         assert_eq!(app.playlist_pages["edited"].pending_writes, 1);
-        assert!(app.playlist_pages["edited"].optimistic_snapshot.is_none());
+        assert_eq!(
+            app.playlist_pages["edited"].optimistic_snapshot.as_deref(),
+            Some("first-write"),
+            "metadata cannot confirm the page while another write is pending"
+        );
         for i in 25..50 {
             seed_playlist(&mut app, &format!("other-{i}"));
         }
@@ -12103,6 +12150,268 @@ mod tests {
             app.backend.take_playlist_add_requests().as_slice(),
             [ApiRequest::AddToPlaylist { position: None, .. }]
         ));
+    }
+
+    #[test]
+    fn playlist_refresh_preserves_the_view_and_failed_reads_keep_its_rows() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        let page = Page::Playlist("best".into());
+        app.playlist_pages.insert(
+            "best".into(),
+            PlaylistPage {
+                items: PagedList {
+                    items: vec![cached_playlist_row("spotify:track:first")],
+                    total: Some(1),
+                    loaded_once: true,
+                    ..Default::default()
+                },
+                filter: "first".into(),
+                ..Default::default()
+            },
+        );
+        let sort = TableSort {
+            column: SortColumn::Title,
+            ascending: false,
+        };
+        app.table_sorts.insert(page.clone(), sort);
+        app.pick_row(&page, "best", 0, RowPick::Only, 1);
+        app.reload(page.clone());
+        let generation = app.playlist_pages["best"].generation;
+        assert_eq!(
+            app.backend.take_playlist_item_requests(),
+            [("best".into(), 0, generation)]
+        );
+        assert_eq!(app.table_sorts[&page], sort);
+        assert_eq!(picked(&app, &page), [0]);
+        assert_eq!(app.playlist_pages["best"].filter, "first");
+        app.handle_api(ApiResponse::PlaylistItems {
+            id: "best".into(),
+            offset: 0,
+            generation,
+            result: Err(crate::api::ApiError::Network("offline".into())),
+        });
+        let playlist = &app.playlist_pages["best"];
+        assert_eq!(playlist.items.items.len(), 1);
+        assert!(!playlist.items.loading);
+        assert!(playlist.items.error.is_some());
+        app.reload(page);
+        assert!(app.playlist_pages["best"].items.loading);
+        assert!(app.playlist_pages["best"].items.error.is_none());
+        assert_eq!(app.backend.take_playlist_item_requests().len(), 1);
+    }
+
+    #[test]
+    fn failed_playlist_write_finishes_a_waiting_refresh_with_the_recovery_read() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.playlist_pages.insert(
+            "edited".into(),
+            PlaylistPage {
+                pending_writes: 1,
+                ..Default::default()
+            },
+        );
+        app.reload(Page::Playlist("edited".into()));
+        assert!(app.backend.take_playlist_item_requests().is_empty());
+        app.handle_api(ApiResponse::PlaylistItemsChanged {
+            id: "edited".into(),
+            message: String::new(),
+            result: Err(crate::api::ApiError::Network("offline".into())),
+        });
+        let generation = app.playlist_pages["edited"].generation;
+        assert_eq!(
+            app.backend.take_playlist_item_requests(),
+            [("edited".into(), 0, generation)]
+        );
+        app.handle_api(ApiResponse::Playlist {
+            id: "edited".into(),
+            generation,
+            result: Ok(Playlist::default()),
+        });
+        assert!(
+            app.backend.take_playlist_item_requests().is_empty(),
+            "the recovery read already handles the waiting refresh"
+        );
+        app.handle_api(ApiResponse::PlaylistItems {
+            id: "edited".into(),
+            offset: 0,
+            generation,
+            result: Ok(crate::api::models::Page::default()),
+        });
+        assert!(!app.playlist_pages["edited"].items.loading);
+    }
+
+    #[test]
+    fn playlist_refresh_waits_for_all_writes_and_their_confirmed_snapshot() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.playlist_pages.insert(
+            "edited".into(),
+            PlaylistPage {
+                playlist: Loadable::Loaded(Playlist {
+                    id: "edited".into(),
+                    snapshot_id: Some("old".into()),
+                    items_count: Some(TrackCount { total: 1 }),
+                    ..Default::default()
+                }),
+                items: PagedList {
+                    items: vec![cached_playlist_row("spotify:track:first")],
+                    total: Some(1),
+                    loaded_once: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        );
+        for uri in ["spotify:track:second", "spotify:track:third"] {
+            app.add_to_playlist_now(
+                "edited".into(),
+                "Edited".into(),
+                vec![cached_playlist_row(uri).playable().unwrap().clone()],
+                None,
+            );
+        }
+        let generation = app.playlist_pages["edited"].generation;
+        app.reload(Page::Playlist("edited".into()));
+        assert!(
+            app.backend.take_playlist_item_requests().is_empty(),
+            "refresh must not read the rows before the pending writes finish"
+        );
+        let metadata = |snapshot: &str, total| ApiResponse::Playlist {
+            id: "edited".into(),
+            generation,
+            result: Ok(Playlist {
+                id: "edited".into(),
+                snapshot_id: Some(snapshot.into()),
+                items_count: Some(TrackCount { total }),
+                ..Default::default()
+            }),
+        };
+        app.handle_api(ApiResponse::PlaylistItemsChanged {
+            id: "edited".into(),
+            message: String::new(),
+            result: Ok(Some("first-write".into())),
+        });
+        app.handle_api(metadata("first-write", 2));
+        assert_eq!(app.playlist_pages["edited"].items.total, Some(3));
+        assert!(app.backend.take_playlist_item_requests().is_empty());
+        app.handle_api(ApiResponse::PlaylistItemsChanged {
+            id: "edited".into(),
+            message: String::new(),
+            result: Ok(Some("second-write".into())),
+        });
+        app.handle_api(metadata("first-write", 2));
+        assert_eq!(app.playlist_pages["edited"].items.total, Some(3));
+        assert!(app.backend.take_playlist_item_requests().is_empty());
+        assert!(app.playlist_pages["edited"].items.loading);
+
+        app.handle_api(metadata("second-write", 3));
+        let refreshed_generation = app.playlist_pages["edited"].generation;
+        assert!(refreshed_generation > generation);
+        assert_eq!(
+            app.backend.take_playlist_item_requests(),
+            [("edited".into(), 0, refreshed_generation)]
+        );
+        let rows = |generation, uris: &[&str]| ApiResponse::PlaylistItems {
+            id: "edited".into(),
+            offset: 0,
+            generation,
+            result: Ok(crate::api::models::Page {
+                total: uris.len() as u32,
+                items: uris.iter().map(|uri| cached_playlist_row(uri)).collect(),
+                ..Default::default()
+            }),
+        };
+        app.handle_api(rows(generation, &["spotify:track:first"]));
+        assert_eq!(app.playlist_pages["edited"].items.items.len(), 3);
+        assert!(app.playlist_pages["edited"].items.loading);
+        let expected = [
+            "spotify:track:first",
+            "spotify:track:second",
+            "spotify:track:third",
+            "spotify:track:added-elsewhere",
+        ];
+        app.handle_api(rows(refreshed_generation, &expected));
+        let page = &app.playlist_pages["edited"];
+        assert!(!page.items.loading);
+        assert_eq!(
+            page.items
+                .items
+                .iter()
+                .map(|row| row.playable().unwrap().uri())
+                .collect::<Vec<_>>(),
+            expected
+        );
+    }
+
+    #[test]
+    fn playlist_refresh_can_retry_unconfirmed_edits_without_losing_them() {
+        for (network_failure, manual_refresh) in
+            [(false, false), (false, true), (true, false), (true, true)]
+        {
+            let mut app = headless_app();
+            app.backend.set_offline(true);
+            app.playlist_pages.insert(
+                "edited".into(),
+                PlaylistPage {
+                    playlist: Loadable::Loaded(Playlist {
+                        id: "edited".into(),
+                        snapshot_id: Some("written".into()),
+                        items_count: Some(TrackCount { total: 1 }),
+                        ..Default::default()
+                    }),
+                    items: PagedList {
+                        items: vec![cached_playlist_row("spotify:track:new")],
+                        total: Some(1),
+                        loaded_once: true,
+                        ..Default::default()
+                    },
+                    optimistic_snapshot: Some("written".into()),
+                    local_additions: ["spotify:track:new".into()].into(),
+                    ..Default::default()
+                },
+            );
+            if manual_refresh {
+                app.reload(Page::Playlist("edited".into()));
+            }
+            assert!(app.backend.take_playlist_item_requests().is_empty());
+            let generation = app.playlist_pages["edited"].generation;
+            let metadata = |snapshot: &str| ApiResponse::Playlist {
+                id: "edited".into(),
+                generation,
+                result: Ok(Playlist {
+                    snapshot_id: Some(snapshot.into()),
+                    items_count: Some(TrackCount { total: 1 }),
+                    ..Default::default()
+                }),
+            };
+            if network_failure {
+                app.handle_api(ApiResponse::Playlist {
+                    id: "edited".into(),
+                    generation,
+                    result: Err(crate::api::ApiError::Network("offline".into())),
+                });
+            } else {
+                for _ in 0..4 {
+                    app.handle_api(metadata("old"));
+                }
+            }
+            let page = &app.playlist_pages["edited"];
+            assert!(!page.items.loading, "failed refresh must stop spinning");
+            assert!(page.items.error.is_some());
+            assert_eq!(page.items.items.len(), 1);
+            assert!(page.local_additions.contains("spotify:track:new"));
+            assert_eq!(page.optimistic_snapshot.as_deref(), Some("written"));
+            app.load_more(Page::Playlist("edited".into()));
+            assert!(app.backend.take_playlist_item_requests().is_empty());
+
+            app.reload(Page::Playlist("edited".into()));
+            assert!(app.playlist_pages["edited"].items.loading);
+            assert!(app.playlist_pages["edited"].items.error.is_none());
+            app.handle_api(metadata("written"));
+            assert_eq!(app.backend.take_playlist_item_requests().len(), 1);
+        }
     }
 
     #[test]

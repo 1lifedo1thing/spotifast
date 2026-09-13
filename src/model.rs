@@ -527,6 +527,9 @@ pub struct PlaylistPage {
     /// Writes still awaiting a result. Keep their optimistic rows in memory
     /// even when navigation moves beyond the usual page-cache limit.
     pub pending_writes: usize,
+    /// A manual refresh waiting for pending writes and their snapshot to be
+    /// confirmed before requesting replacement rows.
+    pub refresh_after_write: bool,
     /// Number of immediate metadata reads made while Spotify still reported
     /// the pre-write snapshot.
     pub snapshot_rechecks: u8,

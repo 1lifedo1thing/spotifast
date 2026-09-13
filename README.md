@@ -92,6 +92,8 @@ everyday use, and connection details.
   Cached playlists must match Spotify's revision and song count before their
   rows can determine playback order. Pending playlist edits stay visible and
   are saved to that cache only after all writes succeed.
+  Refresh waits for pending edits and their Spotify revision to be confirmed;
+  a failed refresh keeps the current rows and offers a retry.
 - **Resumes the last session.** On startup, the last song is paused where it
   stopped. Play resumes it, and the other playback controls work before it
   starts.
