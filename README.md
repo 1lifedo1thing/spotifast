@@ -212,6 +212,10 @@ vcpkg (`vcpkg install glew:x64-windows-static`, with
 With [Nix](https://nixos.org), `nix develop` provides all of it, along with
 the exact toolchain `rust-toolchain.toml` pins.
 
+An official public binary cache is not active yet. CI can publish its Linux
+Nix builds once a maintainer configures Cachix; see
+[Nix binary cache setup](docs/_reference/nix-cache.md).
+
 On macOS, the flake also exposes `packages.<system>.fastpotify-app`, an
 ad-hoc signed `Fastpotify.app` bundle for the Dock, Launch Services, and
 `spotify:` links. With nix-darwin, add it to `environment.systemPackages`
