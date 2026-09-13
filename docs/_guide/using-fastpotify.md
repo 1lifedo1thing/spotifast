@@ -85,6 +85,9 @@ field to see everything again.
 Right-click a search, filter, settings or playlist-editing text field for
 **Cut**, **Copy**, **Paste** and **Select all**. Cut and Copy require a text
 selection. The usual keyboard shortcuts, including Undo, still work.
+On `main`, after 0.7.1, Ctrl, Cmd and Alt arrow keys move the caret while
+a text field has focus. Playback and navigation shortcuts on those keys
+remain available from song rows and other controls.
 
 The main window provides screen-reader names for playback controls, library
 and song rows, menus, sliders, and settings switches. `Tab` and `Shift+Tab`

@@ -298,6 +298,9 @@ those things, and [CONTRIBUTING.md](CONTRIBUTING.md) prohibits them.
 
 ## Keyboard shortcuts
 
+On `main`, after 0.7.1, text fields keep their usual Ctrl, Cmd and Alt arrow
+keys for moving the caret while you type.
+
 Hold `Shift` while turning the mouse wheel to scroll horizontal shelves,
 including Made for you and Recently played on Home.
 
