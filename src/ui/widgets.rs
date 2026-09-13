@@ -720,6 +720,15 @@ fn columns(width: f32, row: &TrackRow<'_>) -> Columns {
 /// Returns the selection behavior for a row-body click. The caller supplies
 /// the display index because sorting and filtering change row positions.
 pub fn track_row(ui: &mut Ui, app: &mut App, row: TrackRow<'_>) -> Option<RowPick> {
+    track_row_response(ui, app, row).1
+}
+
+/// Also exposes the row body so a collection can navigate between whole songs.
+pub(crate) fn track_row_response(
+    ui: &mut Ui,
+    app: &mut App,
+    row: TrackRow<'_>,
+) -> (egui::Response, Option<RowPick>) {
     // Virtual lists reuse the visible slots as they scroll. Keep focus and
     // accessibility actions attached to the song and its occurrence instead.
     // Now playing and Next up can both contain the same song at index zero.
@@ -736,7 +745,11 @@ pub fn track_row(ui: &mut Ui, app: &mut App, row: TrackRow<'_>) -> Option<RowPic
     .inner
 }
 
-fn track_row_contents(ui: &mut Ui, app: &mut App, row: TrackRow<'_>) -> Option<RowPick> {
+fn track_row_contents(
+    ui: &mut Ui,
+    app: &mut App,
+    row: TrackRow<'_>,
+) -> (egui::Response, Option<RowPick>) {
     let palette = app.palette;
     let row_height = if row.thin {
         theme::THIN_ROW_HEIGHT
@@ -764,7 +777,7 @@ fn track_row_contents(ui: &mut Ui, app: &mut App, row: TrackRow<'_>) -> Option<R
         response.scroll_to_me(None);
     }
     if !ui.is_rect_visible(rect) && !response.has_focus() && !response.clicked() {
-        return None;
+        return (response, None);
     }
     // Start a sidebar drag only after egui's drag threshold.
     if row.item.is_track() && response.drag_started_by(egui::PointerButton::Primary) {
@@ -1289,6 +1302,7 @@ fn track_row_contents(ui: &mut Ui, app: &mut App, row: TrackRow<'_>) -> Option<R
             }
         } else if !on_control {
             // The body of the row, which plays nothing on a single click.
+            response.request_focus();
             let modifiers = ui.input(|input| input.modifiers);
             pick = Some(if modifiers.shift {
                 RowPick::Range
@@ -1311,7 +1325,7 @@ fn track_row_contents(ui: &mut Ui, app: &mut App, row: TrackRow<'_>) -> Option<R
                 item_menu(ui, app, row.item, Some(row.context), Some(row.index));
             }
         });
-    pick
+    (response, pick)
 }
 
 /// Scroll the enclosing list while a held drag approaches its visible edges.

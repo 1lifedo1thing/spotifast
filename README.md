@@ -276,7 +276,10 @@ including Made for you and Recently played on Home.
 The main window exposes named playback controls, library and song rows,
 menus, sliders, and settings switches to screen readers. Use `Tab` and
 `Shift+Tab` to move focus, then `Enter` or `Space` to activate a control or
-play a focused song. Left and right arrows adjust a focused volume or seek
+play a focused song. In a playlist, album or Liked Songs, up and down arrows
+move focus between whole song rows in the displayed order and scroll them
+into view. Tab still reaches the artist links, Like and More controls.
+Left and right arrows adjust a focused volume or seek
 slider. Windows testing with NVDA and accessibility for Winamp skins are
 still in progress.
 

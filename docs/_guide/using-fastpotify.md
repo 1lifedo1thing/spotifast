@@ -71,6 +71,11 @@ move keyboard focus, shown by an outline. `Enter` or `Space` activates the
 focused control; on a song row, it plays that song. The row's **More** button
 opens its menu from the keyboard too.
 
+In a playlist, album or Liked Songs, focus a song row and use the up and down
+arrows to move between whole rows in the displayed order. Rows scroll into
+view as you move; Enter plays the focused song. Tab still reaches artist
+links and each row's Like and More controls.
+
 Left and right arrows adjust a focused volume slider by five percentage
 points, or the seek slider by one percent of the song. Screen readers can
 also read and set these sliders' values. `Ctrl+F` (`Cmd+F` on macOS) focuses
