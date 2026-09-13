@@ -145,7 +145,10 @@ A release is not the tag alone. Do these in order:
    through the Changelog link. Never make the download page point at files
    that do not exist yet.
 5. Update the Homebrew cask in the maintainer's tap and the AUR package from
-   the release's `checksums.txt`.
+   the release's `checksums.txt`. The packaging workflow handles configured
+   destinations when `PUBLISH_HOMEBREW` and `PUBLISH_AUR` are enabled. Otherwise
+   use the in-repository packaging CLI to prepare, review and publish them;
+   see `PACKAGING.md`. Native package validation remains required.
 
 Before writing release notes, read the previous two stable releases and match
 their style. Start with a short plain-language summary, use `New` and `Fixed`

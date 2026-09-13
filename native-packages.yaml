@@ -1,0 +1,150 @@
+# Shared CLI: gem install native-packages --version 0.2.0
+---
+schema: 1
+tool:
+  version: 0.2.0
+  nfpm: 2.47.0
+nfpm:
+  name: fastpotify
+  maintainer: Carmine Paolino <carmine@paolino.me>
+  homepage: https://github.com/crmne/fastpotify
+  description: Native Spotify client
+  license: MIT
+  contents:
+  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/fastpotify"
+    dst: "/usr/bin/fastpotify"
+    file_info:
+      mode: 493
+  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/LICENSE"
+    dst: "/usr/share/licenses/fastpotify/LICENSE"
+    file_info:
+      mode: 420
+  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/README.md"
+    dst: "/usr/share/doc/fastpotify/README.md"
+    file_info:
+      mode: 420
+  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/packaging/applications/fastpotify.desktop"
+    dst: "/usr/share/applications/fastpotify.desktop"
+    file_info:
+      mode: 420
+  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/packaging/icons/fastpotify.svg"
+    dst: "/usr/share/icons/hicolor/scalable/apps/fastpotify.svg"
+    file_info:
+      mode: 420
+  overrides:
+    deb:
+      depends:
+      - libc6 (>= 2.39)
+      - libgl1
+      - libxkbcommon0
+      - libwayland-client0
+      - libx11-6
+      - libasound2
+      - libpulse0
+      - libgcc-s1
+      - libstdc++6
+    rpm:
+      depends:
+      - glibc >= 2.39
+      - libglvnd-glx
+      - libxkbcommon
+      - wayland-libs
+      - libX11
+      - alsa-lib
+      - pulseaudio-libs
+      - libgcc
+      - libstdc++
+  rpm:
+    buildhost: github-actions
+targets:
+  linux-amd64:
+    platform: linux
+    arch: amd64
+    libc: glibc
+    compiler_target: x86_64-unknown-linux-gnu
+    formats:
+    - deb
+    - rpm
+    input:
+      local: dist/fastpotify-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
+      release_asset: fastpotify-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
+  linux-arm64:
+    platform: linux
+    arch: arm64
+    libc: glibc
+    compiler_target: aarch64-unknown-linux-gnu
+    formats:
+    - deb
+    - rpm
+    input:
+      local: dist/fastpotify-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
+      release_asset: fastpotify-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
+release:
+  repository: crmne/fastpotify
+  checksums: checksums.txt
+assets:
+  AMD64:
+    file: fastpotify-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
+    local: dist/fastpotify-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
+  ARM64:
+    file: fastpotify-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
+    local: dist/fastpotify-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
+  SOURCE:
+    file: fastpotify-v@VERSION@-source.tar.gz
+    local: dist/fastpotify-v@VERSION@-source.tar.gz
+  MACOS:
+    file: fastpotify-v@VERSION@-macos-universal.dmg
+    local: dist/fastpotify-v@VERSION@-macos-universal.dmg
+templates:
+  arch/fastpotify/PKGBUILD: packaging/arch/fastpotify/PKGBUILD.in
+  arch/fastpotify/fastpotify.install: packaging/arch/fastpotify.install
+  arch/fastpotify-bin/PKGBUILD: packaging/arch/fastpotify-bin/PKGBUILD.in
+  arch/fastpotify-bin/fastpotify-bin.install: packaging/arch/fastpotify.install
+  arch/fastpotify-git/PKGBUILD: packaging/arch/fastpotify-git/PKGBUILD.in
+  arch/fastpotify-git/fastpotify-git.install: packaging/arch/fastpotify.install
+  homebrew/fastpotify.rb: packaging/homebrew/fastpotify.rb.in
+repositories:
+  aur-source:
+    group: aur
+    url: https://aur.archlinux.org/fastpotify.git
+    push_url: ssh://aur@aur.archlinux.org/fastpotify.git
+    branch: master
+    package_path: "."
+    files:
+      arch/fastpotify: "."
+    version_file: ".SRCINFO"
+    version_pattern: "^\\s*pkgver = (\\S+)"
+    publish: push
+  aur-bin:
+    group: aur
+    url: https://aur.archlinux.org/fastpotify-bin.git
+    push_url: ssh://aur@aur.archlinux.org/fastpotify-bin.git
+    branch: master
+    package_path: "."
+    files:
+      arch/fastpotify-bin: "."
+    version_file: ".SRCINFO"
+    version_pattern: "^\\s*pkgver = (\\S+)"
+    publish: push
+  aur-git:
+    group: aur
+    url: https://aur.archlinux.org/fastpotify-git.git
+    push_url: ssh://aur@aur.archlinux.org/fastpotify-git.git
+    branch: master
+    package_path: "."
+    files:
+      arch/fastpotify-git: "."
+    version_file: ".SRCINFO"
+    version_pattern: "^\\s*pkgver = (\\S+)"
+    publish: push
+  homebrew:
+    url: https://github.com/crmne/homebrew-tap.git
+    push_url: https://github.com/crmne/homebrew-tap.git
+    branch: main
+    package_path: Casks
+    files:
+      homebrew/fastpotify.rb: Casks/fastpotify.rb
+    version_file: Casks/fastpotify.rb
+    version_pattern: version "([^"]+)"
+    publish: push
+version_file: Cargo.toml
