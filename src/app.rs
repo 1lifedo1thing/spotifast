@@ -6237,6 +6237,9 @@ impl App {
                 RowContext::Queue => self.play_queue_item(index as usize, uri),
                 RowContext::View { uris, context_uri } => {
                     let (uris, index) = cap_uris(uris.as_ref(), index);
+                    if let Some(uri) = uris.get(index as usize) {
+                        self.cache_track_from_context(&context_uri, uri);
+                    }
                     let request = PlayRequest::tracks(uris).starting_at_index(index);
                     self.play_request(request, false);
                     self.note_recent_context(&context_uri);
@@ -13095,6 +13098,75 @@ mod tests {
         app.handle_playback(LocalPlayback::Failed("test connection failure".into()));
         assert!(app.requested_track_preview().is_none());
         app.backend.shutdown();
+    }
+
+    #[test]
+    fn sorted_view_play_shows_an_uncached_song_while_local_playback_connects() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        let ctx = egui::Context::default();
+        let first = Track {
+            id: Some("first".into()),
+            uri: "spotify:track:first".into(),
+            name: "First in the sorted view".into(),
+            duration_ms: 180_000,
+            ..Default::default()
+        };
+        app.playlist_pages.insert(
+            "mix".into(),
+            PlaylistPage {
+                items: PagedList {
+                    items: vec![
+                        cached_playlist_row("spotify:track:other"),
+                        PlaylistItem {
+                            item: Some(PlayableItem::Track(first.clone())),
+                            ..Default::default()
+                        },
+                    ],
+                    loaded_once: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        );
+        assert!(!app.track_cache.contains_key("first"));
+        app.apply(
+            Action::PlayFromRow {
+                context: RowContext::View {
+                    context_uri: "spotify:playlist:mix".into(),
+                    uris: vec![first.uri.clone(), "spotify:track:other".into()].into(),
+                },
+                uri: String::new(),
+                index: 0,
+            },
+            &ctx,
+        );
+        let now = app
+            .now_playing()
+            .expect("the requested song appears before the engine connects");
+        assert_eq!(now.uri, first.uri);
+        assert_eq!(now.title, first.name);
+        assert_eq!(now.position_ms, 0);
+        assert!(now.loading);
+        assert_eq!(
+            app.queued_play.as_ref().unwrap().uris,
+            vec![first.uri.clone(), "spotify:track:other".into()]
+        );
+        assert_eq!(
+            app.playlist_pages["mix"].items.items[0]
+                .playable()
+                .unwrap()
+                .uri(),
+            "spotify:track:other",
+            "previewing must not change the playlist order"
+        );
+        app.intent_track.as_mut().unwrap().at =
+            Instant::now() - PLAYBACK_HOLD - Duration::from_secs(1);
+        assert_eq!(
+            app.now_playing().unwrap().uri,
+            first.uri,
+            "the preview stays while the play request is pending"
+        );
     }
 
     #[test]

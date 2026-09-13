@@ -55,6 +55,12 @@ order when Shuffle is off. Shuffle chooses a random starting song unless you
 choose a specific row. To resume the current song at its paused position,
 use **Play** in the bottom player bar or press `Space`.
 
+On `main`, after 0.7.1, starting playback from a sorted playlist or Liked Songs
+view immediately shows the requested song from the loaded rows. The preview
+stays while local playback connects, even when that song was not previously
+in the track cache. The selected order and the playlist stored on Spotify stay
+the same.
+
 ## Playing from the sidebar
 
 Double-click a playlist, Liked Songs, album, artist, or podcast row in the

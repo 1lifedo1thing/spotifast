@@ -25,6 +25,9 @@ everyday use, and connection details.
   playback can try another endpoint.
   On `main`, after 0.7.1, a confirmed local seek discards audio queued from
   the old position. Decoder, download, and device-buffer delays can still apply.
+  Starting a sorted playlist or Liked Songs view shows the requested song
+  immediately while playback connects, using its loaded metadata (on `main`,
+  after 0.7.1).
 - **Controls other devices.** Move playback to a speaker, a phone, or
   another computer from the device picker, and keep controlling it: play,
   pause, skip, seek, shuffle, repeat, volume. Long device lists scroll.
