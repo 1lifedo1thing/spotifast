@@ -25,6 +25,29 @@ builds the configured packages, and attaches them to the GitHub release.
 Configured recipes are attached as an archive. Package checksums are separate
 from the original binary checksums. PR validation never publishes.
 
+The Linux release runners are pinned to Ubuntu 24.04 (glibc 2.39). The native
+packages target Ubuntu 24.04 / Debian 13 and newer, and Fedora 41 and newer.
+Runtime-loaded GUI libraries must be declared explicitly in the YAML; ELF
+inspection only discovers linked dependencies. The ALSA library mapping also
+uses the Debian/Ubuntu `libasound2t64` name for this baseline.
+
+Packaging CI builds both architectures using a pinned published release
+(`v0.7.1`) for pushes and PRs, or the requested version for manual and release
+runs. It then installs and removes each package in clean Ubuntu 24.04, Debian
+13, Fedora 41 and current Fedora containers on native amd64 and arm64 runners.
+The checks run `fastpotify --version`, load the GUI libraries with `dlopen`,
+and verify the desktop entry and icon. They cover installation and library
+resolution, not a running desktop or Spotify playback. On release runs these
+checks follow artifact attachment; a failure marks the workflow as failed.
+
+To repeat a check locally on the matching architecture, with Docker and a C
+compiler available:
+
+```sh
+bash packaging/test-install.sh ubuntu:24.04 dist/packages/1.2.3
+bash packaging/test-install.sh fedora:latest dist/packages/1.2.3
+```
+
 Review or publish an existing build with the same installed CLI:
 
 ```sh

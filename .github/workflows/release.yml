@@ -20,7 +20,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          # Match the native packages' declared glibc 2.39 baseline.
+          - os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
           # A native arm64 runner, so the GUI's system libraries need no
           # cross-compilation sysroot.

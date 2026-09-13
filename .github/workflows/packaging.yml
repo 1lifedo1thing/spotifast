@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Published version (empty validates recipes only)
+        description: Published version (empty tests the pinned v0.7.1 fixture)
         type: string
         default: ''
       publish:
@@ -41,6 +41,29 @@ jobs:
       contents: write
     uses: crmne/native-packages/.github/workflows/package.yml@4ddc1447a1ac2b987cfc101d5b4859f622123c77 # v0.2.0
     with:
-      version: ${{ inputs.version || '' }}
+      # Packaging changes exercise real release binaries on both architectures.
+      # Update this fixture deliberately; releases use their own tag instead.
+      version: ${{ inputs.version || 'v0.7.1' }}
       publish: ${{ inputs.publish == true && inputs.version != '' }}
     secrets: inherit
+
+  installation:
+    name: Install (${{ matrix.os }}, ${{ matrix.image }})
+    needs: packaging
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+        image: ['ubuntu:24.04', 'debian:13-slim', 'fedora:41', 'fedora:latest']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-packages
+          path: dist/native-packages
+      - name: Install and check runtime libraries in a clean container
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: bash packaging/test-install.sh "$IMAGE" dist/native-packages

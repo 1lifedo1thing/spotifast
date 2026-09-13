@@ -4,6 +4,12 @@ schema: 1
 tool:
   version: 0.2.0
   nfpm: 2.47.0
+# Ubuntu 24.04 and Debian 13 use the ALSA t64 package name. Override ELF
+# inference as well as the explicit dependencies below.
+libraries:
+  libasound.so.2:
+    deb: libasound2t64
+    rpm: alsa-lib
 nfpm:
   name: fastpotify
   maintainer: Carmine Paolino <carmine@paolino.me>
@@ -32,14 +38,24 @@ nfpm:
     file_info:
       mode: 420
   overrides:
+    # ELF inspection cannot discover the GUI's dlopen dependencies. Keep
+    # these aligned with winit/glutin and packaging/check-runtime-libs.c.
     deb:
       depends:
       - libc6 (>= 2.39)
       - libgl1
+      - libegl1
       - libxkbcommon0
+      - libxkbcommon-x11-0
       - libwayland-client0
+      - libwayland-cursor0
+      - libwayland-egl1
       - libx11-6
-      - libasound2
+      - libx11-xcb1
+      - libxcursor1
+      - libxi6
+      - libxrandr2
+      - libasound2t64
       - libpulse0
       - libgcc-s1
       - libstdc++6
@@ -47,9 +63,17 @@ nfpm:
       depends:
       - glibc >= 2.39
       - libglvnd-glx
+      - libglvnd-egl
       - libxkbcommon
-      - wayland-libs
+      - libxkbcommon-x11
+      - libwayland-client
+      - libwayland-cursor
+      - libwayland-egl
       - libX11
+      - libX11-xcb
+      - libXcursor
+      - libXi
+      - libXrandr
       - alsa-lib
       - pulseaudio-libs
       - libgcc

@@ -11,7 +11,11 @@ Homebrew templates in `native-packages.yaml` and `packaging/`. Common automation
 Stable releases build the existing Linux, macOS and Windows artifacts first.
 The shared packaging workflow then verifies their published checksums and attaches
 Linux DEB/RPM packages and a recipe archive. AUR and Homebrew publication require
-their configured repository variables and secrets. PRs only validate recipes.
+their configured repository variables and secrets. PRs build packages from a
+pinned published release without publishing them. Installation checks cover
+Ubuntu 24.04, Debian 13, Fedora 41 and current Fedora on amd64 and arm64, including
+the GUI libraries loaded at runtime. They do not exercise desktop rendering or
+Spotify playback. Release checks run after the packages are attached.
 
 The application retains its Flatpak manifests, macOS bundle/signing configuration
 and Windows installer configuration. nFPM does not replace these platform tools.
