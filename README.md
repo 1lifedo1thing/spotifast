@@ -27,7 +27,9 @@ everyday use, and connection details.
   the old position. Decoder, download, and device-buffer delays can still apply.
   Starting a sorted playlist or Liked Songs view shows the requested song
   immediately while playback connects, using its loaded metadata (on `main`,
-  after 0.7.1).
+  after 0.7.1). Sorted views start at their first playable row. Filtering a
+  playlist or Liked Songs keeps playback within the shown songs and preserves
+  repeated songs; Play is unavailable when no shown song can play.
 - **Controls other devices.** Move playback to a speaker, a phone, or
   another computer from the device picker, and keep controlling it: play,
   pause, skip, seek, shuffle, repeat, volume. Long device lists scroll.

@@ -109,8 +109,7 @@ pub fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
 
 pub struct Actions<'a> {
     pub play_uri: Option<String>,
-    /// A sorted or filtered view: the exact list on screen, which the big
-    /// button plays instead of the context's own order.
+    /// Playable songs in the sorted or filtered view, in displayed order.
     pub view: Option<Arc<[String]>>,
     pub saved: Option<(String, bool)>,
     pub saved_icons: (Icon, Icon),
@@ -133,6 +132,10 @@ pub fn actions_row(
         if let Some(uri) = &actions.play_uri {
             let now_playing_here = app.playing_context_uri().as_deref() == Some(uri.as_str())
                 && app.believed_playing();
+            let is_filtered = filter.as_ref().is_some_and(|f| !f.trim().is_empty());
+            let play_view =
+                actions.view.is_some() && (!app.playing_context_shuffle() || is_filtered);
+            let can_start = actions.view.as_ref().is_none_or(|uris| !uris.is_empty());
             let icon = if now_playing_here {
                 Icon::PauseFilled
             } else {
@@ -140,22 +143,26 @@ pub fn actions_row(
             };
             if app.play_pending(uri) {
                 theme::circle_spinner(ui, 56.0, palette.accent, palette.on_accent, "Starting…");
-            } else if theme::circle_button(
-                ui,
-                icon,
-                56.0,
-                palette.accent,
-                palette.accent_hover,
-                palette.on_accent,
-                if now_playing_here { "Pause" } else { "Play" },
-            )
-            .clicked()
+            } else if ui
+                .add_enabled_ui(now_playing_here || can_start, |ui| {
+                    theme::circle_button(
+                        ui,
+                        icon,
+                        56.0,
+                        palette.accent,
+                        palette.accent_hover,
+                        palette.on_accent,
+                        if now_playing_here { "Pause" } else { "Play" },
+                    )
+                })
+                .inner
+                .on_disabled_hover_text("No playable songs in this view")
+                .clicked()
             {
-                let is_filtered = filter.as_ref().is_some_and(|f| !f.trim().is_empty());
                 if now_playing_here {
                     app.actions.push(Action::TogglePlay);
                 } else if let Some(uris) = actions.view.clone()
-                    && (!app.playing_context_shuffle() || is_filtered)
+                    && play_view
                 {
                     app.actions.push(Action::PlayFromRow {
                         context: RowContext::View {
@@ -313,6 +320,8 @@ pub struct TableCache {
     pub user_names_revision: u64,
     pub visible: Arc<[usize]>,
     pub view_uris: Option<Arc<[String]>>,
+    /// Playback positions for visible rows; unavailable rows have no position.
+    pub view_positions: Arc<[Option<usize>]>,
 }
 
 pub fn table_items_hit(
@@ -406,11 +415,18 @@ pub fn prepare_table_view(
         entry
     } else {
         let visible = view_indices(items, needle, sort);
-        let view_uris = sort.map(|_| {
-            visible
-                .iter()
-                .map(|&index| items[index].0.uri().to_string())
-                .collect::<Arc<[String]>>()
+        let mut view_positions = Vec::new();
+        let view_uris = (sort.is_some() || !needle.is_empty()).then(|| {
+            let mut uris = Vec::new();
+            for &index in &visible {
+                let item = &items[index].0;
+                view_positions.push(widgets::row_playable(item).then(|| {
+                    let position = uris.len();
+                    uris.push(item.uri().to_string());
+                    position
+                }));
+            }
+            Arc::<[String]>::from(uris)
         });
         let entry = Arc::new(TableCache {
             sort,
@@ -419,6 +435,7 @@ pub fn prepare_table_view(
             user_names_revision: app.user_names_revision,
             visible: visible.into(),
             view_uris,
+            view_positions: view_positions.into(),
         });
         ui.data_mut(|d| d.insert_temp(cache_id, Arc::clone(&entry)));
         entry
@@ -566,7 +583,11 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
             ui,
             app,
             TrackRow {
-                index: if sorted { row } else { actual_index },
+                index: if entry.view_uris.is_some() {
+                    entry.view_positions[row].unwrap_or(row)
+                } else {
+                    actual_index
+                },
                 number: Some(if sorted { row + 1 } else { actual_index + 1 }),
                 item,
                 context: &context,
@@ -778,7 +799,10 @@ fn items_of(
     list.items
         .iter()
         .filter_map(|item| {
-            let playable = item.playable().cloned()?;
+            let mut playable = item.playable().cloned()?;
+            if let PlayableItem::Track(track) = &mut playable {
+                track.is_local |= item.is_local;
+            }
             let adder = item
                 .added_by
                 .as_ref()
@@ -1525,6 +1549,7 @@ mod tests {
             user_names_revision: 2,
             visible: Arc::new([2]),
             view_uris: Some(Arc::new(["spotify:track:t_2".to_string()])),
+            view_positions: Arc::new([Some(0)]),
         };
 
         // Cache hit
@@ -1659,10 +1684,13 @@ mod tests {
             let id = tree
                 .nodes
                 .iter()
-                .find(|(_, node)| {
+                .filter(|(_, node)| {
                     node.label()
                         .is_some_and(|label| label.starts_with(&format!("Play {name},")))
                 })
+                // AccessKit node storage is not display order. Start at the
+                // first visible occurrence when a song appears more than once.
+                .min_by(|(_, a), (_, b)| a.bounds().unwrap().y0.total_cmp(&b.bounds().unwrap().y0))
                 .expect("song row")
                 .0;
             self.frame(vec![egui::Event::AccessKitActionRequest(

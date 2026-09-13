@@ -13101,6 +13101,246 @@ mod tests {
     }
 
     #[test]
+    fn collection_play_starts_at_the_first_available_row_in_the_shown_view() {
+        use egui::accesskit::{Action as AccessibleAction, ActionRequest, Role, TreeId};
+        for liked in [false, true] {
+            for filter in [None, Some("First"), Some("Unavailable"), Some("Missing")] {
+                let filtered = filter.is_some();
+                let ctx = egui::Context::default();
+                ctx.enable_accesskit();
+                let mut app = headless_app();
+                app.attach(&ctx);
+                crate::demo::populate(&mut app);
+                app.remote = None;
+                app.selected_device = None;
+                app.local.connected = false;
+                app.shuffle_wanted = false;
+                let track = |id: &str, name: &str, available, local| Track {
+                    id: Some(id.into()),
+                    uri: if local {
+                        "spotify:local:Artist:Album:Song:180".into()
+                    } else {
+                        format!("spotify:track:{id}")
+                    },
+                    name: name.into(),
+                    is_playable: Some(available),
+                    is_local: local,
+                    duration_ms: 180_000,
+                    ..Default::default()
+                };
+                let tracks = [
+                    track("other", "03 Other", true, false),
+                    track("unavailable", "00 Unavailable", false, false),
+                    track("local", "01 Local", true, true),
+                    track("first", "02 First", true, false),
+                    track("first", "02 First", true, false),
+                ];
+                let page = if liked {
+                    Page::LikedSongs
+                } else {
+                    Page::Playlist("pl1".into())
+                };
+                if liked {
+                    app.library.liked.items = tracks
+                        .iter()
+                        .map(|track| crate::api::models::SavedTrack {
+                            track: track.clone(),
+                            added_at: None,
+                        })
+                        .collect();
+                    app.library.liked.total = Some(5);
+                    app.library.liked.next_offset = None;
+                    app.library.liked.revision += 1;
+                    if let Some(filter) = filter {
+                        ctx.data_mut(|data| {
+                            data.insert_temp(egui::Id::new("liked-filter"), filter.to_string())
+                        });
+                    }
+                } else {
+                    let list = app.playlist_pages.get_mut("pl1").unwrap();
+                    list.items.items = tracks
+                        .iter()
+                        .map(|track| PlaylistItem {
+                            // Spotify can mark only the enclosing playlist row local.
+                            is_local: track.is_local,
+                            item: Some(PlayableItem::Track(Track {
+                                is_local: false,
+                                ..track.clone()
+                            })),
+                            ..Default::default()
+                        })
+                        .collect();
+                    list.items.total = Some(5);
+                    list.items.next_offset = None;
+                    list.items.revision += 1;
+                    if let Some(filter) = filter {
+                        list.filter = filter.into();
+                    }
+                }
+                if !filtered {
+                    app.table_sorts.insert(
+                        page.clone(),
+                        TableSort {
+                            column: SortColumn::Title,
+                            ascending: true,
+                        },
+                    );
+                }
+                app.open(page);
+                let mut draw = |events| {
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(egui::Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                egui::vec2(1280.0, 800.0),
+                            )),
+                            events,
+                            ..Default::default()
+                        },
+                        |ui| {
+                            if liked {
+                                crate::ui::collection::liked(&mut app, ui);
+                            } else {
+                                crate::ui::collection::playlist(&mut app, ui, "pl1");
+                            }
+                        },
+                    );
+                    output.textures_delta.clear();
+                    app.apply_actions(&ctx);
+                    output.platform_output.accesskit_update.unwrap()
+                };
+                draw(vec![]);
+                let tree = draw(vec![]);
+                let button = tree
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.role() == Role::Button && node.label() == Some("Play"))
+                    .expect("collection Play")
+                    .0;
+                draw(vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                    target_tree: TreeId::ROOT,
+                    target_node: button,
+                    action: AccessibleAction::Click,
+                    data: None,
+                })]);
+                if matches!(filter, Some("Unavailable" | "Missing")) {
+                    let play = tree.nodes.iter().find(|(id, _)| *id == button).unwrap();
+                    assert!(
+                        play.1.is_disabled(),
+                        "a view without playable songs disables Play"
+                    );
+                    assert!(
+                        app.queued_play.is_none(),
+                        "do not start the unfiltered context when no shown song can play"
+                    );
+                    app.backend.shutdown();
+                    continue;
+                }
+                let request = app
+                    .queued_play
+                    .as_ref()
+                    .expect("waiting for local playback");
+                if filtered {
+                    assert_eq!(
+                        request.uris,
+                        vec!["spotify:track:first", "spotify:track:first"],
+                        "a filtered view keeps only its shown songs and preserves duplicates"
+                    );
+                    assert_eq!(request.offset_position, Some(0));
+                } else {
+                    assert_eq!(
+                        request.uris,
+                        vec![
+                            "spotify:track:first",
+                            "spotify:track:first",
+                            "spotify:track:other"
+                        ]
+                    );
+                    assert_eq!(
+                        request.offset_position,
+                        Some(0),
+                        "playback starts at the first playable row"
+                    );
+                }
+                assert_eq!(app.now_playing().unwrap().uri, "spotify:track:first");
+                let mut settled = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(1280.0, 800.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| {
+                        if liked {
+                            crate::ui::collection::liked(&mut app, ui);
+                        } else {
+                            crate::ui::collection::playlist(&mut app, ui, "pl1");
+                        }
+                    },
+                );
+                settled.textures_delta.clear();
+                app.apply_actions(&ctx);
+                let tree = settled.platform_output.accesskit_update.unwrap();
+                let second = tree
+                    .nodes
+                    .iter()
+                    .filter(|(_, node)| {
+                        node.role() == Role::Button
+                            && node
+                                .label()
+                                .is_some_and(|label| label.starts_with("Play 02 First,"))
+                    })
+                    .max_by(|a, b| {
+                        a.1.bounds()
+                            .unwrap()
+                            .y0
+                            .total_cmp(&b.1.bounds().unwrap().y0)
+                    })
+                    .expect("second duplicate row")
+                    .0;
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(1280.0, 800.0),
+                        )),
+                        events: vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                            target_tree: TreeId::ROOT,
+                            target_node: second,
+                            action: AccessibleAction::Click,
+                            data: None,
+                        })],
+                        ..Default::default()
+                    },
+                    |ui| {
+                        if liked {
+                            crate::ui::collection::liked(&mut app, ui);
+                        } else {
+                            crate::ui::collection::playlist(&mut app, ui, "pl1");
+                        }
+                    },
+                );
+                output.textures_delta.clear();
+                assert!(
+                    app.actions
+                        .iter()
+                        .any(|action| matches!(action, Action::PlayFromRow { index: 1, .. })),
+                    "second occurrence action: {:?}",
+                    app.actions
+                );
+                app.apply_actions(&ctx);
+                assert_eq!(
+                    app.queued_play.as_ref().unwrap().offset_position,
+                    Some(1),
+                    "selecting the second duplicate keeps its occurrence in the playable list"
+                );
+                app.backend.shutdown();
+            }
+        }
+    }
+
+    #[test]
     fn sorted_view_play_shows_an_uncached_song_while_local_playback_connects() {
         let mut app = headless_app();
         app.backend.set_offline(true);

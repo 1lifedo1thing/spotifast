@@ -613,6 +613,15 @@ pub fn context_menu_items(
     }
 }
 
+/// Whether a row can start playback through Spotify. Unknown availability
+/// remains playable, while local files and missing entries cannot be requested.
+pub(crate) fn row_playable(item: &PlayableItem) -> bool {
+    !item.uri().is_empty()
+        && !item.uri().starts_with("spotify:local:")
+        && !matches!(item, PlayableItem::Track(track)
+            if track.is_local || track.is_playable == Some(false))
+}
+
 /// Describes one row of a track table.
 pub struct TrackRow<'a> {
     pub index: usize,
@@ -737,7 +746,11 @@ pub(crate) fn track_row_response(
         "track-row",
         std::mem::discriminant(row.context),
         row.item.uri(),
-        row.index,
+        // Playback can omit unavailable rows; the displayed occurrence keeps
+        // a distinct identity even when playback positions are compacted.
+        row.number
+            .map(|number| number.saturating_sub(1))
+            .unwrap_or(row.index),
     ));
     ui.scope_builder(UiBuilder::new().id(id), |ui| {
         track_row_contents(ui, app, row)
@@ -761,10 +774,7 @@ fn track_row_contents(
     let width = ui.available_width();
     let (rect, response) = ui.allocate_exact_size(vec2(width, row_height), Sense::click_and_drag());
     let rect = rect.translate(vec2(0.0, row.shift));
-    let unavailable = match row.item {
-        PlayableItem::Track(track) => track.is_playable == Some(false) || track.is_local,
-        PlayableItem::Episode(_) => false,
-    };
+    let unavailable = !row_playable(row.item);
     response.widget_info(|| {
         egui::WidgetInfo::selected(
             egui::WidgetType::Button,

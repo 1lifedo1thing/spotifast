@@ -30,6 +30,12 @@ never becomes the beginning. This keeps the full Spotify playlist context;
 the app does not replace it with a shortened list of loaded songs. A request
 waiting for local playback to reconnect keeps the song chosen at the click.
 
+Sorted and filtered views omit unavailable songs and local files from their
+playback requests. The displayed rows keep their positions, and selecting a
+repeated song starts that occurrence. A filtered playlist or Liked Songs view
+plays its matching songs in displayed order, including duplicates. An empty or entirely
+unplayable view disables Play instead of starting the unfiltered context.
+
 1. **The list shows the play order.** The top row plays next, followed by the
    rows below it.
 

@@ -61,6 +61,12 @@ stays while local playback connects, even when that song was not previously
 in the track cache. The selected order and the playlist stored on Spotify stay
 the same.
 
+Sorted and filtered views omit unavailable songs and local files from playback.
+The rows stay visible, and selecting a repeated song starts that occurrence. Filtering a playlist or Liked Songs plays only the matching songs,
+including repeated entries. Play is disabled when the view has no playable
+songs; it never falls back to the unfiltered playlist in that case. Clearing
+the filter restores the original view. Existing Shuffle behavior is unchanged.
+
 ## Playing from the sidebar
 
 Double-click a playlist, Liked Songs, album, artist, or podcast row in the
