@@ -768,6 +768,7 @@ impl App {
             ctx.input(|input| crate::window::fills_the_screen(input.viewport()));
         if let Some(size) = self.session_window_size.take()
             && !filling_the_screen
+            && !self.offline
         {
             // Clamp to a sane range so a stale session never creates an
             // unusable window; the OS will further clamp to the monitor.
@@ -780,6 +781,7 @@ impl App {
         // If the saved position is off-screen, leave the window where eframe put it.
         if let Some(pos) = self.session_window_pos.take()
             && !filling_the_screen
+            && !self.offline
             && crate::window::can_restore(pos, ctx.pixels_per_point())
         {
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(
@@ -8690,6 +8692,27 @@ mod tests {
             );
             app.backend.shutdown();
         }
+    }
+
+    #[test]
+    fn a_demo_window_keeps_its_requested_geometry_over_the_saved_session() {
+        let mut app = headless_app();
+        crate::demo::populate(&mut app);
+        app.session_window_size = Some([1100.0, 700.0]);
+        app.session_window_pos = Some([100.0, 150.0]);
+
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(Default::default(), |_ui| app.attach(&ctx));
+        output.textures_delta.clear();
+        let commands = &output.viewport_output[&egui::ViewportId::ROOT].commands;
+        assert!(
+            !commands.iter().any(|command| matches!(
+                command,
+                egui::ViewportCommand::InnerSize(_) | egui::ViewportCommand::OuterPosition(_)
+            )),
+            "the last real session must not move or resize the demo: {commands:?}"
+        );
+        app.backend.shutdown();
     }
 
     /// The song the last session ended on is shown, paused, at the position

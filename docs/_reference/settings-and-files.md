@@ -231,5 +231,9 @@ cargo run --release --features demo -- \
 ```
 
 The image uses the current window size. `--demo-size WIDTHxHEIGHT` sets that
-size for a shot (for example `760x800` or `1240x800`). `--demo-shot-delay <MS>`
-sets how long to wait for cover art before taking it.
+size in logical pixels for a shot (for example `760x800` or `1240x800`).
+`--demo-shot-delay <MS>` sets how long to wait for cover art before taking it.
+On `main`, after 0.7.1, demo windows ignore saved window geometry and do not
+read or save the normal window's framework state. Existing appearance settings
+still apply. `--demo-data <DIRECTORY>` keeps demo caches and logs under that
+directory's `cache` and `state` folders, with settings read from `config`.

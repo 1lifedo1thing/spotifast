@@ -462,6 +462,8 @@ fn main() -> eframe::Result<()> {
     });
     #[cfg(feature = "demo")]
     let demo_inner = cli.demo_size;
+    #[cfg(feature = "demo")]
+    let demo_storage = app.dirs.cache.join("demo-window.ron");
     let slot = std::sync::Arc::new(std::sync::Mutex::new(Some(app)));
     loop {
         let creator_slot = std::sync::Arc::clone(&slot);
@@ -472,15 +474,22 @@ fn main() -> eframe::Result<()> {
             let guard = slot.lock().unwrap_or_else(|p| p.into_inner());
             MiniWindow::wanted(guard.as_ref().expect("application state present"))
         };
-        let mini_window = mini.is_some();
         #[cfg(feature = "demo")]
-        let options = native_options(
-            shot.is_some() && mini.is_none() && demo_inner.is_none(),
-            mini,
-            demo_inner,
-        );
+        let options = {
+            let options = native_options(
+                shot.is_some() && mini.is_none() && demo_inner.is_none(),
+                mini,
+                demo_inner,
+            );
+            if demo {
+                demo_native_options(options, demo_storage.clone())
+            } else {
+                options
+            }
+        };
         #[cfg(not(feature = "demo"))]
         let options = native_options(false, mini, None);
+        let persist_memory = options.persist_window;
         #[cfg(windows)]
         let thumbbar_enabled = desktop_surfaces && options.viewport.taskbar != Some(false);
         eframe::run_native(
@@ -528,7 +537,7 @@ fn main() -> eframe::Result<()> {
                 Ok(Box::new(Shell {
                     app: Some(app),
                     slot: std::sync::Arc::clone(&creator_slot),
-                    mini_window,
+                    persist_memory,
                     #[cfg(windows)]
                     thumbbar,
                     #[cfg(feature = "demo")]
@@ -769,6 +778,18 @@ fn native_options(
     }
 }
 
+#[cfg(any(test, feature = "demo"))]
+fn demo_native_options(
+    mut options: eframe::NativeOptions,
+    storage: std::path::PathBuf,
+) -> eframe::NativeOptions {
+    // Saving and loading are separate in eframe. An unused, unsaved path
+    // prevents the normal profile's geometry and zoom from entering a demo.
+    options.persistence_path = Some(storage);
+    options.persist_window = false;
+    options
+}
+
 #[cfg(test)]
 mod native_window_tests {
     use super::*;
@@ -869,6 +890,43 @@ mod native_window_tests {
     }
 
     #[test]
+    fn demo_window_storage_is_separate_and_never_saved() {
+        let cache = std::path::PathBuf::from("isolated-demo/cache");
+        for mini in [
+            None,
+            Some(MiniWindow {
+                size: egui::vec2(550.0, 232.0),
+                position: None,
+                on_top: false,
+                taskbar: true,
+                storage_path: cache.join("winamp.ron"),
+            }),
+        ] {
+            let options = demo_native_options(
+                native_options(false, mini, Some([760.0, 520.0])),
+                cache.join("demo-window.ron"),
+            );
+            assert_eq!(
+                options.persistence_path,
+                Some(cache.join("demo-window.ron"))
+            );
+            assert!(!options.persist_window);
+            // Shell retains this policy even after handing its App back to
+            // the event loop on exit, when eframe also saves egui memory.
+            let shell = Shell {
+                app: None,
+                slot: Default::default(),
+                persist_memory: options.persist_window,
+                #[cfg(windows)]
+                thumbbar: fastpotify::thumbbar::ThumbBar::new(),
+                #[cfg(feature = "demo")]
+                shot: None,
+            };
+            assert!(!eframe::App::persist_egui_memory(&shell));
+        }
+    }
+
+    #[test]
     fn only_windows_removes_the_native_frame() {
         assert!(!main_window_decorated(true));
         assert!(main_window_decorated(false));
@@ -880,8 +938,9 @@ mod native_window_tests {
 struct Shell {
     app: Option<app::App>,
     slot: std::sync::Arc<std::sync::Mutex<Option<app::App>>>,
-    /// The mode this window opened in, even after an action switches modes.
-    mini_window: bool,
+    /// Keep demo and mini-window memory out of the normal profile, including
+    /// after on_exit has returned the App to the event loop.
+    persist_memory: bool,
     #[cfg(windows)]
     thumbbar: fastpotify::thumbbar::ThumbBar,
     /// A pending `--demo-shot` capture, if this is a screenshot run.
@@ -948,7 +1007,7 @@ impl Shell {
 
 impl eframe::App for Shell {
     fn persist_egui_memory(&self) -> bool {
-        !self.mini_window
+        self.persist_memory
     }
 
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
