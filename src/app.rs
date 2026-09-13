@@ -80,6 +80,7 @@ struct AssumedContext {
 /// ignored and a second one settles on what Spotify actually reports.
 struct TrackIntent {
     uri: String,
+    position_ms: u32,
     at: Instant,
     confirmation: TrackConfirmation,
 }
@@ -961,7 +962,7 @@ impl App {
     /// Track shown as current, including a recent unconfirmed play request.
     pub fn current_track_uri(&self) -> Option<String> {
         if let Some(intent) = &self.intent_track
-            && intent.at.elapsed() < PLAYBACK_HOLD
+            && (intent.at.elapsed() < PLAYBACK_HOLD || self.queued_play.is_some())
         {
             return Some(intent.uri.clone());
         }
@@ -970,7 +971,7 @@ impl App {
 
     /// Shows a user-requested track until the responsible playback surface
     /// has had a chance to report what really started.
-    fn expect_track(&mut self, uri: String) {
+    fn expect_track(&mut self, uri: String, position_ms: u32) {
         let confirmation = match self.target() {
             Target::Local => TrackConfirmation::Local,
             Target::Remote(_) => TrackConfirmation::Remote {
@@ -980,6 +981,7 @@ impl App {
         };
         self.intent_track = Some(TrackIntent {
             uri,
+            position_ms,
             at: Instant::now(),
             confirmation,
         });
@@ -1063,11 +1065,41 @@ impl App {
         if let Some(now) = &self.frame_now {
             return Some(now.clone());
         }
-        self.now_playing_live().or_else(|| self.resume_preview())
+        self.requested_track_preview()
+            .or_else(|| self.now_playing_live())
+            .or_else(|| self.resume_preview())
     }
 
     fn refresh_frame_now(&mut self) {
-        self.frame_now = self.now_playing_live().or_else(|| self.resume_preview());
+        self.frame_now = self
+            .requested_track_preview()
+            .or_else(|| self.now_playing_live())
+            .or_else(|| self.resume_preview());
+    }
+
+    /// Keep the player bar on the same requested song as the playlist marker
+    /// while the responsible playback surface catches up.
+    fn requested_track_preview(&self) -> Option<NowPlaying> {
+        let intent = self.intent_track.as_ref()?;
+        if intent.at.elapsed() >= PLAYBACK_HOLD && self.queued_play.is_none() {
+            return None;
+        }
+        let mut now = self.cached_track_preview(&intent.uri, intent.position_ms)?;
+        let actual = self.now_playing_live();
+        now.local = matches!(intent.confirmation, TrackConfirmation::Local);
+        now.playing = match self.optimistic_playing {
+            Some((playing, at)) if at.elapsed() < PLAYBACK_HOLD => playing,
+            _ => self.queued_play.is_some() || actual.as_ref().is_some_and(|now| now.playing),
+        };
+        now.loading = true;
+        now.resuming = false;
+        if let Some(actual) = actual {
+            now.device_name = actual.device_name;
+            now.repeat = actual.repeat;
+            now.volume_percent = actual.volume_percent;
+            now.can_control = actual.can_control;
+        }
+        Some(now)
     }
 
     /// What a device is actually playing, here or elsewhere.
@@ -1212,6 +1244,10 @@ impl App {
     /// Last session's track, shown paused when no device is playing.
     fn resume_preview(&self) -> Option<NowPlaying> {
         let uri = self.resume_track.as_deref()?;
+        self.cached_track_preview(uri, self.resume_position_ms)
+    }
+
+    fn cached_track_preview(&self, uri: &str, position_ms: u32) -> Option<NowPlaying> {
         let track = self.track_cache.get(util::uri_id(uri)?)?;
         Some(NowPlaying {
             local: true,
@@ -1231,7 +1267,7 @@ impl App {
             art_url: track.image(640).map(str::to_string),
             art_small: track.image(64).map(str::to_string),
             duration_ms: track.duration_ms,
-            position_ms: self.resume_position_ms.min(track.duration_ms),
+            position_ms: position_ms.min(track.duration_ms),
             playing: false,
             loading: false,
             shuffle: self.shuffle_wanted,
@@ -1532,6 +1568,7 @@ impl App {
                 self.local_ready = false;
                 if self.queued_play.take().is_some() {
                     self.clear_play_pending();
+                    self.intent_track = None;
                 }
                 self.toast_error(format!("Local playback: {message}"));
             }
@@ -1990,13 +2027,11 @@ impl App {
     }
 
     fn on_now_playing_changed(&mut self) {
-        let Some(now) = self.now_playing() else {
+        // Queue consumption and saved session state follow confirmed playback,
+        // not the song shown optimistically while a command is still pending.
+        let Some(now) = self.now_playing_live() else {
             return;
         };
-        // Do not reset the saved position for a resume preview.
-        if now.resuming {
-            return;
-        }
         if self.last_now_playing_uri.as_deref() == Some(now.uri.as_str()) {
             return;
         }
@@ -3245,7 +3280,7 @@ impl App {
             self.pending_queue_adds
                 .retain(|(pending, _)| pending != gone);
         }
-        self.expect_track(uri.clone());
+        self.expect_track(uri.clone(), 0);
         self.set_play_pending(vec![uri]);
         self.optimistic_playing = Some((true, Instant::now()));
         match self.target() {
@@ -3399,7 +3434,7 @@ impl App {
         let item = queue.queue.remove(0);
         let uri = item.uri().to_string();
         queue.currently_playing = Some(item);
-        self.expect_track(uri);
+        self.expect_track(uri, 0);
     }
 
     /// Whether a fetched queue predates the latest local change.
@@ -3409,7 +3444,7 @@ impl App {
         }
         // A recent play or pop must be reflected in the fetched current row.
         if let Some(intent) = &self.intent_track
-            && intent.at.elapsed() < PLAYBACK_HOLD
+            && (intent.at.elapsed() < PLAYBACK_HOLD || self.queued_play.is_some())
             && fetched
                 .currently_playing
                 .as_ref()
@@ -5083,6 +5118,33 @@ impl App {
         (None, None)
     }
 
+    /// Start a playlist at its first available row, not an unspecified place
+    /// in the player's resolved context. A loaded range from the middle is
+    /// not the playlist's beginning; without its prefix, request position zero.
+    fn playlist_start(&self, id: &str) -> (Option<String>, Option<u32>) {
+        let first = self
+            .playlist_pages
+            .get(id)
+            .filter(|page| page.items.base_offset == 0)
+            .and_then(|page| {
+                page.items.items.iter().find_map(|row| {
+                    let item = row.playable()?;
+                    if row.is_local
+                        || item.uri().is_empty()
+                        || matches!(item, PlayableItem::Track(track)
+                            if track.is_local || track.is_playable == Some(false))
+                    {
+                        return None;
+                    }
+                    Some(item.uri().to_string())
+                })
+            });
+        match first {
+            Some(uri) => (Some(uri), None),
+            None => (None, Some(0)),
+        }
+    }
+
     /// With `shuffle_first`, shuffle is turned on before playback starts,
     /// in one ordered exchange: two independent requests race, and shuffle
     /// sometimes lost.
@@ -5097,13 +5159,16 @@ impl App {
             self.queue_recheck_at = Some(Instant::now() + QUEUE_RECHECK);
         }
         let shuffle = shuffle_first || self.shuffle_wanted;
-        if shuffle
-            && request.offset_uri.is_none()
+        if request.offset_uri.is_none()
             && request.offset_position.is_none()
             && request.uris.is_empty()
-            && let Some(context) = request.context_uri.clone()
+            && let Some(context) = request.context_uri.as_deref()
         {
-            (request.offset_uri, request.offset_position) = self.shuffle_start(&context);
+            if shuffle {
+                (request.offset_uri, request.offset_position) = self.shuffle_start(context);
+            } else if let Some(id) = context.strip_prefix("spotify:playlist:") {
+                (request.offset_uri, request.offset_position) = self.playlist_start(id);
+            }
         }
         let mut keys: Vec<String> = Vec::new();
         if let Some(context) = &request.context_uri {
@@ -5129,7 +5194,10 @@ impl App {
         }
         let expected_track = keys.iter().find(|key| key.contains(":track:")).cloned();
         if let Some(uri) = expected_track {
-            self.expect_track(uri);
+            if let Some(context) = &request.context_uri {
+                self.cache_track_from_context(context, &uri);
+            }
+            self.expect_track(uri, request.position_ms);
         } else {
             self.intent_track = None;
         }
@@ -6943,15 +7011,10 @@ impl App {
     ///
     /// Paused time and seeking do not count. Each track is recorded once.
     fn note_listening(&mut self) {
-        let Some(now) = self.now_playing() else {
+        let Some(now) = self.now_playing_live() else {
             self.listening = None;
             return;
         };
-        // A resume preview is not a new play.
-        if now.resuming {
-            self.listening = None;
-            return;
-        }
         let listening = match &mut self.listening {
             Some(held) if held.uri == now.uri => held,
             _ => {
@@ -8230,6 +8293,31 @@ mod tests {
         );
     }
 
+    #[test]
+    fn a_pending_next_keeps_paused_playback_paused() {
+        let mut app = headless_app();
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: "spotify:track:a".into(),
+            ..Default::default()
+        });
+        app.local.playback = Playback::Paused;
+        app.track_cache.insert(
+            "b".into(),
+            Track {
+                uri: "spotify:track:b".into(),
+                ..Default::default()
+            },
+        );
+        app.queue = loaded_queue("spotify:track:a", &["spotify:track:b"]);
+        app.apply(Action::Next, &egui::Context::default());
+        let now = app.now_playing().unwrap();
+        assert_eq!(now.uri, "spotify:track:b");
+        assert!(
+            !now.playing,
+            "Next preserves pause while the engine catches up"
+        );
+    }
+
     /// A queue restored at startup is useful to show, but it is not evidence
     /// of what follows the player now and must not drive an optimistic skip.
     #[test]
@@ -8303,7 +8391,7 @@ mod tests {
         app.local_ready = false;
         app.selected_device = Some("phone".into());
         app.remote_poll_seq = 7;
-        app.expect_track("spotify:track:wanted".into());
+        app.expect_track("spotify:track:wanted".into(), 0);
 
         app.reconcile_remote_track_intent(7, Some("spotify:track:old"));
         assert!(
@@ -11761,6 +11849,264 @@ mod tests {
             page.items.items[0].playable().map(PlayableItem::uri),
             Some("spotify:track:new")
         );
+    }
+
+    #[test]
+    fn playlist_play_button_starts_at_the_first_row_instead_of_the_resume_track() {
+        use egui::accesskit::{Action as AccessibleAction, ActionRequest, Role, TreeId};
+
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let mut app = headless_app();
+        app.attach(&ctx);
+        crate::demo::populate(&mut app);
+        app.remote = None;
+        app.selected_device = None;
+        app.local.connected = false;
+        app.shuffle_wanted = false;
+        let context = "spotify:playlist:pl1";
+        let rows = app.context_track_uris(context).unwrap();
+        app.resume_context = Some(context.into());
+        app.resume_track = Some(rows[7].clone());
+        app.resume_position_ms = 23_000;
+        app.open(Page::Playlist("pl1".into()));
+        assert!(matches!(app.target(), Target::Local));
+
+        let mut draw = |events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| crate::ui::collection::playlist(&mut app, ui, "pl1"),
+            );
+            output.textures_delta.clear();
+            app.apply_actions(&ctx);
+            output.platform_output.accesskit_update.unwrap()
+        };
+        draw(Vec::new());
+        let tree = draw(Vec::new());
+        let button = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| node.role() == Role::Button && node.label() == Some("Play"))
+            .expect("the playlist Play button")
+            .0;
+        draw(vec![egui::Event::AccessKitActionRequest(ActionRequest {
+            target_tree: TreeId::ROOT,
+            target_node: button,
+            action: AccessibleAction::Click,
+            data: None,
+        })]);
+
+        let request = app
+            .queued_play
+            .as_ref()
+            .expect("waiting for the local engine");
+        assert_eq!(request.context_uri.as_deref(), Some(context));
+        assert_eq!(request.offset_uri.as_deref(), Some(rows[0].as_str()));
+        assert_eq!(request.position_ms, 0);
+        assert!(
+            request.uris.is_empty(),
+            "retain the full Spotify playlist context"
+        );
+        let load = local_load(request, false);
+        assert_eq!(load.offset_uri, Some(rows[0].clone()));
+        assert_eq!(load.context_uri.as_deref(), Some(context));
+        assert_eq!(app.now_playing().unwrap().uri, rows[0]);
+        assert_eq!(app.now_playing().unwrap().position_ms, 0);
+        app.intent_track.as_mut().unwrap().at =
+            Instant::now() - PLAYBACK_HOLD - Duration::from_secs(1);
+        assert_eq!(app.now_playing().unwrap().uri, rows[0]);
+        assert_eq!(app.current_track_uri().as_deref(), Some(rows[0].as_str()));
+
+        // A ready notification may replay the pending request before the
+        // engine connects. Keep the song chosen at the click even if the
+        // playlist has refreshed in the meantime.
+        app.playlist_pages
+            .get_mut("pl1")
+            .unwrap()
+            .items
+            .items
+            .swap(0, 7);
+        app.handle_playback(LocalPlayback::Ready {
+            device_id: "demo-local".into(),
+        });
+        assert_eq!(
+            app.queued_play.as_ref().unwrap().offset_uri.as_deref(),
+            Some(rows[0].as_str())
+        );
+        app.handle_playback(LocalPlayback::Failed("test connection failure".into()));
+        assert!(app.requested_track_preview().is_none());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn playlist_start_preview_waits_for_playback_before_consuming_queue_or_history() {
+        let mut app = headless_app();
+        crate::demo::populate(&mut app);
+        app.remote = None;
+        app.selected_device = None;
+        app.shuffle_wanted = false;
+        let rows = app.context_track_uris("spotify:playlist:pl1").unwrap();
+        let old = crate::player::LocalTrack {
+            uri: rows[7].clone(),
+            duration_ms: 200_000,
+            ..Default::default()
+        };
+        app.local = LocalState {
+            connected: true,
+            track: Some(old),
+            playback: Playback::Playing,
+            position_ms: 23_000,
+            ..Default::default()
+        };
+        app.last_now_playing_uri = Some(rows[7].clone());
+        app.manual_queue = vec![rows[0].clone()];
+        app.play_request(PlayRequest::context("spotify:playlist:pl1"), false);
+        assert!(
+            app.queued_play.is_none(),
+            "the connected engine received it"
+        );
+        assert_eq!(app.now_playing().unwrap().uri, rows[0]);
+        assert!(app.now_playing().unwrap().loading);
+
+        // A progress report for the old song cannot undo the user's start.
+        let mut stale = app.local.clone();
+        stale.position_ms += 1;
+        app.handle_local(stale);
+        app.refresh_frame_now();
+        assert_eq!(app.now_playing().unwrap().uri, rows[0]);
+        app.on_now_playing_changed();
+        assert_eq!(app.manual_queue, vec![rows[0].clone()]);
+        app.note_listening();
+        assert_eq!(app.listening.as_ref().unwrap().uri, rows[7]);
+
+        let mut started = app.local.clone();
+        started.track = Some(crate::player::LocalTrack {
+            uri: rows[0].clone(),
+            duration_ms: 200_000,
+            ..Default::default()
+        });
+        started.position_ms = 0;
+        app.handle_local(started);
+        app.refresh_frame_now();
+        assert_eq!(app.now_playing().unwrap().uri, rows[0]);
+        assert!(!app.now_playing().unwrap().loading);
+        assert!(app.intent_track.is_none());
+        assert!(
+            app.manual_queue.is_empty(),
+            "the confirmed song consumes its row"
+        );
+        app.note_listening();
+        assert_eq!(app.listening.as_ref().unwrap().uri, rows[0]);
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn playlist_play_without_its_prefix_requests_position_zero() {
+        for base_offset in [None, Some(0), Some(6_900)] {
+            let mut app = headless_app();
+            if let Some(base_offset) = base_offset {
+                app.playlist_pages.insert(
+                    "large".into(),
+                    PlaylistPage {
+                        items: PagedList {
+                            base_offset,
+                            items: if base_offset == 0 {
+                                Vec::new()
+                            } else {
+                                vec![cached_playlist_row("spotify:track:middle")]
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                );
+            }
+            app.play_request(PlayRequest::context("spotify:playlist:large"), false);
+            let request = app.queued_play.as_ref().unwrap();
+            assert_eq!(request.offset_uri, None, "base offset {base_offset:?}");
+            assert_eq!(request.offset_position, Some(0));
+            let load = local_load(request, false);
+            assert_eq!(load.context_uri.as_deref(), Some("spotify:playlist:large"));
+            assert_eq!(load.offset_index, Some(0));
+            assert!(load.uris.is_empty());
+        }
+    }
+
+    #[test]
+    fn playlist_play_skips_missing_local_and_unavailable_prefix_rows() {
+        let mut app = headless_app();
+        let mut local = cached_playlist_row("spotify:local:artist:album:track");
+        local.is_local = true;
+        let mut unavailable = cached_playlist_row("spotify:track:unavailable");
+        let Some(PlayableItem::Track(track)) = unavailable.item.as_mut() else {
+            panic!("a track fixture");
+        };
+        track.is_playable = Some(false);
+        app.playlist_pages.insert(
+            "playlist".into(),
+            PlaylistPage {
+                items: PagedList {
+                    items: vec![
+                        Default::default(),
+                        local,
+                        unavailable,
+                        cached_playlist_row("spotify:track:first"),
+                        cached_playlist_row("spotify:track:second"),
+                    ],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        );
+        app.play_request(PlayRequest::context("spotify:playlist:playlist"), false);
+        assert_eq!(
+            app.queued_play.as_ref().unwrap().offset_uri.as_deref(),
+            Some("spotify:track:first")
+        );
+    }
+
+    #[test]
+    fn playlist_start_keeps_explicit_rows_and_shuffle_choices() {
+        let mut app = headless_app();
+        app.playlist_pages.insert(
+            "playlist".into(),
+            PlaylistPage {
+                items: PagedList {
+                    items: vec![cached_playlist_row("spotify:track:first")],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        );
+        let context = "spotify:playlist:playlist";
+        for shuffle in [false, true] {
+            app.shuffle_wanted = shuffle;
+            for request in [
+                PlayRequest::context(context).starting_at_uri("spotify:track:chosen"),
+                PlayRequest::context(context).starting_at_index(7),
+                PlayRequest::tracks(vec!["spotify:track:sorted-first".into()]).starting_at_index(0),
+            ] {
+                app.play_request(request.clone(), false);
+                let queued = app.queued_play.as_ref().unwrap();
+                assert_eq!(queued.offset_uri, request.offset_uri);
+                assert_eq!(queued.offset_position, request.offset_position);
+                assert_eq!(queued.uris, request.uris);
+            }
+        }
+        // With no loaded prefix, local shuffle must still choose its own
+        // random start, rather than receiving the unshuffled position zero.
+        app.playlist_pages.clear();
+        app.play_request(PlayRequest::context(context), false);
+        let request = app.queued_play.as_ref().unwrap();
+        assert_eq!(request.offset_uri, None);
+        assert_eq!(request.offset_position, None);
     }
 
     /// Shuffle picks a random loaded track or Web API offset. Local librespot

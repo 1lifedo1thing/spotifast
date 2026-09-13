@@ -18,6 +18,18 @@ playing from somewhere Spotify reports.
 These are the rules the app follows. The queue tests in `src/app.rs`
 check every one of them.
 
+Starting and resuming are separate actions. With Shuffle off, a playlist's
+**Play** button starts at its first available song in the selected order.
+Double-clicking a row starts there, including with Shuffle on. **Play** in
+the player bar resumes the current song at its paused position.
+
+On `main`, after 0.7.1, starting a playlist in its original order explicitly
+names its first available song from the loaded prefix. If that prefix is not
+loaded, it requests playlist position zero. A page loaded from the middle
+never becomes the beginning. This keeps the full Spotify playlist context;
+the app does not replace it with a shortened list of loaded songs. A request
+waiting for local playback to reconnect keeps the song chosen at the click.
+
 1. **The list shows the play order.** The top row plays next, followed by the
    rows below it.
 

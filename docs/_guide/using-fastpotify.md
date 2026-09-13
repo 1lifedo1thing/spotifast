@@ -33,6 +33,19 @@ of the playlist scrolls to positions beyond the visible rows.
 The Library sidebar also scrolls near its edges when you drag a song toward a
 playlist or reorder its entries. Only the list under the pointer scrolls.
 
+## Starting a playlist and resuming
+
+On `main`, after 0.7.1, with Shuffle off and the playlist in its original
+order, its **Play** button explicitly starts at the first available song.
+The selected song appears in the player immediately, including while local
+playback reconnects. The full playlist remains the playback source, even
+when only its first page is loaded.
+
+Double-click a song to start at that row. Sorting the table plays its chosen
+order when Shuffle is off. Shuffle chooses a random starting song unless you
+choose a specific row. To resume the current song at its paused position,
+use **Play** in the bottom player bar or press `Space`.
+
 ## Playing from the sidebar
 
 Double-click a playlist, Liked Songs, album, artist, or podcast row in the
