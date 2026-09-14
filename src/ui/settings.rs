@@ -728,7 +728,15 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                             info.current_text_value = Some(selected.to_owned());
                             info
                         });
-                        if ui.link("Open themes folder").clicked() {
+                        if theme::soft_button(
+                            ui,
+                            &palette,
+                            Some(Icon::ExternalLink),
+                            "Open themes folder",
+                            false,
+                        )
+                        .clicked()
+                        {
                             app.actions.push(Action::OpenThemesFolder);
                         }
                     });

@@ -2480,8 +2480,8 @@ mod tests {
     }
 
     #[test]
-    fn themes_folder_link_is_visible_accessible_and_emits_an_action() {
-        let (ctx, mut app) = accessible_app("themes-folder-link");
+    fn themes_folder_button_is_visible_accessible_and_emits_an_action() {
+        let (ctx, mut app) = accessible_app("themes-folder-button");
         app.backend.shutdown();
         ctx.data_mut(|data| {
             data.insert_temp(egui::Id::new("settings-filter"), "Theme".to_string())
@@ -2490,11 +2490,11 @@ mod tests {
             view_frame(&ctx, &mut app, vec![], crate::ui::settings::show);
         }
         let painted = view_frame(&ctx, &mut app, vec![], crate::ui::settings::show);
-        let link = sidebar_text(&painted, "Open themes folder").center();
+        let button = sidebar_text(&painted, "Open themes folder").center();
         view_frame(
             &ctx,
             &mut app,
-            pointer_click(link, egui::PointerButton::Primary),
+            pointer_click(button, egui::PointerButton::Primary),
             crate::ui::settings::show,
         );
         assert!(matches!(app.actions.as_slice(), [Action::OpenThemesFolder]));
@@ -2505,7 +2505,7 @@ mod tests {
         });
         accessible_frame(&ctx, &mut app, vec![]);
         let tree = accessible_frame(&ctx, &mut app, vec![]);
-        accessible_node(&tree, "Open themes folder", egui::accesskit::Role::Link);
+        accessible_node(&tree, "Open themes folder", egui::accesskit::Role::Button);
         assert!(
             !app.dirs.config.join("themes").exists(),
             "drawing cannot open or create folders"
