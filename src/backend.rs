@@ -1145,6 +1145,8 @@ struct Worker {
     authorization_attempt: u64,
     session: watch::Sender<u64>,
     engine_config: EngineConfig,
+    /// The resolved proxy handed to the current or in-flight engine connection.
+    engine_proxy: Option<reqwest::Url>,
     web_client_id: Option<String>,
     http: Http,
     api: Arc<ApiGateway>,
@@ -1205,6 +1207,7 @@ impl Worker {
             session: watch::channel(0).0,
             dirs,
             engine_config,
+            engine_proxy: None,
             web_client_id,
             api: Arc::new(ApiGateway::new(http.clone(), activity)),
             background_api: Arc::new(tokio::sync::Semaphore::new(4)),
@@ -1238,7 +1241,7 @@ impl Worker {
     /// change leaves the existing connection in place and is reported to the UI.
     fn apply_proxy(&mut self, proxy: ProxyConfig) -> Result<bool, String> {
         let client = crate::http::build_client(&proxy)?;
-        let restart = self.engine_config.proxy.restarts_local_playback(&proxy);
+        let restart = self.engine_proxy != proxy.librespot_url();
         self.http.replace(client);
         self.engine_config.proxy = proxy;
         Ok(restart)
@@ -2408,6 +2411,8 @@ impl Worker {
         self.emit(Event::Playback(LocalPlayback::Connecting));
         let lease = self.credentials.lease(CredentialSlot::Playback);
         let config = self.engine_config.clone();
+        let proxy = config.proxy.librespot_url();
+        self.engine_proxy = proxy.clone();
         let notify = self.engine_notify();
         let events = self.events.clone();
         let commands = self.commands.clone();
@@ -2428,7 +2433,7 @@ impl Worker {
             };
             let attempt = tokio::time::timeout(
                 Duration::from_secs(45),
-                Engine::connect(&config, credentials, cache, notify),
+                Engine::connect(&config, proxy, credentials, cache, notify),
             )
             .await;
             let outcome = match attempt {
@@ -3872,6 +3877,79 @@ fn playback_credentials(account: Option<AccountId>, access_token: String) -> Opt
 #[cfg(test)]
 mod authorization_tests {
     use super::*;
+
+    #[test]
+    fn proxy_changes_compare_with_the_running_engine() {
+        const CHILD: &str = "SPOTIFAST_PROXY_SNAPSHOT_TEST";
+        if std::env::var_os(CHILD).is_none() {
+            let status = std::process::Command::new(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "backend::authorization_tests::proxy_changes_compare_with_the_running_engine",
+                    "--nocapture",
+                ])
+                .env(CHILD, "1")
+                .env("NO_PROXY", "*")
+                .env("no_proxy", "*")
+                .status()
+                .unwrap();
+            assert!(status.success());
+            return;
+        }
+
+        // The system proxy has been removed since the engine connected.
+        // Resolve it in a child process so the test never alters desktop settings
+        // or the environment used by concurrently running tests.
+        assert_eq!(ProxyConfig::System.librespot_url(), None);
+        let old_url = reqwest::Url::parse("http://127.0.0.1:7890/").unwrap();
+        let (runtime, mut worker, _) = worker("proxy-snapshot");
+        let _entered = runtime.enter();
+        worker.engine_config.proxy = ProxyConfig::System;
+        worker.engine_proxy = Some(old_url.clone());
+        worker.signed_in = true;
+        worker.engine_busy = true;
+        worker.change_proxy(1, ProxyConfig::Off, false);
+        assert!(
+            worker.engine_restart_pending,
+            "Off must discard an in-flight connection using the former system proxy"
+        );
+        assert_eq!(worker.engine_proxy, Some(old_url));
+        assert_eq!(worker.engine_config.proxy, ProxyConfig::Off);
+
+        let http = crate::settings::Settings {
+            proxy_mode: crate::settings::ProxyMode::Http,
+            proxy_host: "127.0.0.1".into(),
+            proxy_port: "7890".into(),
+            ..Default::default()
+        };
+        let socks = crate::settings::Settings {
+            proxy_mode: crate::settings::ProxyMode::Socks,
+            ..http.clone()
+        };
+        let other = crate::settings::Settings {
+            proxy_port: "7891".into(),
+            ..http.clone()
+        };
+        // Every choice is compared with the old connection, even after a
+        // previous Apply has updated the saved policy while reconnecting.
+        for (next, restart) in [
+            (ProxyConfig::System, true),
+            (socks.proxy_config().unwrap(), true),
+            (other.proxy_config().unwrap(), true),
+            (http.proxy_config().unwrap(), false),
+        ] {
+            assert_eq!(worker.apply_proxy(next).unwrap(), restart);
+        }
+        worker.engine_proxy = None;
+        for (next, restart) in [
+            (ProxyConfig::Off, false),
+            (ProxyConfig::System, false),
+            (socks.proxy_config().unwrap(), false),
+            (http.proxy_config().unwrap(), true),
+        ] {
+            assert_eq!(worker.apply_proxy(next).unwrap(), restart);
+        }
+    }
 
     #[test]
     fn proxy_restoration_defers_work_without_blocking_shutdown() {

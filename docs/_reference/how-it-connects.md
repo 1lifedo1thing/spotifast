@@ -280,8 +280,9 @@ and control, but the engine then connects to Spotify directly. SOCKS5 behaves
 the same way for local playback. System uses the same proxy reqwest would
 (environment variables, and the OS proxy on macOS and Windows) only when it
 is an unauthenticated `http://` endpoint; authenticated, `https://`, and SOCKS
-system proxies are ignored by the engine. Changing the HTTP proxy the engine
-would actually use restarts local playback.
+system proxies are ignored by the engine. Applying a proxy choice restarts
+local playback when it changes the endpoint used by the current connection,
+including when the system proxy has changed since that connection started.
 
 Off and System apply immediately. HTTP and SOCKS5 apply when you press
 **Apply settings**. The same choice is on the sign-in screen, so it can be

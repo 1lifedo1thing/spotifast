@@ -683,11 +683,6 @@ impl ProxyConfig {
             Self::Invalid(_) | Self::Off | Self::Socks(_) => None,
         }
     }
-
-    /// Local playback reconnects only when its HTTP proxy actually changes.
-    pub fn restarts_local_playback(&self, other: &Self) -> bool {
-        self.librespot_url() != other.librespot_url()
-    }
 }
 
 /// The HTTP proxy System mode would hand librespot, if it can resolve one.
@@ -1144,33 +1139,8 @@ mod tests {
     }
 
     #[test]
-    fn off_system_and_socks_do_not_restart_local_playback() {
-        let off = super::ProxyConfig::Off;
-        let system = super::ProxyConfig::System;
-        let http = super::ProxyConfig::Http(
-            super::ManualProxy::parse(super::ManualKind::Http, "127.0.0.1", "7890", "", "")
-                .unwrap(),
-        );
-        let http_other = super::ProxyConfig::Http(
-            super::ManualProxy::parse(super::ManualKind::Http, "127.0.0.1", "7891", "", "")
-                .unwrap(),
-        );
-        let socks = super::ProxyConfig::Socks(
-            super::ManualProxy::parse(super::ManualKind::Socks, "127.0.0.1", "1080", "", "")
-                .unwrap(),
-        );
-        assert_eq!(off.librespot_url(), None);
-        assert_eq!(socks.librespot_url(), None);
-        assert!(!off.restarts_local_playback(&socks));
-        assert!(off.restarts_local_playback(&http));
-        assert!(http.restarts_local_playback(&socks));
-        assert!(http.restarts_local_playback(&http_other));
-        assert!(!http.restarts_local_playback(&http));
-        assert_eq!(
-            off.restarts_local_playback(&system),
-            system.librespot_url().is_some(),
-            "System restarts local playback only when an HTTP proxy is resolved"
-        );
+    fn engine_only_accepts_plain_http_proxy_urls() {
+        assert_eq!(super::ProxyConfig::Off.librespot_url(), None);
         let http_uri: http::Uri = "http://127.0.0.1:8080".parse().unwrap();
         let https_uri: http::Uri = "https://127.0.0.1:8080".parse().unwrap();
         let socks_uri: http::Uri = "socks5://127.0.0.1:1080".parse().unwrap();

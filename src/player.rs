@@ -291,6 +291,7 @@ impl Engine {
     /// Connects to Spotify and announces this device on Spotify Connect.
     pub async fn connect(
         config: &EngineConfig,
+        proxy: Option<reqwest::Url>,
         credentials: Credentials,
         cache: Cache,
         notify: Notify,
@@ -299,7 +300,7 @@ impl Engine {
         let session_config = SessionConfig {
             device_id: device_id.clone(),
             autoplay: Some(config.autoplay),
-            proxy: config.proxy.librespot_url(),
+            proxy,
             ..SessionConfig::default()
         };
         let normalisation_factor = Arc::new(std::sync::atomic::AtomicU64::new(1.0f64.to_bits()));
