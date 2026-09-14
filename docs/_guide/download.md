@@ -75,17 +75,19 @@ sign-ins are removed.
 
 ### Flatpak
 
-The release carries a Flatpak bundle of the Linux build,
-`spotifast-vX.Y.Z-x86_64.flatpak`, on the
-[releases page](https://github.com/crmne/spotifast/releases). It runs on
+The release carries a [Spotifast Flatpak bundle]({{ base }}/spotifast-v{{ v }}-x86_64.flatpak?flatpak-id=rocks.spotifast.Spotifast)
+of the Linux build. It runs on
 any distribution with Flatpak and the Freedesktop 24.08 runtime:
 
 ```sh
-flatpak install --user ~/Downloads/spotifast-vX.Y.Z-x86_64.flatpak
+flatpak install --user ~/Downloads/spotifast-v{{ v }}-x86_64.flatpak
+flatpak run rocks.spotifast.Spotifast
 ```
 
-The Flatpak application ID remains `rocks.fastpotify.Fastpotify` so existing
-installations upgrade in place.
+The application ID is **`rocks.spotifast.Spotifast`**. Existing Fastpotify
+Flatpak users install this as a new application, then remove the old one.
+See [switching Flatpak installations](/renaming/#flatpak) to retain settings
+and history. Sign in again after switching.
 
 A bundle does not update itself. Flathub support is planned.
 

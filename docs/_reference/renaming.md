@@ -40,9 +40,10 @@ the old name until their maintainers update them.
 
 ## Updates and packaging
 
-Public release downloads use the `spotifast-` prefix. The 0.8.0 downloads
-were renamed without changing their bytes. Byte-identical `fastpotify-`
-compatibility downloads remain for installed update clients that request
+Public release downloads use the `spotifast-` prefix. The 0.8.0 native downloads
+were renamed without changing their bytes. Flatpak was repackaged with its
+new application ID while retaining the original executable. Byte-identical
+native `fastpotify-` compatibility downloads remain for installed update clients that request
 those exact filenames, with both names recorded in `checksums.txt`. The compatibility command keeps its `fastpotify VERSION`
 response. The Spotifast command reports `spotifast VERSION`; new update clients
 accept either name and still require the exact expected version and checksum.
@@ -63,10 +64,10 @@ protocol retain their original identities for existing integrations.
 
 ## Flatpak
 
-New Flatpak builds use **`rocks.spotifast.Spotifast`**. This is a separate
+The Spotifast Flatpak bundle uses **`rocks.spotifast.Spotifast`**. This is a separate
 Flatpak application, so install the new bundle and remove the old application.
-The repackaged 0.8.0 bundle is being prepared; the download page will identify
-the new application once it is available.
+The repackaged 0.8.0 bundle is available from the [download page](/download/)
+and contains the original 0.8.0 executable.
 
 To retain settings, local pins and history, quit the old application. Before
 the first launch of the new one, copy its data directory:
