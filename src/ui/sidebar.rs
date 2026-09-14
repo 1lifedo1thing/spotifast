@@ -837,10 +837,13 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
     let context_playing = app.believed_playing();
     let current_page = app.page().clone();
 
-    egui::ScrollArea::vertical()
-        .id_salt("sidebar-list")
-        .auto_shrink([false, false])
-        .show(ui, |ui| {
+    crate::autoscroll::show(
+        ui,
+        egui::ScrollArea::vertical()
+            .id_salt("sidebar-list")
+            .auto_shrink([false, false]),
+        egui::Vec2b::new(false, true),
+        |ui| {
             if egui::DragAndDrop::has_payload_of_type::<DragTrack>(ui.ctx())
                 || egui::DragAndDrop::has_payload_of_type::<DragEntry>(ui.ctx())
             {
@@ -1280,6 +1283,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                             pin_menu(app, ui, entry.ordering_key());
                         });
                 }
+                crate::autoscroll::row(ui, &response);
                 response.on_hover_cursor(egui::CursorIcon::PointingHand);
             });
             if let Some(slot) = reorder_slot {
@@ -1304,7 +1308,8 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
             if let Some(page) = more_page {
                 super::widgets::load_more_when_near_end(ui, app, page, true);
             }
-        });
+        },
+    );
 }
 
 fn pin_menu(app: &mut App, ui: &mut egui::Ui, key: &str) {

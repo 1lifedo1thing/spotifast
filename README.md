@@ -360,6 +360,10 @@ still in progress.
 
 On macOS, `Cmd` replaces `Ctrl`.
 
+On Windows, after 0.7.1, middle-click a scrolling list and move the pointer to
+autoscroll. Click, press Esc, use the wheel or switch windows to stop.
+It works automatically, with no Settings toggle. See [autoscroll](docs/_guide/using-spotifast.md#middle-click-autoscroll).
+
 ## Controlling it from outside
 
 On Linux, Spotifast is an MPRIS player, so `playerctl --player=fastpotify

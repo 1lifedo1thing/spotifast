@@ -399,6 +399,7 @@ pub struct App {
     glide: Option<egui::Vec2>,
     /// Time of the last scroll event, used to detect the end of a gesture.
     scroll_last_event: Option<Instant>,
+    autoscroll: crate::autoscroll::Autoscroll,
     /// How each table is sorted, per page, for as long as the app runs.
     /// The rows picked out in a track table, and the page they belong to.
     /// One table at a time: picking rows on another page replaces it.
@@ -675,6 +676,7 @@ impl App {
             scroll_accum: egui::Vec2::ZERO,
             glide: None,
             scroll_last_event: None,
+            autoscroll: crate::autoscroll::Autoscroll::default(),
             selection: None,
             table_sorts: session
                 .sorts
@@ -7282,6 +7284,10 @@ impl App {
 impl App {
     /// Runs background work with or without a main window.
     pub fn background_frame(&mut self, ctx: &egui::Context) {
+        if self.autoscroll.cancel_if_unfocused(ctx) {
+            self.glide = None;
+            self.scroll_lock = None;
+        }
         self.handle_control_commands();
         self.handle_events();
         self.open_pending_link();
@@ -7363,7 +7369,14 @@ impl App {
         let ctx = &ctx;
         self.refresh_frame_now();
         self.apply_theme(ctx);
-        self.lock_scroll_axis(ctx);
+        self.autoscroll.begin(ctx, true);
+        if self.autoscroll.active() {
+            self.glide = None;
+            self.scroll_lock = None;
+            ctx.input_mut(|input| input.smooth_scroll_delta = egui::Vec2::ZERO);
+        } else {
+            self.lock_scroll_axis(ctx);
+        }
         // Switch to the main window when sign-in is required.
         let needs_sign_in = !(self.is_connected() && self.user.is_some())
             && !matches!(self.auth, AuthStatus::Connecting | AuthStatus::Starting)
@@ -7377,6 +7390,17 @@ impl App {
             crate::ui::show(self, ui);
         }
         self.apply_actions(ctx);
+        let autoscroll = self.autoscroll.finish(ctx, true);
+        if autoscroll.scrolling {
+            self.glide = None;
+            self.scroll_lock = None;
+        }
+        if autoscroll.stop_following_lyrics {
+            self.lyrics_following = false;
+        }
+        if let Some(offset) = autoscroll.playlist_scroll {
+            self.winamp.playlist_scroll = offset;
+        }
         self.refresh_frame_now();
         self.sync_media_controls(ctx);
 
@@ -8015,6 +8039,244 @@ fn evict_lru_map<V>(
 mod tests {
     use super::*;
     use crate::api::models::Image;
+
+    #[test]
+    fn middle_clicking_a_playlist_row_autoscrolls_only_on_windows_without_playing_it() {
+        use egui::accesskit::Role;
+        fn draw(
+            ctx: &egui::Context,
+            app: &mut App,
+            time: u32,
+            events: Vec<egui::Event>,
+        ) -> egui::accesskit::TreeUpdate {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    time: Some(time as f64 / 60.0),
+                    events,
+                    ..Default::default()
+                },
+                |ui| app.frame_ui(ui),
+            );
+            output.textures_delta.clear();
+            output.platform_output.accesskit_update.unwrap()
+        }
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let mut app = test_app("autoscroll-playlist-row");
+        app.attach(&ctx);
+        crate::demo::populate(&mut app);
+        app.open(Page::Playlist("pl1".into()));
+        app.show_queue_panel = true;
+        let playing = app.now_playing().unwrap().uri.clone();
+        draw(&ctx, &mut app, 0, vec![]);
+        let tree = draw(&ctx, &mut app, 1, vec![]);
+        let (id, node) = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == Role::Button
+                    && node
+                        .label()
+                        .is_some_and(|label| label.starts_with("Play ") && label.contains(','))
+                    && node.bounds().is_some_and(|rect| {
+                        rect.x0 > 250.0
+                            && rect.x0 < 700.0
+                            && rect.width() > 400.0
+                            && rect.y0 > 60.0
+                            && rect.y1 < 700.0
+                    })
+            })
+            .expect("a visible playlist row");
+        let id = *id;
+        let before = node.bounds().unwrap();
+        let anchor = egui::pos2(before.x0 as f32 + 120.0, before.y0 as f32 + 12.0);
+        draw(
+            &ctx,
+            &mut app,
+            2,
+            vec![
+                egui::Event::PointerMoved(anchor),
+                egui::Event::PointerButton {
+                    pos: anchor,
+                    button: egui::PointerButton::Middle,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        assert_eq!(
+            app.autoscroll.active(),
+            cfg!(windows),
+            "only Windows arms the real row's scroll area"
+        );
+        draw(
+            &ctx,
+            &mut app,
+            3,
+            vec![egui::Event::PointerButton {
+                pos: anchor,
+                button: egui::PointerButton::Middle,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+        for frame in 4..8 {
+            draw(
+                &ctx,
+                &mut app,
+                frame,
+                vec![egui::Event::PointerMoved(egui::pos2(1100.0, 680.0))],
+            );
+        }
+        let tree = draw(&ctx, &mut app, 8, vec![]);
+        let after = tree
+            .nodes
+            .iter()
+            .find(|(node_id, _)| *node_id == id)
+            .expect("the same displayed occurrence")
+            .1
+            .bounds()
+            .unwrap();
+        if cfg!(windows) {
+            assert!(
+                after.y0 < before.y0,
+                "the playlist must scroll while the pointer is over Queue"
+            );
+        } else {
+            assert_eq!(after.y0, before.y0, "middle-click must not move the list");
+        }
+        assert_eq!(app.now_playing().unwrap().uri, playing);
+        assert_eq!(app.autoscroll.active(), cfg!(windows));
+    }
+
+    #[test]
+    fn autoscroll_updates_the_real_lyrics_and_skinned_playlist_without_changing_playback() {
+        for skinned in [false, true] {
+            let ctx = egui::Context::default();
+            let mut app = test_app(if skinned {
+                "autoscroll-skin"
+            } else {
+                "autoscroll-lyrics"
+            });
+            app.attach(&ctx);
+            crate::demo::populate(&mut app);
+            app.show_queue_panel = false;
+            app.show_lyrics_panel = !skinned;
+            app.settings.winamp_window = skinned;
+            app.settings.playlist_open = skinned;
+            app.settings.skin_scale = Some(2);
+            if let Loadable::Loaded(queue) = &mut app.queue {
+                queue.queue = queue.queue.iter().cycle().take(80).cloned().collect();
+            }
+            app.lyrics = Loadable::Loaded(Some(crate::lyrics::Lyrics {
+                lines: (0..80)
+                    .map(|i| crate::lyrics::Line {
+                        at_ms: Some(i * 5000),
+                        text: format!("Autoscroll lyric line {i}"),
+                    })
+                    .collect(),
+                synced: true,
+                instrumental: false,
+            }));
+            if let Some(remote) = &mut app.remote {
+                remote.state.is_playing = false;
+                remote.state.progress_ms = Some(0);
+            }
+            let playing = app.now_playing().unwrap().uri.clone();
+            let mut frame = 0;
+            let mut draw = |app: &mut App, events: Vec<egui::Event>| {
+                frame += 1;
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            if skinned {
+                                egui::vec2(550.0, 580.0)
+                            } else {
+                                egui::vec2(1280.0, 800.0)
+                            },
+                        )),
+                        time: Some(frame as f64 / 60.0),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| app.frame_ui(ui),
+                );
+                output.textures_delta.clear();
+            };
+            draw(&mut app, vec![]);
+            draw(&mut app, vec![]);
+            let anchor = if skinned {
+                ctx.read_response(egui::Id::new(("playlist-row", 0_usize)))
+                    .unwrap()
+                    .rect
+                    .center()
+            } else {
+                egui::pos2(1120.0, 100.0)
+            };
+            let press = |button, pressed| egui::Event::PointerButton {
+                pos: anchor,
+                button,
+                pressed,
+                modifiers: egui::Modifiers::NONE,
+            };
+            draw(
+                &mut app,
+                vec![
+                    egui::Event::PointerMoved(anchor),
+                    press(egui::PointerButton::Middle, true),
+                ],
+            );
+            assert_eq!(
+                app.autoscroll.active(),
+                cfg!(windows),
+                "real surface, skinned={skinned}"
+            );
+            if !skinned {
+                assert_eq!(app.lyrics_following, !cfg!(windows));
+            }
+            draw(&mut app, vec![press(egui::PointerButton::Middle, false)]);
+            for _ in 0..5 {
+                draw(
+                    &mut app,
+                    vec![egui::Event::PointerMoved(anchor + egui::vec2(0.0, 120.0))],
+                );
+            }
+            if skinned {
+                if cfg!(windows) {
+                    assert!(app.winamp.playlist_scroll > 0);
+                } else {
+                    assert_eq!(app.winamp.playlist_scroll, 0);
+                }
+                assert!(
+                    app.winamp.playlist_selection.is_empty(),
+                    "middle-click must not select a row"
+                );
+            } else {
+                assert_eq!(app.lyrics_following, !cfg!(windows));
+            }
+            assert_eq!(app.now_playing().unwrap().uri, playing);
+            draw(&mut app, vec![press(egui::PointerButton::Primary, true)]);
+            assert!(!app.autoscroll.active());
+            draw(&mut app, vec![press(egui::PointerButton::Primary, false)]);
+            if skinned {
+                // After cancelling, a normal click selects the visible row.
+                draw(&mut app, vec![egui::Event::PointerMoved(anchor)]);
+                draw(&mut app, vec![press(egui::PointerButton::Primary, true)]);
+                draw(&mut app, vec![press(egui::PointerButton::Primary, false)]);
+                assert_eq!(
+                    app.winamp.playlist_selection.len(),
+                    1,
+                    "ordinary row selection must still work after cancellation"
+                );
+            }
+            app.backend.shutdown();
+        }
+    }
 
     #[test]
     fn shift_wheel_moves_the_shelf_without_scrolling_the_page() {

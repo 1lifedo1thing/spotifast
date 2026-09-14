@@ -3,6 +3,7 @@
 pub mod api;
 pub mod app;
 pub mod auth;
+pub mod autoscroll;
 pub mod backend;
 pub mod bidi;
 pub mod credentials;
