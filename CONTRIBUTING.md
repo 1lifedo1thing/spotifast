@@ -40,8 +40,10 @@ but is not required for closure. Reopen the issue if it persists after updating.
 
 Copilot assesses new and reopened issues, new discussions, and new or edited
 comments on either. It reads the full conversation again and can update triage
-labels when new evidence changes the report. Bot activity and pull request
-comments are ignored. Reopening a closed issue remains a maintainer decision.
+labels when new evidence changes the report. Bot activity, pull request comments
+and generated workflow-failure alerts are ignored. This includes maintainer
+comments on those alerts, so discussing a failed assessment cannot create more
+failure alerts. Reopening a closed issue remains a maintainer decision.
 
 A rocket reaction on the triggering report or comment means that assessment
 completed successfully, including its safety checks and GitHub actions. It does

@@ -104,6 +104,66 @@ test('bot edits and pull request comments are filtered', async () => {
   assert.deepEqual(f.mutations, []);
 });
 
+function workflowFailure() {
+  return {
+    number: 428, node_id: 'alert',
+    user: { type: 'Bot', login: 'github-actions[bot]' },
+    title: '[aw] Failed jobs: Copilot issue assessment',
+    labels: [{ name: 'agentic-workflows' }, { name: 'duplicate' }],
+  };
+}
+
+test('human comments and reopenings cannot reassess workflow failure alerts', async () => {
+  const engineFailure = {
+    ...workflowFailure(),
+    title: '[aw] Copilot issue assessment hit engine rate limit (HTTP 429)',
+    body: '<!-- gh-aw-failure-issue: true, workflow_id: issue-assessment, branch: main -->',
+  };
+  for (const issue of [workflowFailure(), engineFailure]) {
+    for (const [type, action] of [
+      ['IssueComment', 'created'], ['IssueComment', 'edited'], ['Issue', 'reopened'],
+    ]) {
+      const f = fixture(type);
+      f.context.payload.action = action;
+      f.context.payload.issue = issue;
+      f.context.payload.sender = { type: 'User', login: 'crmne' };
+      f.node.reactionGroups[0].viewerHasReacted = true;
+      f.github.graphql = async () => { throw new Error('alert must be filtered before any reaction API'); };
+      assert.equal(await prepare(f), null);
+      assert.deepEqual(f.mutations, []);
+    }
+  }
+});
+
+test('manual dispatch cannot feed a workflow failure alert back into assessment', async () => {
+  const f = fixture();
+  f.context.eventName = 'workflow_dispatch';
+  delete f.context.payload.issue;
+  f.context.payload.inputs = { aw_context: JSON.stringify({ item_type: 'issue', item_number: 428 }) };
+  f.github.rest = { issues: { get: async args => {
+    assert.equal(args.issue_number, 428);
+    return { data: workflowFailure() };
+  } } };
+  f.github.graphql = async () => { throw new Error('alert must be filtered before any reaction API'); };
+  assert.equal(await prepare(f), null);
+  assert.deepEqual(f.mutations, []);
+});
+
+test('ordinary maintainer conversations and human reports about workflows still get assessed', async () => {
+  for (const change of [
+    { user: { type: 'User', login: 'reporter' },
+      body: '<!-- gh-aw-failure-issue: true, workflow_id: issue-assessment -->' },
+    { labels: [] },
+    { title: 'Playback stops after an hour' },
+  ]) {
+    const f = fixture('IssueComment');
+    f.context.payload.issue = { ...workflowFailure(), ...change };
+    f.context.payload.sender = { type: 'User', login: 'crmne' };
+    assert.ok(await prepare(f));
+    assert.deepEqual(f.mutations, []);
+  }
+});
+
 for (const type of ['IssueComment', 'DiscussionComment']) {
   test(`${type}: an edit during assessment cannot be marked by the older run`, async () => {
     const f = fixture(type);

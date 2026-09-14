@@ -33,7 +33,14 @@ async function readSubject(github, context, target) {
 async function prepare({ github, context }) {
   const { issue, discussion, comment, sender } = context.payload;
   const isBot = user => user?.type === "Bot" || user?.login?.endsWith("[bot]");
-  if (issue?.pull_request || isBot(sender) || isBot(comment?.user)) return null;
+  // A maintainer closing or discussing an alert must not trigger another
+  // failed assessment and another alert, even though their comment is human.
+  const isWorkflowFailure = item => isBot(item?.user)
+    && (item.title?.startsWith('[aw] Failed jobs:')
+      || item.body?.includes('<!-- gh-aw-failure-issue: true,'))
+    && item.labels?.some(label => label.name === 'agentic-workflows');
+  if (issue?.pull_request || isBot(sender) || isBot(comment?.user)
+      || isWorkflowFailure(issue)) return null;
 
   let subject = comment || issue || discussion;
   if (!subject && context.eventName === "workflow_dispatch") {
@@ -45,7 +52,7 @@ async function prepare({ github, context }) {
     }
     if (routed.item_type === "issue") {
       const { data } = await github.rest.issues.get({ ...context.repo, issue_number: number });
-      if (data.pull_request) return null;
+      if (data.pull_request || isWorkflowFailure(data)) return null;
       subject = data;
     } else {
       const { repository } = await github.graphql(`query($owner: String!, $repo: String!, $number: Int!) {
