@@ -64,6 +64,9 @@ Spotifast has a limited scope:
 Bug reports should include `fastpotify.log`, `panic.log` after a crash, and
 steps to reproduce the problem. See the
 [issue form](https://github.com/crmne/spotifast/issues/new/choose).
+On `main`, after 0.8.0, the log also records the app version, platform and
+active OpenGL renderer. Window-creation failures are written there even when
+the app is started from the desktop without a console.
 
 ## Account safety
 

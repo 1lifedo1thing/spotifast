@@ -380,6 +380,12 @@ pub(crate) fn run() -> eframe::Result<()> {
         Err(error) => eprintln!("not keeping a log file: {error}"),
     }
     logger.init();
+    log::info!(
+        "Starting Spotifast {} on {} ({})",
+        env!("CARGO_PKG_VERSION"),
+        std::env::consts::OS,
+        std::env::consts::ARCH
+    );
     if let Err(error) = dirs_ready {
         log::warn!("unable to create the application directories: {error}");
     }
@@ -536,6 +542,20 @@ pub(crate) fn run() -> eframe::Result<()> {
             "Spotifast",
             options,
             Box::new(move |cc| {
+                if let Some(gl) = &cc.gl {
+                    use eframe::glow::HasContext;
+                    // eframe has made this window's GL context current before
+                    // calling the app creator. These identify the renderer
+                    // actually selected, which may differ from the listed GPU.
+                    unsafe {
+                        log::info!(
+                            "OpenGL renderer: {}; vendor: {}; version: {}",
+                            gl.get_parameter_string(eframe::glow::RENDERER),
+                            gl.get_parameter_string(eframe::glow::VENDOR),
+                            gl.get_parameter_string(eframe::glow::VERSION)
+                        );
+                    }
+                }
                 creator_waker.attach(&cc.egui_ctx);
                 let mut app = creator_slot
                     .lock()
@@ -584,7 +604,8 @@ pub(crate) fn run() -> eframe::Result<()> {
                     shot: creator_shot.clone(),
                 }))
             }),
-        )?;
+        )
+        .inspect_err(|error| log::error!("Native window failed: {error}"))?;
         waker.detach();
 
         let (switch, hide) = {
