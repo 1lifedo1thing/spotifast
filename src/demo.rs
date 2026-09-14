@@ -2739,6 +2739,36 @@ mod tests {
     }
 
     #[test]
+    fn home_json_hides_only_the_chosen_recommendation_shelves() {
+        let (ctx, mut app) = accessible_app("home-json-visibility");
+        let view = crate::ui::home::show;
+        for (made_for_you, recommendations) in
+            [(true, true), (false, true), (true, false), (false, false)]
+        {
+            app.settings.home = serde_json::from_str(&format!(
+                r#"{{"made_for_you":{{"visible":{made_for_you}}},"recommendations":{{"visible":{recommendations}}}}}"#
+            )).unwrap();
+            view_frame(&ctx, &mut app, vec![], view);
+            let text = view_frame(&ctx, &mut app, vec![], view);
+            for (label, expected) in [
+                ("Made for you", made_for_you),
+                ("Recommended for you", recommendations),
+                ("Liked Songs", true),
+                ("Recently played", true),
+                ("Your top artists", true),
+                ("Your top songs", true),
+            ] {
+                assert_eq!(
+                    text.iter().any(|(text, _)| text == label),
+                    expected,
+                    "{label}, made_for_you={made_for_you}, recommendations={recommendations}"
+                );
+            }
+        }
+        app.backend.shutdown();
+    }
+
+    #[test]
     fn home_cards_open_item_menus() {
         for (section, title, uri, labels) in [
             (

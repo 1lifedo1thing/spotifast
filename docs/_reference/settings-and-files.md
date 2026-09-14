@@ -237,3 +237,21 @@ On `main`, after 0.7.1, demo windows ignore saved window geometry and do not
 read or save the normal window's framework state. Existing appearance settings
 still apply. `--demo-data <DIRECTORY>` keeps demo caches and logs under that
 directory's `cache` and `state` folders, with settings read from `config`.
+
+## Home shelves
+
+On `main`, after 0.7.1, you can hide **Made for you** and **Recommended for you**
+from Home independently. Quit Fastpotify before editing `settings.json`, then
+restart it. Add this field to hide both:
+
+```json
+"home": {
+  "made_for_you": { "visible": false },
+  "recommendations": { "visible": false }
+}
+```
+
+Set either `visible` value to `true` to show that shelf again. Omitted
+preferences keep both shelves visible. Other Home sections keep their normal
+order and contents. This changes what is displayed; hidden shelves still
+refresh in the background.

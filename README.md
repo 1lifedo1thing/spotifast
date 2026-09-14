@@ -390,6 +390,9 @@ on Linux). They include the Connect device name, bitrate, normalisation,
 autoplay, gapless playback, the audio backend (PulseAudio/PipeWire or ALSA on
 Linux), audio cache size, theme, sidebar state, whether pages take colour
 from artwork, and the mini player's skin and size.
+On `main`, after 0.7.1, you can hide Made for you and Recommended for you
+from Home through JSON preferences; see
+[Home shelves](docs/_reference/settings-and-files.md#home-shelves).
 Playback settings apply when you press **Apply and restart playback**.
 The Settings page has its own search: type under the title to narrow the
 rows, clear the field to see everything again.

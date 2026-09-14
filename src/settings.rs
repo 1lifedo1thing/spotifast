@@ -47,6 +47,26 @@ pub enum ThemeChoice {
     System,
 }
 
+/// Whether a Home shelf is drawn. Hidden shelves still refresh normally.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HomeShelfSettings {
+    pub visible: bool,
+}
+
+impl Default for HomeShelfSettings {
+    fn default() -> Self {
+        Self { visible: true }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HomeSettings {
+    pub made_for_you: HomeShelfSettings,
+    pub recommendations: HomeShelfSettings,
+}
+
 /// Mini-player visualizer mode.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -101,6 +121,7 @@ pub struct Settings {
     pub audio_cache: bool,
     pub audio_cache_mb: u64,
     pub theme: ThemeChoice,
+    pub home: HomeSettings,
     /// Tint the interface with the colour of the playing album's art.
     pub accent_from_art: bool,
     /// Last local volume, 0..=65535.
@@ -211,6 +232,7 @@ impl Default for Settings {
             audio_cache: true,
             audio_cache_mb: 1024,
             theme: ThemeChoice::Dark,
+            home: HomeSettings::default(),
             accent_from_art: true,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
             sidebar_visible: true,
@@ -330,6 +352,33 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::Settings;
+
+    #[test]
+    fn partial_home_preferences_keep_defaults_and_survive_a_settings_round_trip() {
+        for (home, made_for_you, recommendations) in [
+            ("{}", true, true),
+            (r#"{"made_for_you":{"visible":false}}"#, false, true),
+            (r#"{"recommendations":{"visible":false}}"#, true, false),
+            (
+                r#"{"made_for_you":{"visible":false},"recommendations":{"visible":false}}"#,
+                false,
+                false,
+            ),
+        ] {
+            let settings: Settings =
+                serde_json::from_str(&format!(r#"{{"volume":12345,"home":{home}}}"#)).unwrap();
+            assert_eq!(settings.home.made_for_you.visible, made_for_you);
+            assert_eq!(settings.home.recommendations.visible, recommendations);
+            assert_eq!(settings.volume, 12345);
+            let restored: Settings =
+                serde_json::from_str(&serde_json::to_string(&settings).unwrap()).unwrap();
+            assert_eq!(restored, settings);
+        }
+        let old: Settings = serde_json::from_str(r#"{"volume":12345}"#).unwrap();
+        assert!(old.home.made_for_you.visible);
+        assert!(old.home.recommendations.visible);
+        assert_eq!(old.volume, 12345);
+    }
 
     #[test]
     fn older_settings_keep_the_sidebar_visible() {
