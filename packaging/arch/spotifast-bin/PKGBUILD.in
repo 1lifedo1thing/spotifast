@@ -1,5 +1,5 @@
 # Maintainer: Carmine Paolino <carmine@paolino.me>
-pkgname=fastpotify-bin
+pkgname=spotifast-bin
 pkgver=@VERSION@
 pkgrel=@PKGREL@
 pkgdesc="Native Spotify client"
@@ -13,12 +13,13 @@ install="${pkgname}.install"
 depends=('dbus' 'alsa-lib' 'libpulse' 'libglvnd' 'libxkbcommon' 'wayland' 'libx11')
 optdepends=('libxkbcommon-x11: keyboard handling in X11 sessions'
             'pipewire-pulse: PipeWire as the PulseAudio server')
-provides=('fastpotify')
-conflicts=('fastpotify' 'fastpotify-git')
+provides=("spotifast=$pkgver" "fastpotify=$pkgver" "fastpotify-bin=$pkgver")
+conflicts=('fastpotify' 'fastpotify-bin' 'fastpotify-git' 'spotifast' 'spotifast-git')
+replaces=('fastpotify-bin')
 options=('!debug' '!strip')
 _repo="https://github.com/crmne/spotifast"
-source_x86_64=("${_repo}/releases/download/v${pkgver}/fastpotify-v${pkgver}-x86_64-unknown-linux-gnu.tar.gz")
-source_aarch64=("${_repo}/releases/download/v${pkgver}/fastpotify-v${pkgver}-aarch64-unknown-linux-gnu.tar.gz")
+source_x86_64=("${_repo}/releases/download/v${pkgver}/spotifast-v${pkgver}-x86_64-unknown-linux-gnu.tar.gz")
+source_aarch64=("${_repo}/releases/download/v${pkgver}/spotifast-v${pkgver}-aarch64-unknown-linux-gnu.tar.gz")
 sha256sums_x86_64=('@AMD64_SHA256@')
 sha256sums_aarch64=('@ARM64_SHA256@')
 

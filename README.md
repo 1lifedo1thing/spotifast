@@ -19,9 +19,9 @@ cannot play music through Spotifast on this computer or another device.
 See [spotifast.rocks](https://spotifast.rocks/) for installation, setup,
 everyday use, and connection details.
 
-On `main`, `spotifast` is the main command and `fastpotify` remains available
-for existing scripts. Settings, credential stores and package identities keep
-their established paths. See [rename compatibility](docs/_reference/renaming.md).
+`spotifast` is the main command and `fastpotify` remains available
+for existing scripts. Settings and credential stores keep their established paths.
+AUR and Homebrew packages now use the Spotifast name. See [rename compatibility](docs/_reference/renaming.md).
 
 ## What it does
 
@@ -170,15 +170,18 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
 On Arch Linux, Spotifast is in the AUR:
 
 ```bash
-yay -S fastpotify-bin      # the released build, ready made
-yay -S fastpotify          # the release, built from source
-yay -S fastpotify-git      # built from the latest commit
+yay -S spotifast-bin      # the released build, ready made
+yay -S spotifast          # the release, built from source
+yay -S spotifast-git      # built from the latest commit
 ```
+
+Existing AUR installations can switch with the matching command above. Accept
+the offer to replace the old package; saved settings and sign-ins are kept.
 
 On macOS, with [Homebrew](https://brew.sh):
 
 ```sh
-brew install --cask crmne/tap/fastpotify
+brew install --cask crmne/tap/spotifast
 ```
 
 On Gentoo, [niko-overlays](https://github.com/NikoMalik/niko-overlays) offers

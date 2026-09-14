@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Usage: bash packaging/test-install.sh ubuntu:24.04 dist/packages/0.7.1
+# Usage: bash packaging/test-install.sh ubuntu:24.04 dist/packages/0.8.0 [legacy-packages]
 # Run on the matching architecture, with a C compiler and Docker available.
 set -euo pipefail
 
 image=${1:?Supply a Debian, Ubuntu or Fedora container image}
 packages=$(realpath "${2:?Supply a native-packages output directory}")
+legacy_packages=$(realpath "${3:-$packages/legacy}")
 case "$(uname -m)" in
   x86_64) target=linux-amd64 ;;
   aarch64) target=linux-arm64 ;;
@@ -17,6 +18,10 @@ case "$image" in
 esac
 package_dir="$packages/packages/$target/$format"
 test -d "$package_dir"
+legacy_mount=()
+if [[ -d "$legacy_packages" ]]; then
+  legacy_mount=(--volume "$legacy_packages:/legacy:ro")
+fi
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 checks=$(mktemp -d)
 trap 'rm -rf -- "$checks"' EXIT
@@ -25,18 +30,31 @@ cc -std=c99 -Wall -Wextra -Werror "$script_dir/check-runtime-libs.c" -ldl -o "$c
 docker run --rm \
   --volume "$package_dir:/packages:ro" \
   --volume "$checks:/checks:ro" \
+  "${legacy_mount[@]}" \
   --env "FORMAT=$format" \
   "$image" sh -ec '
     set -- /packages/*."$FORMAT"
     test "$#" -eq 1
     test -f "$1"
+    mkdir -p /root/.config/fastpotify
+    printf "%s\n" "preserve-existing-settings" > /root/.config/fastpotify/rename-fixture
     if [ "$FORMAT" = deb ]; then
       apt-get update
+      if [ -d /legacy ]; then
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends /legacy/*.deb
+        dpkg-query -W fastpotify
+      fi
       DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$1"
-      dpkg-query -W fastpotify
+      dpkg-query -W spotifast
+      test "$(dpkg-query -W -f="\${db:Status-Status}" fastpotify 2>/dev/null || true)" != installed
     else
+      if [ -d /legacy ]; then
+        dnf install -y --setopt=install_weak_deps=False /legacy/*.rpm
+        rpm -q fastpotify
+      fi
       dnf install -y --setopt=install_weak_deps=False "$1"
-      rpm -q fastpotify
+      rpm -q spotifast
+      ! rpm -q fastpotify
     fi
     # --version exercises linked libraries; the probe checks dlopen libraries
     # without installing a desktop, compiler, interpreter or test dependencies.
@@ -47,10 +65,11 @@ docker run --rm \
     test -s /usr/share/icons/hicolor/scalable/apps/fastpotify.svg
     test -s /usr/share/spotifast/omarchy/spotifast.json.tpl
     test -x /usr/share/spotifast/omarchy/spotifast-theme
+    test "$(cat /root/.config/fastpotify/rename-fixture)" = preserve-existing-settings
     if [ "$FORMAT" = deb ]; then
-      apt-get remove -y fastpotify
+      apt-get remove -y spotifast
     else
-      dnf remove -y fastpotify
+      dnf remove -y spotifast
     fi
     test ! -e /usr/bin/fastpotify
     test ! -e /usr/bin/spotifast
@@ -58,4 +77,5 @@ docker run --rm \
     test ! -e /usr/share/icons/hicolor/scalable/apps/fastpotify.svg
     test ! -e /usr/share/spotifast/omarchy/spotifast.json.tpl
     test ! -e /usr/share/spotifast/omarchy/spotifast-theme
+    test "$(cat /root/.config/fastpotify/rename-fixture)" = preserve-existing-settings
   '

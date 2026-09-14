@@ -117,7 +117,7 @@
               );
             in
             rustPlatform.buildRustPackage {
-              pname = "fastpotify";
+              pname = "spotifast";
               version = (pkgs.lib.importTOML ./Cargo.toml).package.version;
               src = self;
 
@@ -201,7 +201,7 @@
                     icnsify ${./packaging/macos/icon-1024.png} -o $out
                   '';
             in
-            pkgs.runCommand "fastpotify-app"
+            pkgs.runCommand "spotifast-app"
               {
                 meta = {
                   description = "A native Spotify client in a macOS app bundle";

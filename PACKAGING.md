@@ -5,8 +5,9 @@ it pins the shared CLI and nFPM versions and declares Linux amd64/arm64 inputs,
 DEB/RPM contents, dependencies, recipe templates and downstream repositories.
 Application assets and native recipes stay in `packaging/`.
 
-The Spotifast rename preserves package IDs and release filenames so installed
-copies can upgrade. Linux packages add a `spotifast` command alias; archives
+Public AUR, Homebrew, DEB/RPM and release download names use Spotifast.
+AUR and native Linux packages declare the old package replacements, and the
+Homebrew tap contains a `fastpotify` to `spotifast` cask rename mapping. Linux packages add a `spotifast` command alias; archives
 also include the new command. See [rename compatibility](docs/_reference/renaming.md)
 for the macOS bundle and updater requirements.
 
@@ -52,7 +53,9 @@ Packaging CI builds both architectures using a pinned published release
 (`v0.8.0`) for pushes and PRs, or the requested version for manual and release
 runs. It then installs and removes each package in clean Ubuntu 24.04, Debian
 13, Fedora 41 and current Fedora containers on native amd64 and arm64 runners.
-The checks run both `spotifast --version` and `fastpotify --version`, load the GUI libraries with `dlopen`,
+Each case first installs the original Fastpotify 0.8.0 package, replaces it
+with Spotifast, and verifies that the old package is gone and a settings
+fixture survives installation and removal. The checks run both `spotifast --version` and `fastpotify --version`, load the GUI libraries with `dlopen`,
 and verify the desktop entry and icon. They cover installation and library
 resolution, not a running desktop or Spotify playback. On release runs these
 checks follow artifact attachment; a failure marks the workflow as failed.
@@ -131,3 +134,11 @@ native-packages --config native-packages.macos.yaml build \
 
 Secret configuration applies to future builds. Existing published DMGs retain
 their original signatures; this setup does not replace release assets.
+
+`packaging/release-names.py DIST TAG` prepares the public `spotifast-` names,
+byte-identical compatibility names for installed updaters, and a checksum
+manifest containing both. It rejects mismatched name pairs without replacing
+either input. Archive layouts, app IDs, settings paths and updater markers
+remain compatible. Run `python3 packaging/test-release-names.py` when changing
+this release step. The 0.8.0 package-name migration reuses the published binary
+and source archives; it is not an application release.

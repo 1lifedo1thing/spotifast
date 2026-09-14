@@ -11,11 +11,14 @@ libraries:
     deb: libasound2t64
     rpm: alsa-lib
 nfpm:
-  name: fastpotify
+  name: spotifast
   maintainer: Carmine Paolino <carmine@paolino.me>
   homepage: https://github.com/crmne/spotifast
   description: A native Spotify client
   license: MIT
+  provides: [fastpotify]
+  replaces: [fastpotify]
+  conflicts: [fastpotify]
   contents:
   - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/fastpotify"
     dst: "/usr/bin/fastpotify"
@@ -25,11 +28,11 @@ nfpm:
     dst: /usr/bin/spotifast
     type: symlink
   - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/LICENSE"
-    dst: "/usr/share/licenses/fastpotify/LICENSE"
+    dst: "/usr/share/licenses/spotifast/LICENSE"
     file_info:
       mode: 420
   - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/README.md"
-    dst: "/usr/share/doc/fastpotify/README.md"
+    dst: "/usr/share/doc/spotifast/README.md"
     file_info:
       mode: 420
   - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/packaging/applications/fastpotify.desktop"
@@ -103,8 +106,8 @@ targets:
     - deb
     - rpm
     input:
-      local: dist/fastpotify-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
-      release_asset: fastpotify-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
+      local: dist/spotifast-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
+      release_asset: spotifast-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
   linux-arm64:
     platform: linux
     arch: arm64
@@ -114,63 +117,63 @@ targets:
     - deb
     - rpm
     input:
-      local: dist/fastpotify-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
-      release_asset: fastpotify-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
+      local: dist/spotifast-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
+      release_asset: spotifast-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
 release:
   repository: crmne/spotifast
   checksums: checksums.txt
 assets:
   AMD64:
-    file: fastpotify-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
-    local: dist/fastpotify-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
+    file: spotifast-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
+    local: dist/spotifast-v@VERSION@-x86_64-unknown-linux-gnu.tar.gz
   ARM64:
-    file: fastpotify-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
-    local: dist/fastpotify-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
+    file: spotifast-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
+    local: dist/spotifast-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
   SOURCE:
-    file: fastpotify-v@VERSION@-source.tar.gz
-    local: dist/fastpotify-v@VERSION@-source.tar.gz
+    file: spotifast-v@VERSION@-source.tar.gz
+    local: dist/spotifast-v@VERSION@-source.tar.gz
   MACOS:
-    file: fastpotify-v@VERSION@-macos-universal.dmg
-    local: dist/fastpotify-v@VERSION@-macos-universal.dmg
+    file: spotifast-v@VERSION@-macos-universal.dmg
+    local: dist/spotifast-v@VERSION@-macos-universal.dmg
 templates:
-  arch/fastpotify/PKGBUILD: packaging/arch/fastpotify/PKGBUILD.in
-  arch/fastpotify/fastpotify.install: packaging/arch/fastpotify.install
-  arch/fastpotify-bin/PKGBUILD: packaging/arch/fastpotify-bin/PKGBUILD.in
-  arch/fastpotify-bin/fastpotify-bin.install: packaging/arch/fastpotify.install
-  arch/fastpotify-git/PKGBUILD: packaging/arch/fastpotify-git/PKGBUILD.in
-  arch/fastpotify-git/fastpotify-git.install: packaging/arch/fastpotify.install
-  homebrew/fastpotify.rb: packaging/homebrew/fastpotify.rb.in
+  arch/spotifast/PKGBUILD: packaging/arch/spotifast/PKGBUILD.in
+  arch/spotifast/spotifast.install: packaging/arch/spotifast.install
+  arch/spotifast-bin/PKGBUILD: packaging/arch/spotifast-bin/PKGBUILD.in
+  arch/spotifast-bin/spotifast-bin.install: packaging/arch/spotifast.install
+  arch/spotifast-git/PKGBUILD: packaging/arch/spotifast-git/PKGBUILD.in
+  arch/spotifast-git/spotifast-git.install: packaging/arch/spotifast.install
+  homebrew/spotifast.rb: packaging/homebrew/spotifast.rb.in
 repositories:
   aur-source:
     group: aur
-    url: https://aur.archlinux.org/fastpotify.git
-    push_url: ssh://aur@aur.archlinux.org/fastpotify.git
+    url: https://aur.archlinux.org/spotifast.git
+    push_url: ssh://aur@aur.archlinux.org/spotifast.git
     branch: master
     package_path: "."
     files:
-      arch/fastpotify: "."
+      arch/spotifast: "."
     version_file: ".SRCINFO"
     version_pattern: "^\\s*pkgver = (\\S+)"
     publish: push
   aur-bin:
     group: aur
-    url: https://aur.archlinux.org/fastpotify-bin.git
-    push_url: ssh://aur@aur.archlinux.org/fastpotify-bin.git
+    url: https://aur.archlinux.org/spotifast-bin.git
+    push_url: ssh://aur@aur.archlinux.org/spotifast-bin.git
     branch: master
     package_path: "."
     files:
-      arch/fastpotify-bin: "."
+      arch/spotifast-bin: "."
     version_file: ".SRCINFO"
     version_pattern: "^\\s*pkgver = (\\S+)"
     publish: push
   aur-git:
     group: aur
-    url: https://aur.archlinux.org/fastpotify-git.git
-    push_url: ssh://aur@aur.archlinux.org/fastpotify-git.git
+    url: https://aur.archlinux.org/spotifast-git.git
+    push_url: ssh://aur@aur.archlinux.org/spotifast-git.git
     branch: master
     package_path: "."
     files:
-      arch/fastpotify-git: "."
+      arch/spotifast-git: "."
     version_file: ".SRCINFO"
     version_pattern: "^\\s*pkgver = (\\S+)"
     publish: push
@@ -180,8 +183,8 @@ repositories:
     branch: main
     package_path: Casks
     files:
-      homebrew/fastpotify.rb: Casks/fastpotify.rb
-    version_file: Casks/fastpotify.rb
+      homebrew/spotifast.rb: Casks/spotifast.rb
+    version_file: Casks/spotifast.rb
     version_pattern: version "([^"]+)"
     publish: push
 version_file: Cargo.toml

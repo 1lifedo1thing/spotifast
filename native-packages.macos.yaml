@@ -4,7 +4,7 @@ tool:
   version: 0.5.1
   nfpm: 2.47.0
 nfpm:
-  name: fastpotify
+  name: spotifast
   maintainer: Carmine Paolino <carmine@paolino.me>
   description: A native Spotify client
   license: MIT
@@ -21,4 +21,4 @@ targets:
       local: dist/macos-input
     native:
       command: [ruby, packaging/macos/dmg.rb, '@PAYLOAD@', '@PACKAGE@']
-      output: 'fastpotify-@TAG@-macos-universal.dmg'
+      output: 'spotifast-@TAG@-macos-universal.dmg'

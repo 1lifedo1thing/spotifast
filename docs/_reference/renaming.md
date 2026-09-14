@@ -17,15 +17,32 @@ The `spotifast` and `fastpotify` commands open and control the same application.
 Linux packages provide `spotifast` as an alias, without installing a second
 copy of the app. Existing `playerctl --player=fastpotify` commands keep working.
 
-Keep using the existing AUR packages, Homebrew cask, DEB/RPM package name,
-Flatpak ID and Cargo package name. Their display name changes to Spotifast;
-their upgrade identity stays the same. Nix also exposes `spotifast` and, on
-macOS, `spotifast-app`, alongside the old attribute names.
+AUR packages are now `spotifast`, `spotifast-bin` and `spotifast-git`.
+The old packages have a packaging-only update that announces the move.
+Install the matching new package and accept the replacement, for example:
+
+```sh
+yay -S spotifast-bin
+```
+
+There is no need to uninstall first or remove settings. The source and binary
+release packages still use the same 0.8.0 application code. The `-git` variant
+continues to build the current development revision.
+
+The Homebrew cask is now `crmne/tap/spotifast`. Its rename metadata lets
+Homebrew migrate existing installations during updates, or explicitly with
+`brew migrate --cask fastpotify` after updating the tap. DEB/RPM packages are
+also named `spotifast` and declare replacement of `fastpotify`.
+Nix exposes `spotifast` and, on macOS, `spotifast-app`, alongside the old
+attribute names. Community-maintained distribution packages may still use
+the old name until their maintainers update them.
 
 ## Updates and packaging
 
-Release asset names retain the `fastpotify-` prefix so older update clients
-can find them. The compatibility command keeps its `fastpotify VERSION`
+Public release downloads use the `spotifast-` prefix. The 0.8.0 downloads
+were renamed without changing their bytes. Byte-identical `fastpotify-`
+compatibility downloads remain for installed update clients that request
+those exact filenames, with both names recorded in `checksums.txt`. The compatibility command keeps its `fastpotify VERSION`
 response. The Spotifast command reports `spotifast VERSION`; new update clients
 accept either name and still require the exact expected version and checksum.
 

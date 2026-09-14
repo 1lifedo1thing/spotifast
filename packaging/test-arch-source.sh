@@ -4,7 +4,7 @@ set -euo pipefail
 
 archive=$(realpath "${1:?usage: test-arch-source.sh SOURCE_ARCHIVE VERSION}")
 version=${2:?release version is required}
-recipe=$(dirname "$(realpath "$0")")/arch/fastpotify/PKGBUILD.in
+recipe=$(dirname "$(realpath "$0")")/arch/spotifast/PKGBUILD.in
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/src"

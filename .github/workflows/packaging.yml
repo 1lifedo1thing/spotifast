@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Published version (empty tests the pinned v0.7.1 fixture)
+        description: Published version (empty tests the pinned v0.8.0 fixture)
         type: string
         default: ''
       publish:
@@ -63,7 +63,30 @@ jobs:
         with:
           name: native-packages
           path: dist/native-packages
+      - name: Download the old package for replacement checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ${{ matrix.image }}
+        run: |
+          case "$(uname -m)" in
+            x86_64) deb_arch=amd64; rpm_arch=x86_64 ;;
+            aarch64) deb_arch=arm64; rpm_arch=aarch64 ;;
+          esac
+          case "$IMAGE" in
+            ubuntu:*|debian:*) file="fastpotify_0.8.0_${deb_arch}.deb" ;;
+            fedora:*) file="fastpotify-0.8.0-1.${rpm_arch}.rpm" ;;
+          esac
+          mkdir -p dist/legacy
+          gh release download v0.8.0 --repo "$GITHUB_REPOSITORY" \
+            --pattern "$file" --dir dist/legacy
+          cp packaging/fixtures/fastpotify-0.8.0-checksums.txt dist/legacy/packaging-checksums.txt
+          cd dist/legacy
+          awk -v file="$file" '$2 == file { print }' packaging-checksums.txt > input-checksum.txt
+          test -s input-checksum.txt
+          sha256sum --check input-checksum.txt
+      - name: Release filename regression checks
+        run: python3 packaging/test-release-names.py
       - name: Install and check runtime libraries in a clean container
         env:
           IMAGE: ${{ matrix.image }}
-        run: bash packaging/test-install.sh "$IMAGE" dist/native-packages
+        run: bash packaging/test-install.sh "$IMAGE" dist/native-packages dist/legacy
