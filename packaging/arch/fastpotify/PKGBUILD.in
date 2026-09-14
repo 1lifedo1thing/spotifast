@@ -19,14 +19,23 @@ options=('!debug' '!lto')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/releases/download/v${pkgver}/fastpotify-v${pkgver}-source.tar.gz")
 sha256sums=('@SOURCE_SHA256@')
 
+# GitHub archives use the repository name; older releases used Fastpotify.
+_source_dir() {
+  if [[ -d "${srcdir}/spotifast-${pkgver}" ]]; then
+    printf '%s\n' "${srcdir}/spotifast-${pkgver}"
+  else
+    printf '%s\n' "${srcdir}/${pkgname}-${pkgver}"
+  fi
+}
+
 prepare() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "$(_source_dir)"
   export RUSTUP_TOOLCHAIN=stable
   cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "$(_source_dir)"
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_TARGET_DIR=target
   # Generated bindings inside glutin carry the path they were built at, which
@@ -37,7 +46,7 @@ build() {
 }
 
 check() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "$(_source_dir)"
   export RUSTUP_TOOLCHAIN=stable
   # The demo feature carries the headless render test, which lays out every
   # page without a display and talks to nothing.
@@ -45,7 +54,7 @@ check() {
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "$(_source_dir)"
 
   install -Dm755 "target/release/fastpotify" "${pkgdir}/usr/bin/fastpotify"
   ln -s fastpotify "${pkgdir}/usr/bin/spotifast"

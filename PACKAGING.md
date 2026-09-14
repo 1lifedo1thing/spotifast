@@ -95,6 +95,11 @@ It uploads a workflow artifact only. After checking the bundle, attach it to the
 existing release and add its hash to `checksums.txt`, preserving every existing
 asset and checksum. Release tags stay immutable.
 
+Check AUR source-directory compatibility against a downloaded source archive
+with `bash packaging/test-arch-source.sh SOURCE_ARCHIVE VERSION`. It runs the
+recipe's prepare/build/check directory handling with Cargo calls stubbed out;
+it does not replace compilation or native package installation checks.
+
 To upgrade the tool, change `tool.version` in both `native-packages.yaml` and
 `native-packages.macos.yaml`, the matching immutable workflow reference, and any release-job gem installation
 pin together. Applications need no packaging Gemfile, lockfile or Ruby wrapper.
