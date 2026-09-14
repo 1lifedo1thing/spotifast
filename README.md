@@ -102,6 +102,8 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
 - **Queue** as a side panel or a page; it names what is playing from, and
   anything can be added to it from a row menu. **Add to queue** places songs
   after those already queued and before the context continues.
+  Selecting repeated playlist rows queues every occurrence in the selected
+  order. A repeated click counts once, and the notification counts actual additions.
   On `main`, after 0.7.1, Recent keeps repeated short-song plays separate,
   including consecutive local repeats of the same song.
   Each Recent row starts the song it names and shows it in the player bar

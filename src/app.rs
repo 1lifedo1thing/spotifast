@@ -6004,22 +6004,25 @@ impl App {
 
     /// Adds a row to Next up immediately, before the context's upcoming rows.
     fn add_to_queue(&mut self, uri: String, label: String) {
+        if self.queued_moments_ago(&uri) {
+            return;
+        }
         self.queue_one(uri, label, true);
+    }
+
+    /// Whether `uri` was queued so recently that asking again is the same
+    /// click arriving twice. Later duplicates are separate asks.
+    fn queued_moments_ago(&mut self, uri: &str) -> bool {
+        self.expire_pending_queue_adds();
+        self.pending_queue_adds
+            .iter()
+            .any(|(pending, at)| pending == uri && at.elapsed() < QUEUE_ADD_DEBOUNCE)
     }
 
     /// Adds one song after existing manual queue entries.
     ///
     /// `announce` is false when a batch should produce one toast.
     fn queue_one(&mut self, uri: String, label: String, announce: bool) {
-        // Coalesce duplicate events from one click, but allow later duplicates.
-        self.expire_pending_queue_adds();
-        if self
-            .pending_queue_adds
-            .iter()
-            .any(|(pending, at)| *pending == uri && at.elapsed() < QUEUE_ADD_DEBOUNCE)
-        {
-            return;
-        }
         self.pending_queue_adds.push((uri.clone(), Instant::now()));
         let item = self.optimistic_queue_item(&uri, &label);
         if let Loadable::Loaded(queue) = &self.queue {
@@ -6532,14 +6535,26 @@ impl App {
             Action::SetRepeat(mode) => self.set_repeat(mode),
             Action::AddToQueue { uri, label } => self.add_to_queue(uri, label),
             Action::QueueMany { songs } => {
-                let count = songs.len();
-                for (uri, label) in songs {
-                    self.queue_one(uri, label, false);
+                // Each picked row is its own ask, so a song picked twice is
+                // queued twice. Only an add from an earlier click can make
+                // one of them a repeat, so decide that before adding any.
+                let repeats: Vec<bool> = songs
+                    .iter()
+                    .map(|(uri, _)| self.queued_moments_ago(uri))
+                    .collect();
+                let mut count = 0;
+                for ((uri, label), repeat) in songs.into_iter().zip(repeats) {
+                    if !repeat {
+                        self.queue_one(uri, label, false);
+                        count += 1;
+                    }
                 }
-                self.toast(match count {
-                    1 => "1 song added to queue".to_string(),
-                    count => format!("{count} songs added to queue"),
-                });
+                if count > 0 {
+                    self.toast(match count {
+                        1 => "1 song added to queue".to_string(),
+                        count => format!("{count} songs added to queue"),
+                    });
+                }
             }
             Action::SetSavedMany { uris, saved } => {
                 let mut changed_tracks = false;
@@ -10031,6 +10046,106 @@ mod tests {
             vec!["spotify:track:b", "spotify:track:b", "spotify:track:ctx1"],
             "two asks are two rows, one after the other"
         );
+    }
+
+    /// A playlist can hold the same song twice. Picking both rows and
+    /// choosing Add to queue is one ask for each row, so the song is queued
+    /// twice, as the notification says.
+    #[test]
+    fn a_song_picked_twice_is_queued_twice() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: "spotify:track:a".into(),
+            ..Default::default()
+        });
+        app.local.playback = Playback::Playing;
+        app.queue = loaded_queue("spotify:track:a", &["spotify:track:ctx1"]);
+        let add = Action::QueueMany {
+            songs: vec![
+                ("spotify:track:b".into(), "b".into()),
+                ("spotify:track:c".into(), "c".into()),
+                ("spotify:track:b".into(), "b".into()),
+            ],
+        };
+        app.apply(add.clone(), &ctx);
+        // The same click arriving twice is still one ask.
+        let toasts = app.toasts.len();
+        app.apply(add.clone(), &ctx);
+        assert_eq!(app.toasts.len(), toasts, "no second addition to announce");
+        let (_, next) = queue_uris(&app);
+        assert_eq!(
+            next,
+            vec![
+                "spotify:track:b",
+                "spotify:track:c",
+                "spotify:track:b",
+                "spotify:track:ctx1",
+            ],
+            "every picked row is queued, in order"
+        );
+        assert_eq!(
+            app.manual_queue,
+            vec!["spotify:track:b", "spotify:track:c", "spotify:track:b"]
+        );
+        assert_eq!(
+            app.toasts.last().map(|toast| toast.message.as_str()),
+            Some("3 songs added to queue")
+        );
+        // A later request is separate and must preserve its duplicates too.
+        for (_, at) in &mut app.pending_queue_adds {
+            *at = Instant::now() - QUEUE_ADD_DEBOUNCE;
+        }
+        app.apply(add, &ctx);
+        assert_eq!(
+            queue_uris(&app).1,
+            [
+                "spotify:track:b",
+                "spotify:track:c",
+                "spotify:track:b",
+                "spotify:track:b",
+                "spotify:track:c",
+                "spotify:track:b",
+                "spotify:track:ctx1"
+            ]
+        );
+    }
+
+    #[test]
+    fn a_queue_batch_reports_only_rows_it_added() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        app.queue = loaded_queue("spotify:track:a", &["spotify:track:ctx1"]);
+        app.apply(
+            Action::AddToQueue {
+                uri: "spotify:track:b".into(),
+                label: "b".into(),
+            },
+            &ctx,
+        );
+        app.apply(
+            Action::QueueMany {
+                songs: vec![
+                    ("spotify:track:b".into(), "b".into()),
+                    ("spotify:track:c".into(), "c".into()),
+                    ("spotify:track:c".into(), "c".into()),
+                ],
+            },
+            &ctx,
+        );
+        assert_eq!(
+            queue_uris(&app).1,
+            [
+                "spotify:track:b",
+                "spotify:track:c",
+                "spotify:track:c",
+                "spotify:track:ctx1"
+            ]
+        );
+        assert_eq!(app.toasts.last().unwrap().message, "2 songs added to queue");
+        let toasts = app.toasts.len();
+        app.apply(Action::QueueMany { songs: vec![] }, &ctx);
+        assert_eq!(app.toasts.len(), toasts, "an empty batch adds nothing");
     }
 
     /// A response superseded by a newer request is ignored.

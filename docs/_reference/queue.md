@@ -76,3 +76,8 @@ unplayable view disables Play instead of starting the unfiltered context.
 10. **Old answers from Spotify are ignored.** Queue responses can be a few
     seconds late. Spotifast ignores stale responses and asks again. Your
     changes stay visible while it waits for confirmation.
+
+On `main`, after 0.7.1, selecting several playlist rows and choosing
+**Add to queue** preserves repeated occurrences in their selected order.
+For example, selecting B, C, B adds all three rows. A repeated click still
+counts once, and the notification reports only the rows actually added.
