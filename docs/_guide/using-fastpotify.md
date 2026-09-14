@@ -208,6 +208,11 @@ through Fastpotify, which Spotify does not record.
 A song is added after about 30 seconds, or halfway through a shorter song.
 Paused time and seeking do not count.
 
+On `main`, after 0.7.1, each repeat remains a separate play, including songs
+shorter than a minute. A newly loaded local repeat earns its own listening
+time; pausing or seeking the current play does not create another entry.
+The same play reported both locally and by Spotify appears once.
+
 The local list is stored in `history.json` and is never uploaded. Settings →
 Storage shows its location and has a **Clear history** button.
 

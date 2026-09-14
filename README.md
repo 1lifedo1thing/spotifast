@@ -93,6 +93,8 @@ everyday use, and connection details.
 - **Queue** as a side panel or a page; it names what is playing from, and
   anything can be added to it from a row menu. **Add to queue** places songs
   after those already queued and before the context continues.
+  On `main`, after 0.7.1, Recent keeps repeated short-song plays separate,
+  including consecutive local repeats of the same song.
 - On `main`, after 0.7.1, a playlist's **Play** button explicitly starts at
   its first available song when Shuffle is off and the original order is
   selected. Double-click a row to start there; use the player bar to resume.

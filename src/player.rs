@@ -177,6 +177,8 @@ pub struct LocalState {
     pub active_client: String,
     pub error: Option<String>,
     pub seek_sequence: u64,
+    /// A newly loaded track, including another play of the same URI.
+    pub track_sequence: u64,
 }
 
 /// What local playback was doing when its session ended, so the engine
@@ -749,9 +751,12 @@ fn apply_event(state: &mut LocalState, event: PlayerEvent) -> bool {
             true
         }
         PlayerEvent::TrackChanged { audio_item } => {
-            let mut changed = set(&mut state.track, Some(local_track(&audio_item)));
-            changed |= set(&mut state.error, None);
-            changed
+            state.track = Some(local_track(&audio_item));
+            state.error = None;
+            // librespot emits this when a loaded track starts, including a
+            // repeat whose URI and metadata are identical to the previous play.
+            state.track_sequence = state.track_sequence.wrapping_add(1);
+            true
         }
         PlayerEvent::Unavailable { track_id, .. } => set(
             &mut state.error,
@@ -1125,6 +1130,65 @@ mod tests {
 
     fn uri() -> SpotifyUri {
         SpotifyUri::from_uri("spotify:track:14XWXWv5FoCbFzLksawpEe").unwrap()
+    }
+
+    #[test]
+    fn each_loaded_track_has_a_new_history_sequence_but_seek_and_pause_do_not() {
+        let item = AudioItem {
+            track_id: uri(),
+            uri: uri().to_uri().unwrap(),
+            files: Default::default(),
+            name: "Short interlude".into(),
+            covers: vec![],
+            language: vec![],
+            duration_ms: 40_000,
+            is_explicit: false,
+            availability: Ok(()),
+            alternatives: None,
+            unique_fields: UniqueFields::Track {
+                artists: librespot_metadata::artist::ArtistsWithRole(vec![]),
+                album: "Album".into(),
+                album_artists: vec![],
+                popularity: 0,
+                number: 1,
+                disc_number: 1,
+            },
+        };
+        let mut state = LocalState::default();
+        for sequence in [1, 2] {
+            assert!(apply_event(
+                &mut state,
+                PlayerEvent::TrackChanged {
+                    audio_item: Box::new(item.clone())
+                }
+            ));
+            assert_eq!(state.track_sequence, sequence);
+            for event in [
+                PlayerEvent::Playing {
+                    play_request_id: sequence,
+                    track_id: uri(),
+                    position_ms: 0,
+                },
+                PlayerEvent::Paused {
+                    play_request_id: sequence,
+                    track_id: uri(),
+                    position_ms: 20_000,
+                },
+                PlayerEvent::Seeked {
+                    play_request_id: sequence,
+                    track_id: uri(),
+                    position_ms: 0,
+                },
+                PlayerEvent::Playing {
+                    play_request_id: sequence,
+                    track_id: uri(),
+                    position_ms: 0,
+                },
+            ] {
+                apply_event(&mut state, event);
+                assert_eq!(state.track_sequence, sequence);
+            }
+        }
     }
 
     #[test]

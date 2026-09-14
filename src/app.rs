@@ -1680,6 +1680,11 @@ impl App {
     }
 
     fn handle_local(&mut self, state: LocalState) {
+        if state.track_sequence != self.local.track_sequence
+            && matches!(self.target(), Target::Local)
+        {
+            self.listening = None;
+        }
         let track_changed = state.track != self.local.track;
         let reconnected = state.connected && !self.local.connected;
         if state.shuffle != self.local.shuffle
@@ -13407,6 +13412,56 @@ mod tests {
             first.uri,
             "the preview stays while the play request is pending"
         );
+    }
+
+    #[test]
+    fn each_repeat_of_a_local_short_song_must_earn_its_own_history_entry() {
+        let mut app = headless_app();
+        app.remote = None;
+        app.selected_device = None;
+        app.plays = crate::history::History::default();
+        let state_dir =
+            std::env::temp_dir().join(format!("fastpotify-repeat-history-{}", std::process::id()));
+        app.dirs.state = state_dir.clone();
+        for sequence in [1, 2] {
+            app.handle_local(LocalState {
+                connected: true,
+                playback: Playback::Playing,
+                track_sequence: sequence,
+                track: Some(crate::player::LocalTrack {
+                    uri: "spotify:track:short".into(),
+                    title: "Short interlude".into(),
+                    duration_ms: 40_000,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            });
+            app.note_listening();
+            assert_eq!(app.plays.plays().len(), sequence as usize - 1);
+            let listening = app.listening.as_mut().unwrap();
+            assert!(
+                !listening.recorded,
+                "the new play must be counted separately"
+            );
+            listening.playing_since = Some(Instant::now() - Duration::from_secs(21));
+            app.note_listening();
+            assert_eq!(app.plays.plays().len(), sequence as usize);
+            assert_eq!(app.recents_view.len(), sequence as usize);
+
+            // Seeking or pausing the same play cannot count it again.
+            let mut paused = app.local.clone();
+            paused.playback = Playback::Paused;
+            paused.seek_sequence += 1;
+            app.handle_local(paused);
+            app.note_listening();
+            let mut resumed = app.local.clone();
+            resumed.playback = Playback::Playing;
+            app.handle_local(resumed);
+            app.note_listening();
+            assert_eq!(app.plays.plays().len(), sequence as usize);
+        }
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(state_dir);
     }
 
     #[test]
