@@ -45,6 +45,9 @@ travels together in its displayed order, even if you selected the rows in
 a different order. The preview names the first song and counts the rest.
 Drop it on a sidebar playlist to append, between rows of another editable
 playlist to insert, or on Liked Songs to save every selected song.
+Selected rows have a translucent neutral highlight. Keyboard focus uses
+the row highlight without an extra outline.
+
 Dragging an unselected row copies just that song. Reordering within a
 playlist still moves one song at a time.
 

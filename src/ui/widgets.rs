@@ -935,14 +935,13 @@ fn track_row_contents(
     let playing = is_current && app.believed_playing();
     let hovered = ui.rect_contains_pointer(rect) || response.has_focus();
     if row.picked {
-        // Picked rows read as a block, so a run of them looks like one
-        // thing rather than a stack of hovers. Hovering one still lifts
-        // it, so the pointer is never lost inside the block.
+        // Keep the existing translucent selection, using a neutral palette
+        // color so selecting a song does not mark it as playing.
         ui.painter().rect_filled(
             rect,
             CornerRadius::same(6),
             palette
-                .accent
+                .secondary
                 .gamma_multiply(if hovered { 0.30 } else { 0.20 }),
         );
     } else if hovered {
@@ -954,7 +953,8 @@ fn track_row_contents(
                 .gamma_multiply(if palette.dark { 0.7 } else { 1.0 }),
         );
     }
-    theme::focus_ring(ui, &response);
+    // The row highlight also shows keyboard focus. Do not add an outline
+    // when a mouse click gives the row focus for arrow-key navigation.
     let cols = columns(width, &row);
     let painter = ui.painter().clone();
     let mut x = rect.left() + 8.0;
@@ -2906,6 +2906,107 @@ mod tests {
             uri: uri.to_string(),
             ..Default::default()
         })
+    }
+
+    #[test]
+    fn track_row_selection_preserves_transparency_and_focus_without_an_outline() {
+        for mut palette in [Palette::dark(), Palette::light()] {
+            // A vivid custom accent must not tint a selected row either.
+            palette.accent = Color32::from_rgb(255, 0, 90);
+            for (picked, focused) in [(true, false), (true, true), (false, true)] {
+                let mut app = test_app();
+                app.backend.shutdown();
+                app.palette = palette;
+                let ctx = egui::Context::default();
+                theme::install(&ctx);
+                theme::apply(&ctx, &palette);
+                let item = song("spotify:track:selected");
+                let context = RowContext::Queue;
+                let mut rect = Rect::NOTHING;
+                let mut id = egui::Id::NULL;
+                let mut draw = || {
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                vec2(760.0, 520.0),
+                            )),
+                            events: vec![egui::Event::PointerGone],
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let (response, _) = track_row_response(
+                                ui,
+                                &mut app,
+                                TrackRow {
+                                    index: 0,
+                                    number: Some(1),
+                                    item: &item,
+                                    context: &context,
+                                    show_cover: false,
+                                    show_album: false,
+                                    added_at: None,
+                                    added_by: None,
+                                    show_added_by: false,
+                                    compact: false,
+                                    thin: false,
+                                    shift: 0.0,
+                                    picked,
+                                    picked_songs: &[],
+                                },
+                            );
+                            rect = response.rect;
+                            id = response.id;
+                            if focused {
+                                response.request_focus();
+                            }
+                        },
+                    );
+                    output.textures_delta.clear();
+                    output
+                };
+                draw();
+                let output = draw();
+                let fills: Vec<_> = output
+                    .shapes
+                    .iter()
+                    .filter_map(|shape| match &shape.shape {
+                        egui::epaint::Shape::Rect(shape) if shape.rect == rect => Some(shape.fill),
+                        _ => None,
+                    })
+                    .collect();
+                assert_eq!(
+                    fills,
+                    [if picked {
+                        palette
+                            .secondary
+                            .gamma_multiply(if focused { 0.30 } else { 0.20 })
+                    } else {
+                        palette
+                            .surface_hover
+                            .gamma_multiply(if palette.dark { 0.7 } else { 1.0 })
+                    }]
+                );
+                if focused {
+                    assert!(ctx.memory(|memory| memory.has_focus(id)));
+                }
+                assert!(
+                    output.shapes.iter().all(|shape| match &shape.shape {
+                        egui::epaint::Shape::Rect(shape)
+                            if shape.rect == rect || shape.rect == rect.expand(2.0) =>
+                        {
+                            shape.stroke == Stroke::NONE
+                                && (shape.rect != rect
+                                    || shape.corner_radius == CornerRadius::same(6))
+                        }
+                        _ => true,
+                    }),
+                    "row selection and focus must not add a border or change the row shape"
+                );
+                assert_eq!(rect.height(), theme::ROW_HEIGHT);
+                assert!(app.actions.is_empty());
+            }
+        }
     }
 
     #[test]

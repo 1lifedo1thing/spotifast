@@ -86,7 +86,8 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
   Add songs from a row menu, or drag a row or the currently playing song to a
   playlist in the sidebar. On `main`, after 0.7.1, dragging a selected row
   copies the whole selection in displayed order; the preview shows its count.
-  Drop the selection on Liked Songs to save every selected song.
+  Drop the selection on Liked Songs to save every selected song. Selection
+  uses a translucent neutral highlight, without a row outline.
   Drop a song from the player
   bar, queue, or another list between rows of an open editable playlist to
   insert it there. This adds a copy and leaves playback and the queue unchanged.
