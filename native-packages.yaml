@@ -50,9 +50,10 @@ nfpm:
       mode: 493
   overrides:
     # ELF inspection cannot discover the GUI's dlopen dependencies. Keep
-    # these aligned with winit/glutin and packaging/check-runtime-libs.c.
+    # these aligned with winit/glutin/rfd and packaging/check-runtime-libs.c.
     deb:
       depends:
+      - libdbus-1-3
       - libc6 (>= 2.39)
       - libgl1
       - libegl1
@@ -72,6 +73,7 @@ nfpm:
       - libstdc++6
     rpm:
       depends:
+      - dbus-libs
       - glibc >= 2.39
       - libglvnd-glx
       - libglvnd-egl

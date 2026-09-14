@@ -71,6 +71,7 @@
             pkgs.lib.makeLibraryPath (
               with pkgs;
               [
+                dbus
                 libxkbcommon
                 wayland
                 libGL
@@ -104,6 +105,7 @@
               runtimeLibs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux (
                 with pkgs;
                 [
+                  dbus
                   libxkbcommon
                   wayland
                   libGL
@@ -125,7 +127,7 @@
                 pname = "fastpotify";
                 version = (pkgs.lib.importTOML ./Cargo.toml).package.version;
                 src = self;
-                hash = "sha256-A17V9f8cueyYaX/aIPMTTYERGSxNbSJrd0bpwDZXUyI=";
+                hash = "sha256-sZV4NmU3SkMoR4IBvlqCKW3HkQFcnQeNYA5DHZjmH/E=";
               };
 
               nativeBuildInputs =

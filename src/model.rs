@@ -804,6 +804,7 @@ pub enum Dialog {
         add_uris: Vec<String>,
     },
     EditPlaylist {
+        cover: crate::playlist_cover::Draft,
         id: String,
         name: String,
         description: String,
@@ -931,6 +932,8 @@ pub enum Action {
         public: bool,
         add_uris: Vec<String>,
     },
+    ChoosePlaylistCover(String),
+    UploadPlaylistCover(String),
     UpdatePlaylist {
         id: String,
         name: String,

@@ -44,6 +44,7 @@ pub const PLAYBACK_SCOPES: &[&str] = &["streaming"];
 /// plan (Free or Premium), which decides whether local playback is offered
 /// at all; no email.
 pub const WEB_SCOPES: &[&str] = &[
+    "ugc-image-upload",
     "playlist-modify-private",
     "playlist-modify-public",
     "playlist-read-collaborative",
@@ -508,6 +509,25 @@ mod tests {
     }
 
     use super::*;
+
+    #[test]
+    fn old_web_grants_require_image_upload_consent() {
+        let token = StoredToken {
+            scope: WEB_SCOPES
+                .iter()
+                .filter(|scope| **scope != "ugc-image-upload")
+                .copied()
+                .collect::<Vec<_>>()
+                .join(" "),
+            ..Default::default()
+        };
+        assert!(!token.has_scopes(WEB_SCOPES));
+        let renewed = StoredToken {
+            scope: WEB_SCOPES.join(" "),
+            ..token
+        };
+        assert!(renewed.has_scopes(WEB_SCOPES));
+    }
 
     #[test]
     fn begin_produces_valid_pkce_material() {

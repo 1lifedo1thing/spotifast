@@ -23,8 +23,7 @@ Spotifast uses the Web API for:
   also save and remove items.
 - **Playlists:** reading, creating, renaming, changing the description and
   visibility, adding and removing songs, reordering songs, and following and
-  unfollowing. The API also supports cover uploads, but Spotifast does not yet
-  use them.
+  unfollowing. Custom playlist cover uploads are on `main`, after 0.8.0.
 - **Catalogue:** albums, artists, tracks, shows, episodes, search, and
   recommendations. Artist pages include top tracks, releases, and related
   artists.

@@ -125,6 +125,12 @@ pub enum ApiRequest {
         public: bool,
         description: String,
     },
+    UploadPlaylistCover {
+        id: String,
+        request: u64,
+        previous_urls: Vec<String>,
+        cover: crate::playlist_cover::Cover,
+    },
     UpdatePlaylist {
         id: String,
         name: Option<String>,
@@ -331,6 +337,13 @@ pub enum ApiResponse {
         result: ApiResult<Page<PlaylistItem>>,
     },
     PlaylistCreated(ApiResult<Playlist>),
+    PlaylistCoverUploaded {
+        id: String,
+        request: u64,
+        previous_urls: Vec<String>,
+        cover: crate::playlist_cover::Cover,
+        result: ApiResult<()>,
+    },
     PlaylistUpdated {
         id: String,
         result: ApiResult<()>,
@@ -463,6 +476,18 @@ pub enum Command {
         slot: CredentialSlot,
         lease: CredentialLease,
         result: Result<crate::credentials::Loaded, crate::credentials::Error>,
+    },
+    CheckPlaylistCover {
+        id: String,
+        request: u64,
+        cover: crate::playlist_cover::Cover,
+        images: Vec<crate::api::models::Image>,
+    },
+    ChoosePlaylistCover {
+        id: String,
+        request: u64,
+        selected:
+            std::pin::Pin<Box<dyn std::future::Future<Output = Option<rfd::FileHandle>> + Send>>,
     },
     /// Start (or restart) the Web API sign-in in the browser.
     SignIn,
@@ -600,6 +625,17 @@ pub enum Event {
     },
     UpdateDownloaded(Result<Box<crate::updates::install::Prepared>, String>),
     UpdateInstalling(Result<(), String>),
+    PlaylistCoverChecked {
+        id: String,
+        request: u64,
+        images: Vec<crate::api::models::Image>,
+        result: Result<bool, String>,
+    },
+    PlaylistCoverChosen {
+        id: String,
+        request: u64,
+        result: Result<Option<crate::playlist_cover::Cover>, String>,
+    },
     Auth(AuthStatus),
     Playback(LocalPlayback),
     /// Receivers seen on the local network that Spotify has not listed.
@@ -818,6 +854,23 @@ impl Backend {
             return;
         }
         let _ = self.commands.send(command);
+    }
+
+    /// Construct the native dialog on the UI thread, then await and read it
+    /// on the runtime. AppKit requires its window lookup on the main thread.
+    pub fn choose_playlist_cover(&self, id: String, request: u64) {
+        if self.offline {
+            return;
+        }
+        let selected = rfd::AsyncFileDialog::new()
+            .set_title("Choose playlist cover")
+            .add_filter("JPEG or PNG image", &["jpg", "jpeg", "png"])
+            .pick_file();
+        self.send(Command::ChoosePlaylistCover {
+            id,
+            request,
+            selected: Box::pin(selected),
+        });
     }
 
     pub fn api(&self, request: ApiRequest) {
@@ -1141,6 +1194,63 @@ impl Worker {
                     lease,
                     result,
                 } => self.on_credentials_restored(slot, lease, result),
+                Command::CheckPlaylistCover {
+                    id,
+                    request,
+                    cover,
+                    images,
+                } => {
+                    let art = self.art.clone();
+                    let events = self.events.clone();
+                    let waker = self.waker.clone();
+                    let mut session = self.session.subscribe();
+                    tokio::spawn(async move {
+                        let result = tokio::select! {
+                            _ = session.changed() => return,
+                            result = async {
+                                let url = crate::api::models::pick_image(&images, u32::MAX)
+                                    .ok_or_else(|| "No playlist artwork yet.".to_string())?;
+                                let bytes = art.fetch(url).await?;
+                                tokio::task::spawn_blocking(move || cover.matches_remote(&bytes))
+                                    .await.map_err(|_| "Couldn't check playlist artwork.".to_string())?
+                            } => result,
+                        };
+                        let _ = events.send(Event::PlaylistCoverChecked {
+                            id,
+                            request,
+                            images,
+                            result,
+                        });
+                        waker.wake();
+                    });
+                }
+                Command::ChoosePlaylistCover {
+                    id,
+                    request,
+                    selected,
+                } => {
+                    let events = self.events.clone();
+                    let waker = self.waker.clone();
+                    tokio::spawn(async move {
+                        let selected = selected.await;
+                        let result = match selected {
+                            None => Ok(None),
+                            Some(file) => tokio::task::spawn_blocking(move || {
+                                crate::playlist_cover::read(file.path()).map(Some)
+                            })
+                            .await
+                            .unwrap_or_else(|_| {
+                                Err("Couldn't prepare that image. Try another file.".into())
+                            }),
+                        };
+                        let _ = events.send(Event::PlaylistCoverChosen {
+                            id,
+                            request,
+                            result,
+                        });
+                        waker.wake();
+                    });
+                }
                 Command::Shutdown => break,
                 Command::SignIn => self.sign_in(),
                 Command::CancelSignIn => {
@@ -2568,7 +2678,9 @@ fn operation_for(api: &ApiGateway, request: &ApiRequest) -> Operation {
         | ApiRequest::CheckPlaylistDuplicates {
             playlist_id: id, ..
         } => Operation::PlaylistItems(api.playlist_access(id)),
-        ApiRequest::UpdatePlaylist { id, .. } | ApiRequest::FollowPlaylist { id, .. } => {
+        ApiRequest::UploadPlaylistCover { id, .. }
+        | ApiRequest::UpdatePlaylist { id, .. }
+        | ApiRequest::FollowPlaylist { id, .. } => {
             Operation::PlaylistMutation(api.playlist_access(id))
         }
         ApiRequest::AddToPlaylist { playlist_id, .. }
@@ -2769,6 +2881,18 @@ async fn handle(
             public,
             description,
         } => ApiResponse::PlaylistCreated(routed!(create_playlist(&name, public, &description))),
+        ApiRequest::UploadPlaylistCover {
+            id,
+            request,
+            previous_urls,
+            cover,
+        } => ApiResponse::PlaylistCoverUploaded {
+            request,
+            previous_urls,
+            result: routed!(upload_playlist_cover(&id, &cover.encoded)),
+            id,
+            cover,
+        },
         ApiRequest::UpdatePlaylist {
             id,
             name,
@@ -3582,6 +3706,149 @@ mod authorization_tests {
     }
 
     #[test]
+    fn cover_confirmation_checks_the_largest_image_without_spotify_credentials() {
+        use std::io::{Read, Write};
+        for matches in [false, true] {
+            let (runtime, mut worker, events) = worker("cover-check");
+            let pixels = image::RgbImage::from_pixel(24, 24, image::Rgb([20, 40, 200]));
+            let mut bytes = std::io::Cursor::new(Vec::new());
+            pixels
+                .write_to(&mut bytes, image::ImageFormat::Png)
+                .unwrap();
+            let cover = crate::playlist_cover::prepare(bytes.get_ref()).unwrap();
+            let returned = if matches {
+                cover.jpeg.clone()
+            } else {
+                let earlier = image::RgbImage::from_pixel(24, 24, image::Rgb([200, 20, 40]));
+                let mut bytes = std::io::Cursor::new(Vec::new());
+                earlier
+                    .write_to(&mut bytes, image::ImageFormat::Png)
+                    .unwrap();
+                crate::playlist_cover::prepare(bytes.get_ref())
+                    .unwrap()
+                    .jpeg
+            };
+            let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = std::thread::spawn(move || {
+                let (mut socket, _) = listener.accept().unwrap();
+                socket
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut request = Vec::new();
+                let mut buffer = [0; 1024];
+                while !request.windows(4).any(|part| part == b"\r\n\r\n") {
+                    let count = socket.read(&mut buffer).unwrap();
+                    assert!(count > 0 && request.len() < 8192);
+                    request.extend_from_slice(&buffer[..count]);
+                }
+                let request = String::from_utf8(request).unwrap().to_lowercase();
+                assert!(request.starts_with("get /full "));
+                assert!(!request.contains("authorization:"));
+                write!(socket,"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",returned.len()).unwrap();
+                socket.write_all(&returned).unwrap();
+            });
+            let images = vec![
+                crate::api::models::Image {
+                    url: format!("http://{address}/thumbnail"),
+                    width: Some(64),
+                    height: Some(64),
+                },
+                crate::api::models::Image {
+                    url: format!("http://{address}/full"),
+                    width: Some(640),
+                    height: Some(640),
+                },
+            ];
+            let (commands, receiver) = mpsc::unbounded_channel();
+            commands
+                .send(Command::CheckPlaylistCover {
+                    id: "pl1".into(),
+                    request: 7,
+                    cover,
+                    images: images.clone(),
+                })
+                .unwrap();
+            runtime.block_on(async {
+                let controller = async {
+                    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+                    loop {
+                        if let Ok(event) = events.try_recv() {
+                            match event {
+                                Event::PlaylistCoverChecked {
+                                    id,
+                                    request,
+                                    images: checked,
+                                    result,
+                                } => {
+                                    assert_eq!(id, "pl1");
+                                    assert_eq!(request, 7);
+                                    assert_eq!(checked, images);
+                                    assert_eq!(result, Ok(matches));
+                                    commands.send(Command::Shutdown).unwrap();
+                                    break;
+                                }
+                                _ => panic!("unexpected event during isolated cover check"),
+                            }
+                        }
+                        assert!(
+                            tokio::time::Instant::now() < deadline,
+                            "cover check timed out"
+                        );
+                        tokio::time::sleep(Duration::from_millis(5)).await;
+                    }
+                };
+                tokio::join!(worker.run(receiver), controller);
+            });
+            server.join().unwrap();
+        }
+    }
+
+    #[test]
+    fn old_protected_web_grants_wait_for_cover_consent_without_erasing_credentials() {
+        for slot in [CredentialSlot::Shared, CredentialSlot::Personal] {
+            let (runtime, mut worker, events) = worker("cover-consent");
+            let lease = worker.credentials.lease(slot);
+            let token = crate::auth::StoredToken {
+                client_id: if slot == CredentialSlot::Shared {
+                    crate::auth::DEFAULT_WEB_CLIENT_ID.into()
+                } else {
+                    "personal".into()
+                },
+                access_token: "dummy-access".into(),
+                refresh_token: "dummy-refresh".into(),
+                expires_at: u64::MAX,
+                scope: crate::auth::WEB_SCOPES
+                    .iter()
+                    .filter(|scope| **scope != "ugc-image-upload")
+                    .copied()
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            };
+            runtime
+                .block_on(lease.save(StoredGrant::Web(token)))
+                .unwrap();
+            worker.restore_pending[slot.index()] = true;
+            let loaded = runtime.block_on(lease.load());
+            worker.on_credentials_restored(slot, lease.clone(), loaded);
+            assert!(!worker.restore_pending[slot.index()]);
+            assert!(worker.web_tokens[slot.index()].is_none());
+            assert!(!worker.signed_in);
+            let emitted: Vec<_> = events.try_iter().collect();
+            assert!(emitted.iter().any(|event| matches!(event,
+                Event::Error(message) if message.contains("permissions changed"))));
+            assert!(
+                emitted
+                    .iter()
+                    .any(|event| matches!(event, Event::Auth(AuthStatus::SignedOut)))
+            );
+            assert!(lease.current());
+            assert!(matches!(runtime.block_on(lease.load()).unwrap().grant,
+                Some(StoredGrant::Web(saved)) if saved.refresh_token == "dummy-refresh"));
+        }
+    }
+
+    #[test]
     fn signout_rejects_late_restore_browser_verification_and_engine_results() {
         let (runtime, mut worker, events) = worker("late-authorization-results");
         let shared = worker.credentials.lease(CredentialSlot::Shared);
@@ -4019,6 +4286,53 @@ mod session_tests {
         assert!(
             session_response(&ApiRequest::Me, header()).is_none(),
             "nothing else is served here"
+        );
+    }
+}
+
+#[cfg(test)]
+mod cover_routing_tests {
+    use super::*;
+    use crate::api::gateway::{AccountId, PlaylistAccess};
+
+    #[test]
+    fn cover_upload_uses_the_existing_playlist_mutation_route() {
+        let api = ApiGateway::new(
+            reqwest::Client::new(),
+            std::sync::Arc::new(NetActivity::default()),
+        );
+        api.install(ApiSource::Shared, AccountId::new("me"))
+            .unwrap();
+        let request = ApiRequest::UploadPlaylistCover {
+            id: "test".into(),
+            request: 1,
+            previous_urls: vec![],
+            cover: crate::playlist_cover::Cover {
+                jpeg: Vec::new().into(),
+                encoded: "".into(),
+                uri: String::new(),
+            },
+        };
+        assert_eq!(
+            operation_for(&api, &request),
+            Operation::PlaylistMutation(PlaylistAccess::Unknown)
+        );
+        let mut playlist = Playlist {
+            id: "test".into(),
+            ..Default::default()
+        };
+        playlist.owner.id = Some("me".into());
+        api.observe_playlist(&playlist);
+        assert_eq!(
+            operation_for(&api, &request),
+            Operation::PlaylistMutation(PlaylistAccess::Owned)
+        );
+        playlist.owner.id = Some("other".into());
+        playlist.collaborative = true;
+        api.observe_playlist(&playlist);
+        assert_eq!(
+            operation_for(&api, &request),
+            Operation::PlaylistMutation(PlaylistAccess::Collaborative)
         );
     }
 }

@@ -311,6 +311,10 @@ pub struct App {
     accent_pending: HashSet<String>,
 
     pub dialog: Option<Dialog>,
+    cover_request: u64,
+    cover_uploads: HashMap<String, u64>,
+    /// Successful uploads stay visible while Spotify propagates the new image.
+    uploaded_covers: std::collections::HashMap<String, crate::playlist_cover::PendingCover>,
     pub show_queue_panel: bool,
     pub show_lyrics_panel: bool,
     /// The track the lyrics below are for.
@@ -631,6 +635,9 @@ impl App {
             accents: HashMap::new(),
             accent_pending: HashSet::new(),
             dialog: None,
+            cover_request: 0,
+            cover_uploads: HashMap::new(),
+            uploaded_covers: Default::default(),
             show_queue_panel: session.queue_open.unwrap_or(false),
             show_lyrics_panel: false,
             lyrics_uri: None,
@@ -1396,6 +1403,21 @@ impl App {
                 continue;
             }
             match event {
+                Event::PlaylistCoverChecked {
+                    id,
+                    request,
+                    images,
+                    result,
+                } => {
+                    self.cover_checked(&id, request, images, result);
+                }
+                Event::PlaylistCoverChosen {
+                    id,
+                    request,
+                    result,
+                } => {
+                    self.cover_chosen(&id, request, result);
+                }
                 Event::Auth(status) => self.handle_auth(status),
                 Event::Playback(status) => self.handle_playback(status),
                 Event::Receivers(receivers) => self.receivers = receivers,
@@ -1551,6 +1573,7 @@ impl App {
                 if matches!(self.dialog, Some(Dialog::PersonalAppIntro)) {
                     self.dialog = None;
                 }
+                self.uploaded_covers.clear();
                 self.sign_in_url = None;
                 self.web_app = None;
                 self.user = None;
@@ -1602,6 +1625,8 @@ impl App {
     }
 
     fn reset_data(&mut self) {
+        self.cover_uploads.clear();
+        self.uploaded_covers.clear();
         self.library = Library::default();
         self.liked_songs = crate::liked::LikedSongs::default();
         self.liked_recheck_at = None;
@@ -3817,7 +3842,157 @@ impl App {
 
     // ---- api responses -------------------------------------------------------
 
-    fn handle_api(&mut self, response: ApiResponse) {
+    fn cover_chosen(
+        &mut self,
+        id: &str,
+        request: u64,
+        result: Result<Option<crate::playlist_cover::Cover>, String>,
+    ) {
+        if let Some(Dialog::EditPlaylist {
+            id: current, cover, ..
+        }) = &mut self.dialog
+            && current == id
+            && cover.request == Some(request)
+        {
+            cover.request = None;
+            match result {
+                Ok(Some(selected)) => {
+                    cover.selection = Some(selected);
+                    cover.error = None;
+                }
+                Ok(None) => {}
+                Err(error) => cover.error = Some(error),
+            }
+        }
+    }
+
+    fn set_playlist_cover(&mut self, id: &str, cover: &crate::playlist_cover::Cover) {
+        if let Some(page) = self.playlist_pages.get_mut(id)
+            && let Some(playlist) = page.playlist.get_mut()
+        {
+            playlist.images = cover_images(cover);
+        }
+        if let Some(playlists) = self.library.playlists.get_mut() {
+            for playlist in playlists.iter_mut().filter(|playlist| playlist.id == id) {
+                playlist.images = cover_images(cover);
+            }
+        }
+    }
+
+    fn reconcile_playlist_cover(&mut self, id: &str, images: &mut Vec<crate::api::models::Image>) {
+        let Some(pending) = self.uploaded_covers.get_mut(id) else {
+            return;
+        };
+        let new_urls = !images.is_empty()
+            && images
+                .iter()
+                .all(|image| !pending.previous_urls.contains(&image.url));
+        if new_urls {
+            if pending.checking.is_none() {
+                pending.checking = Some(images.clone());
+                self.backend.send(Command::CheckPlaylistCover {
+                    id: id.into(),
+                    request: pending.request,
+                    cover: pending.cover.clone(),
+                    images: images.clone(),
+                });
+            } else if pending.checking.as_ref() != Some(images) {
+                // Keep the latest candidate while one image is being checked.
+                // Do not start parallel downloads for every metadata reply.
+                pending.next_images = Some(images.clone());
+            }
+        }
+        *images = cover_images(&pending.cover);
+        if !new_urls {
+            self.recheck_playlist_cover(id);
+        }
+    }
+
+    fn recheck_playlist_cover(&mut self, id: &str) {
+        if let Some(pending) = self.uploaded_covers.get_mut(id)
+            && pending.rechecks_left > 0
+            && let Some(page) = self.playlist_pages.get(id)
+        {
+            pending.rechecks_left -= 1;
+            self.backend.api(ApiRequest::Playlist {
+                id: id.into(),
+                generation: page.generation,
+            });
+        }
+    }
+
+    fn cover_checked(
+        &mut self,
+        id: &str,
+        request: u64,
+        images: Vec<crate::api::models::Image>,
+        result: Result<bool, String>,
+    ) {
+        let Some(pending) = self.uploaded_covers.get_mut(id) else {
+            return;
+        };
+        if pending.request != request || pending.checking.as_ref() != Some(&images) {
+            return;
+        }
+        pending.checking = None;
+        let next_images = pending.next_images.take();
+        let should_recheck = matches!(result, Ok(false));
+        match result {
+            Ok(true) => {
+                self.uploaded_covers.remove(id);
+                if let Some(page) = self.playlist_pages.get_mut(id)
+                    && let Some(playlist) = page.playlist.get_mut()
+                {
+                    playlist.images = images.clone();
+                }
+                if let Some(playlists) = self.library.playlists.get_mut() {
+                    for playlist in playlists.iter_mut().filter(|playlist| playlist.id == id) {
+                        playlist.images = images.clone();
+                    }
+                }
+            }
+            Ok(false) => {
+                pending
+                    .previous_urls
+                    .extend(images.into_iter().map(|image| image.url));
+            }
+            // The successful upload stays visible if its artwork cannot be
+            // checked. A later metadata refresh can try that URL again.
+            Err(_) => {}
+        }
+        if self.uploaded_covers.contains_key(id) {
+            if let Some(mut next) = next_images {
+                self.reconcile_playlist_cover(id, &mut next);
+            } else if should_recheck {
+                self.recheck_playlist_cover(id);
+            }
+        }
+    }
+
+    fn handle_api(&mut self, mut response: ApiResponse) {
+        match &mut response {
+            ApiResponse::Playlist {
+                id,
+                result: Ok(playlist),
+                generation,
+            } => {
+                if self
+                    .playlist_pages
+                    .get(id)
+                    .is_some_and(|page| page.generation == *generation)
+                {
+                    self.reconcile_playlist_cover(id, &mut playlist.images);
+                }
+            }
+            ApiResponse::MyPlaylists {
+                result: Ok(page), ..
+            } => {
+                for playlist in &mut page.items {
+                    self.reconcile_playlist_cover(&playlist.id, &mut playlist.images);
+                }
+            }
+            _ => {}
+        }
         match response {
             ApiResponse::Me(result) => match result {
                 Ok(user) => {
@@ -4406,6 +4581,56 @@ impl App {
                     Err(error) => {
                         self.toast_error(format!("Couldn't create the playlist: {error}"))
                     }
+                }
+            }
+            ApiResponse::PlaylistCoverUploaded {
+                id,
+                request,
+                previous_urls,
+                cover,
+                result,
+            } => {
+                if self.cover_uploads.get(&id) != Some(&request) {
+                    return;
+                }
+                self.cover_uploads.remove(&id);
+                if let Some(Dialog::EditPlaylist {
+                    id: current,
+                    cover: draft,
+                    ..
+                }) = &mut self.dialog
+                    && *current == id
+                    && draft.uploading == Some(request)
+                {
+                    draft.uploading = None;
+                    draft.error = result.as_ref().err().map(cover_error);
+                    if result.is_ok() {
+                        draft.selection = None;
+                    }
+                }
+                match result {
+                    Ok(()) => {
+                        self.set_playlist_cover(&id, &cover);
+                        self.uploaded_covers.insert(
+                            id.clone(),
+                            crate::playlist_cover::PendingCover {
+                                cover,
+                                previous_urls,
+                                request,
+                                checking: None,
+                                next_images: None,
+                                rechecks_left: 3,
+                            },
+                        );
+                        if let Some(page) = self.playlist_pages.get(&id) {
+                            self.backend.api(ApiRequest::Playlist {
+                                id,
+                                generation: page.generation,
+                            });
+                        }
+                        self.toast("Playlist cover updated");
+                    }
+                    Err(error) => self.toast_error(cover_error(&error)),
                 }
             }
             ApiResponse::PlaylistUpdated { id, result } => {
@@ -6349,6 +6574,9 @@ impl App {
     // ---- actions -----------------------------------------------------------------
 
     fn apply_actions(&mut self, ctx: &egui::Context) {
+        for cover in self.uploaded_covers.values() {
+            ctx.include_bytes(cover.cover.uri.clone(), cover.cover.jpeg.clone());
+        }
         self.frame_now = None;
         let mut actions = std::mem::take(&mut self.actions);
         while !actions.is_empty() {
@@ -6712,7 +6940,77 @@ impl App {
                     snapshot_id,
                 });
             }
-            Action::ShowDialog(dialog) => self.dialog = Some(dialog),
+            Action::ChoosePlaylistCover(id) => {
+                if self.cover_uploads.contains_key(&id) {
+                    return;
+                }
+                if let Some(Dialog::EditPlaylist {
+                    id: current, cover, ..
+                }) = &mut self.dialog
+                    && *current == id
+                    && cover.request.is_none()
+                    && cover.uploading.is_none()
+                {
+                    self.cover_request = self.cover_request.wrapping_add(1);
+                    cover.request = Some(self.cover_request);
+                    cover.error = None;
+                    self.backend.choose_playlist_cover(id, self.cover_request);
+                }
+            }
+            Action::UploadPlaylistCover(id) => {
+                if self.cover_uploads.contains_key(&id) {
+                    return;
+                }
+                let previous_urls = self
+                    .uploaded_covers
+                    .get(&id)
+                    .map(|pending| pending.previous_urls.clone())
+                    .unwrap_or_else(|| {
+                        self.playlist_pages
+                            .get(&id)
+                            .and_then(|page| page.playlist.get())
+                            .into_iter()
+                            .chain(
+                                self.library
+                                    .playlists
+                                    .get()
+                                    .into_iter()
+                                    .flatten()
+                                    .filter(|playlist| playlist.id == id),
+                            )
+                            .flat_map(|playlist| {
+                                playlist.images.iter().map(|image| image.url.clone())
+                            })
+                            .collect()
+                    });
+                if let Some(Dialog::EditPlaylist {
+                    id: current, cover, ..
+                }) = &mut self.dialog
+                    && *current == id
+                    && cover.uploading.is_none()
+                    && cover.request.is_none()
+                    && let Some(selected) = cover.selection.clone()
+                {
+                    self.cover_request = self.cover_request.wrapping_add(1);
+                    cover.uploading = Some(self.cover_request);
+                    self.cover_uploads.insert(id.clone(), self.cover_request);
+                    cover.error = None;
+                    self.backend.api(ApiRequest::UploadPlaylistCover {
+                        id,
+                        request: self.cover_request,
+                        previous_urls,
+                        cover: selected,
+                    });
+                }
+            }
+            Action::ShowDialog(mut dialog) => {
+                if let Dialog::EditPlaylist { id, cover, .. } = &mut dialog
+                    && let Some(request) = self.cover_uploads.get(id)
+                {
+                    cover.uploading = Some(*request);
+                }
+                self.dialog = Some(dialog);
+            }
             Action::CloseDialog => {
                 if matches!(self.dialog, Some(Dialog::PersonalAppIntro)) {
                     self.settings.personal_app_intro_seen = true;
@@ -8161,6 +8459,23 @@ fn evict_lru_map<V>(
     victims.sort();
     for (_, id) in victims.into_iter().take(overflow) {
         map.remove(&id);
+    }
+}
+
+fn cover_images(cover: &crate::playlist_cover::Cover) -> Vec<crate::api::models::Image> {
+    vec![crate::api::models::Image {
+        url: cover.uri.clone(),
+        width: None,
+        height: None,
+    }]
+}
+
+fn cover_error(error: &crate::api::client::ApiError) -> String {
+    match error.status() {
+        Some(401) => "Spotify sign-in expired. Sign in again, then retry the cover upload.".into(),
+        Some(403) => "Spotify refused this cover. Check that you own the playlist, then sign in again to grant image upload permission. If using a personal app, reconnect it in Settings too.".into(),
+        Some(413) => "Spotify rejected the image size. Choose a smaller image.".into(),
+        _ => format!("Couldn't upload the cover: {error}. Try again."),
     }
 }
 
@@ -10977,6 +11292,359 @@ mod tests {
             assert!(matches!(app.search.results, Loadable::NotLoaded));
             assert!(app.search.playlists.is_none());
             assert!(!app.search.catalogue_pending && !app.search.playlists_pending);
+            app.backend.shutdown();
+        }
+    }
+
+    fn cover_dialog(request: Option<u64>) -> Dialog {
+        Dialog::EditPlaylist {
+            id: "pl1".into(),
+            name: "Test".into(),
+            description: String::new(),
+            public: Some(false),
+            cover: crate::playlist_cover::Draft {
+                request,
+                ..Default::default()
+            },
+        }
+    }
+
+    fn test_cover() -> crate::playlist_cover::Cover {
+        test_cover_color([220, 20, 40])
+    }
+
+    fn test_cover_color(color: [u8; 3]) -> crate::playlist_cover::Cover {
+        let pixels = image::RgbImage::from_pixel(16, 16, image::Rgb(color));
+        let mut bytes = std::io::Cursor::new(Vec::new());
+        pixels
+            .write_to(&mut bytes, image::ImageFormat::Png)
+            .unwrap();
+        crate::playlist_cover::prepare(bytes.get_ref()).unwrap()
+    }
+
+    #[test]
+    fn reopening_cover_details_does_not_start_a_second_upload() {
+        let mut app = test_app("cover-reopened-in-flight");
+        app.backend.set_offline(true);
+        let ctx = egui::Context::default();
+        app.dialog = Some(cover_dialog(None));
+        if let Some(Dialog::EditPlaylist { cover, .. }) = &mut app.dialog {
+            cover.selection = Some(test_cover());
+        }
+        app.apply(Action::UploadPlaylistCover("pl1".into()), &ctx);
+        let request = app.cover_request;
+        app.apply(Action::CloseDialog, &ctx);
+        app.apply(Action::ShowDialog(cover_dialog(None)), &ctx);
+        // A stale action or another UI entry point cannot overlap that PUT.
+        if let Some(Dialog::EditPlaylist { cover, .. }) = &mut app.dialog {
+            cover.selection = Some(test_cover());
+        }
+        app.apply(Action::UploadPlaylistCover("pl1".into()), &ctx);
+        assert_eq!(
+            app.cover_request, request,
+            "the first upload still owns the playlist"
+        );
+        let Some(Dialog::EditPlaylist { cover, .. }) = &app.dialog else {
+            panic!()
+        };
+        assert_eq!(cover.uploading, Some(request));
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn cover_picker_cancellation_and_stale_completion_preserve_the_dialog() {
+        let mut app = test_app("cover-picker");
+        app.dialog = Some(cover_dialog(Some(2)));
+        app.cover_chosen("pl1", 1, Ok(Some(test_cover())));
+        let Some(Dialog::EditPlaylist { cover, .. }) = &app.dialog else {
+            panic!()
+        };
+        assert!(cover.selection.is_none());
+        assert_eq!(cover.request, Some(2));
+        app.cover_chosen("pl1", 2, Ok(None));
+        let Some(Dialog::EditPlaylist { cover, .. }) = &app.dialog else {
+            panic!()
+        };
+        assert!(cover.request.is_none());
+        assert!(cover.error.is_none());
+        app.dialog = None;
+        app.cover_chosen("pl1", 2, Ok(Some(test_cover())));
+        assert!(app.dialog.is_none());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn failed_cover_upload_preserves_preview_and_success_refreshes_library_art() {
+        let mut app = test_app("cover-upload");
+        app.dialog = Some(cover_dialog(None));
+        let cover = test_cover();
+        if let Some(Dialog::EditPlaylist { cover: draft, .. }) = &mut app.dialog {
+            draft.selection = Some(cover.clone());
+            draft.uploading = Some(1);
+        }
+        app.cover_uploads.insert("pl1".into(), 1);
+        app.handle_api(ApiResponse::PlaylistCoverUploaded {
+            id: "pl1".into(),
+            request: 1,
+            previous_urls: vec![],
+            cover: cover.clone(),
+            result: Err(crate::api::ApiError::Status {
+                status: 403,
+                message: "Forbidden".into(),
+            }),
+        });
+        let Some(Dialog::EditPlaylist { cover: draft, .. }) = &app.dialog else {
+            panic!()
+        };
+        assert!(draft.uploading.is_none());
+        assert!(draft.selection.is_some());
+        assert!(draft.error.as_ref().unwrap().contains("sign in again"));
+        app.library.playlists = Loadable::Loaded(vec![Playlist {
+            id: "pl1".into(),
+            ..Default::default()
+        }]);
+        if let Some(Dialog::EditPlaylist { cover: draft, .. }) = &mut app.dialog {
+            draft.uploading = Some(2);
+        }
+        app.cover_uploads.insert("pl1".into(), 2);
+        app.handle_api(ApiResponse::PlaylistCoverUploaded {
+            id: "pl1".into(),
+            request: 2,
+            previous_urls: vec![],
+            cover: cover.clone(),
+            result: Ok(()),
+        });
+        assert_eq!(
+            app.library.playlists.get().unwrap()[0].images[0].url,
+            cover.uri
+        );
+        assert!(app.uploaded_covers.contains_key("pl1"));
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            result: Ok(crate::api::models::Page {
+                items: vec![Playlist {
+                    id: "pl1".into(),
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+        });
+        assert_eq!(
+            app.library.playlists.get().unwrap()[0].images[0].url,
+            cover.uri,
+            "lagging metadata must not undo the uploaded artwork"
+        );
+        let Some(Dialog::EditPlaylist { cover: draft, .. }) = &app.dialog else {
+            panic!()
+        };
+        assert!(draft.selection.is_none());
+        assert!(draft.error.is_none());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn old_upload_completion_does_not_change_a_reopened_dialog() {
+        for succeeds in [false, true] {
+            for newer_upload in [None, Some(2)] {
+                let mut app = test_app("reopened-cover-upload");
+                app.dialog = Some(cover_dialog(None));
+                let selected = test_cover();
+                if let Some(Dialog::EditPlaylist { cover, .. }) = &mut app.dialog {
+                    cover.selection = Some(selected.clone());
+                    cover.uploading = Some(1);
+                }
+                app.dialog = None;
+                app.dialog = Some(cover_dialog(Some(3)));
+                if let Some(Dialog::EditPlaylist { cover, .. }) = &mut app.dialog {
+                    cover.selection = Some(selected.clone());
+                    cover.uploading = newer_upload;
+                    cover.error = Some("Newer selection error".into());
+                }
+                app.cover_uploads
+                    .insert("pl1".into(), newer_upload.unwrap_or(1));
+                app.handle_api(ApiResponse::PlaylistCoverUploaded {
+                    id: "pl1".into(),
+                    request: 1,
+                    previous_urls: vec![],
+                    cover: selected.clone(),
+                    result: if succeeds {
+                        Ok(())
+                    } else {
+                        Err(crate::api::ApiError::Status {
+                            status: 403,
+                            message: "Forbidden".into(),
+                        })
+                    },
+                });
+                let Some(Dialog::EditPlaylist { cover, .. }) = &app.dialog else {
+                    panic!()
+                };
+                assert_eq!(cover.selection.as_ref().unwrap().uri, selected.uri);
+                assert_eq!(cover.uploading, newer_upload);
+                assert_eq!(cover.request, Some(3));
+                assert_eq!(cover.error.as_deref(), Some("Newer selection error"));
+                app.backend.shutdown();
+            }
+        }
+    }
+
+    #[test]
+    fn a_late_url_from_an_earlier_upload_cannot_replace_the_new_cover() {
+        let mut app = test_app("cover-lagging-earlier-upload");
+        app.backend.set_offline(true);
+        app.library.playlists = Loadable::Loaded(vec![Playlist {
+            id: "pl1".into(),
+            images: vec![Image {
+                url: "original".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }]);
+        let current = test_cover_color([20, 40, 220]);
+        for request in [1, 2] {
+            app.cover_uploads.insert("pl1".into(), request);
+            app.handle_api(ApiResponse::PlaylistCoverUploaded {
+                id: "pl1".into(),
+                request,
+                previous_urls: vec!["original".into()],
+                cover: if request == 1 {
+                    test_cover()
+                } else {
+                    current.clone()
+                },
+                result: Ok(()),
+            });
+        }
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            result: Ok(crate::api::models::Page {
+                items: vec![Playlist {
+                    id: "pl1".into(),
+                    images: vec![Image {
+                        url: "https://art.example/earlier-upload.jpg".into(),
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                }],
+                ..Default::default()
+            }),
+        });
+        assert_eq!(
+            app.library.playlists.get().unwrap()[0].images[0].url,
+            current.uri,
+            "a new URL does not establish which upload it contains"
+        );
+        let earlier = vec![Image {
+            url: "https://art.example/earlier-upload.jpg".into(),
+            ..Default::default()
+        }];
+        // A check started for the superseded upload cannot confirm request 2.
+        app.cover_checked("pl1", 1, earlier.clone(), Ok(true));
+        assert_eq!(app.uploaded_covers["pl1"].request, 2);
+        let latest = vec![Image {
+            url: "https://art.example/current-upload.jpg".into(),
+            ..Default::default()
+        }];
+        let mut latest_reply = latest.clone();
+        app.reconcile_playlist_cover("pl1", &mut latest_reply);
+        assert_eq!(latest_reply[0].url, current.uri);
+        assert_eq!(app.uploaded_covers["pl1"].checking, Some(earlier.clone()));
+        assert_eq!(app.uploaded_covers["pl1"].next_images, Some(latest.clone()));
+        app.cover_checked("pl1", 2, earlier, Ok(false));
+        assert_eq!(app.uploaded_covers["pl1"].checking, Some(latest.clone()));
+        assert_eq!(
+            app.library.playlists.get().unwrap()[0].images[0].url,
+            current.uri
+        );
+        // A failed download also preserves the preview and remains retryable.
+        app.cover_checked("pl1", 2, latest.clone(), Err("offline".into()));
+        assert!(app.uploaded_covers["pl1"].checking.is_none());
+        app.reconcile_playlist_cover("pl1", &mut latest.clone());
+        app.cover_checked("pl1", 2, latest.clone(), Ok(true));
+        assert!(!app.uploaded_covers.contains_key("pl1"));
+        assert_eq!(app.library.playlists.get().unwrap()[0].images, latest);
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn confirmed_spotify_art_retires_the_override_and_accepts_later_changes() {
+        for confirm_from_library in [false, true] {
+            let mut app = test_app("confirmed-cover");
+            let remote = |url: &str| {
+                vec![crate::api::models::Image {
+                    url: url.into(),
+                    width: None,
+                    height: None,
+                }]
+            };
+            let playlist = |url: &str| Playlist {
+                id: "pl1".into(),
+                images: remote(url),
+                ..Default::default()
+            };
+            app.library.playlists = Loadable::Loaded(vec![playlist("old")]);
+            let page = app.playlist_pages.entry("pl1".into()).or_default();
+            page.playlist = Loadable::Loaded(playlist("old"));
+            let generation = page.generation;
+            let cover = test_cover();
+            app.cover_uploads.insert("pl1".into(), 1);
+            app.handle_api(ApiResponse::PlaylistCoverUploaded {
+                id: "pl1".into(),
+                request: 1,
+                previous_urls: vec!["old".into()],
+                cover: cover.clone(),
+                result: Ok(()),
+            });
+            app.handle_api(ApiResponse::Playlist {
+                id: "pl1".into(),
+                generation: generation + 1,
+                result: Ok(playlist("stale-generation")),
+            });
+            assert!(app.uploaded_covers.contains_key("pl1"));
+            for url in ["old", "confirmed", "changed-elsewhere"] {
+                if confirm_from_library {
+                    app.handle_api(ApiResponse::MyPlaylists {
+                        offset: 0,
+                        result: Ok(crate::api::models::Page {
+                            items: vec![playlist(url)],
+                            ..Default::default()
+                        }),
+                    });
+                } else {
+                    app.handle_api(ApiResponse::Playlist {
+                        id: "pl1".into(),
+                        generation,
+                        result: Ok(playlist(url)),
+                    });
+                }
+                if url == "confirmed" {
+                    assert_eq!(
+                        app.library.playlists.get().unwrap()[0].images[0].url,
+                        cover.uri
+                    );
+                    app.cover_checked("pl1", 1, remote(url), Ok(true));
+                }
+                let expected = if url == "old" { &cover.uri } else { url };
+                if confirm_from_library {
+                    assert_eq!(
+                        app.library.playlists.get().unwrap()[0].images[0].url,
+                        expected
+                    );
+                } else {
+                    assert_eq!(
+                        app.playlist_pages["pl1"].playlist.get().unwrap().images[0].url,
+                        expected
+                    );
+                }
+                assert_eq!(app.uploaded_covers.contains_key("pl1"), url == "old");
+                if url == "confirmed" {
+                    assert_eq!(app.library.playlists.get().unwrap()[0].images[0].url, url);
+                    assert_eq!(
+                        app.playlist_pages["pl1"].playlist.get().unwrap().images[0].url,
+                        url
+                    );
+                }
+            }
             app.backend.shutdown();
         }
     }

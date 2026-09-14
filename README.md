@@ -80,6 +80,8 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
   Since 0.8.0, hold a dragged song near the playlist's top or bottom
   edge to scroll to rows beyond the screen. The Library sidebar scrolls while
   dragging toward offscreen playlists too.
+  On `main`, after 0.8.0, upload a JPEG or PNG cover from
+  **Edit details → Change cover**.
   Add songs from a row menu, or drag a row or the currently playing song to a
   playlist in the sidebar. Since 0.8.0, dragging a selected row
   copies the whole selection in displayed order; the preview shows its count.

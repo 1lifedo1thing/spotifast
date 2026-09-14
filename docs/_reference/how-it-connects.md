@@ -173,6 +173,35 @@ or the request fails, the page keeps the edits and offers a retry. Refreshing
 again retries confirmation without losing the local changes. This uses the
 existing playlist requests and adds no periodic polling.
 
+## Playlist cover uploads
+
+On `main`, after 0.8.0, **Edit details → Change cover** opens the native file
+picker. Spotifast reads only the selected JPEG or PNG, preserves its aspect ratio, flattens transparent
+pixels onto white, and encodes a JPEG preview. Files must be smaller than 20 MB
+and no larger than 8192 pixels per side, within a 128 MB decoding budget.
+Encoding reduces the image to fit
+Spotify's 256 KB Base64 request limit. **Upload cover** sends that preview to
+Spotify; **Save** separately saves the name, description, and visibility.
+
+Uploads use the same shared or personal app routing as playlist edits. Requests
+are not retried through another app. The uploaded image stays visible while
+Spotify propagates its artwork. A changed URL can still contain an earlier
+upload, so Spotifast checks the largest returned image through its normal
+artwork cache, off the UI thread. Only matching image bytes or decoded pixels
+replace the temporary preview. It makes at most three immediate metadata
+rechecks; if Spotify is still catching up or the check fails, the preview stays
+and a later page refresh can check again. Once confirmed, later cover changes
+from other clients can appear. The selected source file is not copied to the
+cache or settings.
+
+Image uploads require renewed Web API consent. If Spotifast asks you to sign
+in again after updating, approve the image upload permission. Reconnect your
+personal app in Settings too, if you use one. Local playback authorization is
+unchanged. Spotify can refuse changes to playlists you do not own.
+
+On Linux the file picker uses a desktop portal, with Zenity as a fallback.
+Install your desktop's file chooser portal or Zenity if no picker opens.
+
 ## Receivers on the local network
 
 Spotify's device list only shows signed-in receivers. A new librespot or
