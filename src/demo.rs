@@ -2453,6 +2453,17 @@ mod tests {
             App::frame_ui,
         );
         let painted = view_frame(&ctx, &mut app, vec![], App::frame_ui);
+        let menu_y = |name: &str| {
+            painted
+                .iter()
+                .filter(|(text, rect)| text == name && rect.center().y > picker.y)
+                .map(|(_, rect)| rect.center().y)
+                .next()
+                .expect("theme menu entry")
+        };
+        assert!(menu_y("Follow system") < menu_y("Light"));
+        assert!(menu_y("Light") < menu_y("Dark"));
+        assert!(menu_y("Dark") < menu_y("local.json"));
         let custom = sidebar_text(&painted, "local.json").center();
         view_frame(
             &ctx,

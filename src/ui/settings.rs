@@ -702,10 +702,10 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                                         app.actions.push(Action::SetTheme(choice));
                                     }
                                 }
-                                if !app.custom_themes.themes().is_empty() {
+                                if app.custom_themes.picker_themes().next().is_some() {
                                     ui.separator();
                                 }
-                                for theme in app.custom_themes.themes() {
+                                for theme in app.custom_themes.picker_themes() {
                                     if ui
                                         .selectable_label(
                                             app.settings.custom_theme.as_deref()

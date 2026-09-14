@@ -321,6 +321,20 @@ impl Catalog {
         &self.themes
     }
 
+    /// Live Omarchy comes first on its desktop; other local palettes retain
+    /// their catalogue order. A leftover generated file is not a live option
+    /// when the integration is unavailable.
+    pub fn picker_themes(&self) -> impl Iterator<Item = &CustomTheme> {
+        self.themes
+            .iter()
+            .filter(|theme| self.follows_omarchy && theme.filename == "omarchy.json")
+            .chain(
+                self.themes
+                    .iter()
+                    .filter(|theme| theme.filename != "omarchy.json"),
+            )
+    }
+
     pub fn find(&self, filename: &str) -> Option<&CustomTheme> {
         self.themes.iter().find(|theme| theme.filename == filename)
     }
@@ -380,6 +394,25 @@ impl Catalog {
         true
     }
 
+    /// Deterministic theme menus for native demo captures, without desktop setup.
+    #[cfg(any(test, feature = "demo"))]
+    pub fn preview(themes: Vec<CustomTheme>, follows_omarchy: bool) -> Self {
+        let system_theme = follows_omarchy
+            .then(|| {
+                themes
+                    .iter()
+                    .find(|theme| theme.filename == "omarchy.json")
+                    .cloned()
+            })
+            .flatten();
+        Self {
+            themes,
+            follows_omarchy,
+            system_theme,
+            ..Self::default()
+        }
+    }
+
     #[cfg(test)]
     pub(crate) fn from_themes(themes: Vec<CustomTheme>) -> Self {
         Self {
@@ -408,6 +441,38 @@ impl Catalog {
 
 #[cfg(test)]
 mod custom_theme_tests {
+    #[test]
+    fn picker_places_live_omarchy_first_only_when_the_integration_is_available() {
+        for available in [false, true] {
+            let catalog = super::Catalog::preview(
+                ["Catppuccin.json", "Tokyo Night.json", "omarchy.json"]
+                    .into_iter()
+                    .map(|filename| super::CustomTheme {
+                        filename: filename.into(),
+                        palette: super::Palette::dark(),
+                    })
+                    .collect(),
+                available,
+            );
+            let names: Vec<_> = catalog
+                .picker_themes()
+                .map(|theme| theme.filename.as_str())
+                .collect();
+            assert_eq!(
+                names,
+                if available {
+                    vec!["omarchy.json", "Catppuccin.json", "Tokyo Night.json"]
+                } else {
+                    vec!["Catppuccin.json", "Tokyo Night.json"]
+                }
+            );
+            assert!(
+                catalog.find("omarchy.json").is_some(),
+                "menu filtering must preserve cached selections"
+            );
+        }
+    }
+
     use super::*;
 
     #[test]

@@ -288,9 +288,12 @@ Run `spotifast reload-themes` if the app is already open, then select the
 filename under **Settings → Appearance → Theme**.
 The default is **Follow system**. It uses your desktop’s light/dark appearance,
 or the current Omarchy palette on a packaged Omarchy installation. Saved Dark,
-Light and custom choices are preserved when updating. The picker also lists
-**Omarchy** and other available local palettes. The **Open themes folder** icon
-button beside the picker creates the folder if needed and opens it in your file
+Light and custom choices are preserved when updating. The picker starts with
+**Follow system**, **Light**, and **Dark**, then a separator. **Omarchy** comes
+next when the integration is available, followed by the other local palettes.
+Themes change colors and keep the app's existing fonts.
+The **Open themes folder** icon button beside the picker creates the folder if
+needed and opens it in your file
 manager, using the same button style as the Winamp skins folder.
 After adding or editing a JSON file, run `spotifast reload-themes` to refresh
 the list and the selected palette without restarting playback.
