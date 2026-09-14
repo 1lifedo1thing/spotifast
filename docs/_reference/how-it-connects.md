@@ -130,6 +130,12 @@ and dragging never write that order back to Spotify.
   macOS security assessment. Apps running from a disk image or an App Translocation
   directory must be moved to a writable installation directory first.
 
+On `main`, after 0.7.1, album and playlist scrollbars can request a distant track
+page through the existing session or Web API read path, without fetching all
+preceding tracks. These reads run one at a time per list and retain the existing
+rate-limit handling. Unloaded
+rows are placeholders until their page arrives; scrolling never starts playback.
+
 ## When Spotify pushes back
 
 Each Web API session has separate concurrency and rate limits. A `Retry-After`
