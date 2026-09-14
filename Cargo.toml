@@ -2,7 +2,7 @@
 # Keep the Cargo package identity for existing cargo-install users.
 name = "fastpotify"
 default-run = "spotifast"
-version = "0.7.1"
+version = "0.8.0"
 edition = "2024"
 rust-version = "1.95"
 license = "MIT"

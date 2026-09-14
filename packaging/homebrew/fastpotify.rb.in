@@ -21,7 +21,7 @@ cask "fastpotify" do
     "~/Library/Caches/me.paolino.fastpotify",
   ]
 
-  caveats <<~EOS
+  caveats <<~EOS if ::Version.new(version) <= ::Version.new("0.7.1")
     This build is not notarized yet, so macOS blocks the first launch.
     Either clear the quarantine flag:
       find /Applications/#{bundle_name} -exec xattr -d com.apple.quarantine {} \; 2>/dev/null
