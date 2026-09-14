@@ -2445,7 +2445,7 @@ mod tests {
             view_frame(&ctx, &mut app, vec![], App::frame_ui);
         }
         let painted = view_frame(&ctx, &mut app, vec![], App::frame_ui);
-        let picker = sidebar_text(&painted, "Dark").center();
+        let picker = sidebar_text(&painted, "Follow system").center();
         view_frame(
             &ctx,
             &mut app,
@@ -2477,6 +2477,39 @@ mod tests {
             .1;
         assert_eq!(node.value(), Some("local.json"));
         app.backend.shutdown();
+    }
+
+    #[test]
+    fn themes_folder_link_is_visible_accessible_and_emits_an_action() {
+        let (ctx, mut app) = accessible_app("themes-folder-link");
+        app.backend.shutdown();
+        ctx.data_mut(|data| {
+            data.insert_temp(egui::Id::new("settings-filter"), "Theme".to_string())
+        });
+        for _ in 0..3 {
+            view_frame(&ctx, &mut app, vec![], crate::ui::settings::show);
+        }
+        let painted = view_frame(&ctx, &mut app, vec![], crate::ui::settings::show);
+        let link = sidebar_text(&painted, "Open themes folder").center();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(link, egui::PointerButton::Primary),
+            crate::ui::settings::show,
+        );
+        assert!(matches!(app.actions.as_slice(), [Action::OpenThemesFolder]));
+        app.actions.clear();
+        app.open(Page::Settings);
+        ctx.data_mut(|data| {
+            data.insert_temp(egui::Id::new("settings-filter"), "Theme".to_string())
+        });
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        accessible_node(&tree, "Open themes folder", egui::accesskit::Role::Link);
+        assert!(
+            !app.dirs.config.join("themes").exists(),
+            "drawing cannot open or create folders"
+        );
     }
 
     /// The painted rect of a sidebar label, for pointer tests against the

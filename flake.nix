@@ -172,6 +172,10 @@
                   $out/share/applications/fastpotify.desktop
                 install -Dm644 packaging/icons/fastpotify.svg \
                   $out/share/icons/hicolor/scalable/apps/fastpotify.svg
+                install -Dm644 contrib/omarchy/spotifast.json.tpl \
+                  $out/share/spotifast/omarchy/spotifast.json.tpl
+                install -Dm755 contrib/omarchy/spotifast-theme \
+                  $out/share/spotifast/omarchy/spotifast-theme
               '';
 
               meta = {

@@ -991,6 +991,7 @@ pub enum Action {
     InstallUpdate,
     SettingsChanged,
     SetTheme(crate::settings::ThemeChoice),
+    OpenThemesFolder,
     SetCustomTheme(String),
     ReloadThemes,
     SetLibrarySort {

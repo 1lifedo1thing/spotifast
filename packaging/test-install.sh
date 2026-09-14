@@ -45,6 +45,8 @@ docker run --rm \
     /checks/check-runtime-libs
     test -s /usr/share/applications/fastpotify.desktop
     test -s /usr/share/icons/hicolor/scalable/apps/fastpotify.svg
+    test -s /usr/share/spotifast/omarchy/spotifast.json.tpl
+    test -x /usr/share/spotifast/omarchy/spotifast-theme
     if [ "$FORMAT" = deb ]; then
       apt-get remove -y fastpotify
     else
@@ -54,4 +56,6 @@ docker run --rm \
     test ! -e /usr/bin/spotifast
     test ! -e /usr/share/applications/fastpotify.desktop
     test ! -e /usr/share/icons/hicolor/scalable/apps/fastpotify.svg
+    test ! -e /usr/share/spotifast/omarchy/spotifast.json.tpl
+    test ! -e /usr/share/spotifast/omarchy/spotifast-theme
   '

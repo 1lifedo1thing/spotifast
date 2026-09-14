@@ -10,6 +10,18 @@ copies can upgrade. Linux packages add a `spotifast` command alias; archives
 also include the new command. See [rename compatibility](docs/_reference/renaming.md)
 for the macOS bundle and updater requirements.
 
+Linux packages also install the optional Omarchy template and hook under
+`share/spotifast/omarchy` in their installation prefix. The normal application
+launch registers missing per-user files and prepares the current palette on an
+Omarchy desktop, without changing existing files or the selected theme. Setup
+runs in the background; package-manager scripts do not write into user homes.
+DEB/RPM packages take these small assets from the checked-out configuration,
+so package validation can still use the pinned older binary fixture. AUR and
+portable Linux release archives carry the assets with their source/binary
+payloads. Source and binary AUR recipes also accept older releases that predate
+the integration; the git recipe requires the current files. Nix installs the
+same assets beside its binaries. Flatpak does not install host desktop hooks.
+
 ```sh
 gem install native-packages --version 0.5.1
 native-packages validate

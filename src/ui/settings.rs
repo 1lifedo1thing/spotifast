@@ -637,12 +637,18 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     }
 
     let appearance_rows = [
-        RowText::new(
-            "Theme",
-            app.custom_themes
-                .detail(app.settings.custom_theme.as_deref())
-                .to_owned(),
-        ),
+        RowText::new("Theme", {
+            let detail = app
+                .custom_themes
+                .detail(app.settings.custom_theme.as_deref());
+            if !detail.is_empty() {
+                detail.to_owned()
+            } else if app.custom_themes.follows_omarchy() {
+                "Follow system uses your Omarchy colours.".to_owned()
+            } else {
+                "Follow system uses your desktop's light or dark appearance.".to_owned()
+            }
+        }),
         RowText::new(
             "Colour from album art",
             "Use the current cover's colour on pages and the player bar.",
@@ -673,52 +679,58 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 "Appearance",
                 &appearance_rows[0],
                 |ui| {
-                    let selected = app
-                        .settings
-                        .custom_theme
-                        .as_deref()
-                        .unwrap_or_else(|| app.settings.theme.label());
-                    let response = egui::ComboBox::from_id_salt("appearance_theme")
-                        .selected_text(selected)
-                        .width(200.0_f32.min(ui.available_width()))
-                        .show_ui(ui, |ui| {
-                            for choice in ThemeChoice::ALL {
-                                if ui
-                                    .selectable_label(
-                                        app.settings.custom_theme.is_none()
-                                            && app.settings.theme == choice,
-                                        choice.label(),
-                                    )
-                                    .clicked()
-                                {
-                                    app.actions.push(Action::SetTheme(choice));
+                    ui.with_layout(Layout::top_down(Align::Max), |ui| {
+                        let selected = app
+                            .settings
+                            .custom_theme
+                            .as_deref()
+                            .map(theme::custom::label)
+                            .unwrap_or_else(|| app.settings.theme.label());
+                        let response = egui::ComboBox::from_id_salt("appearance_theme")
+                            .selected_text(selected)
+                            .width(200.0_f32.min(ui.available_width()))
+                            .show_ui(ui, |ui| {
+                                for choice in ThemeChoice::ALL {
+                                    if ui
+                                        .selectable_label(
+                                            app.settings.custom_theme.is_none()
+                                                && app.settings.theme == choice,
+                                            choice.label(),
+                                        )
+                                        .clicked()
+                                    {
+                                        app.actions.push(Action::SetTheme(choice));
+                                    }
                                 }
-                            }
-                            if !app.custom_themes.themes().is_empty() {
-                                ui.separator();
-                            }
-                            for theme in app.custom_themes.themes() {
-                                if ui
-                                    .selectable_label(
-                                        app.settings.custom_theme.as_deref()
-                                            == Some(theme.filename.as_str()),
-                                        &theme.filename,
-                                    )
-                                    .clicked()
-                                {
-                                    app.actions
-                                        .push(Action::SetCustomTheme(theme.filename.clone()));
+                                if !app.custom_themes.themes().is_empty() {
+                                    ui.separator();
                                 }
-                            }
+                                for theme in app.custom_themes.themes() {
+                                    if ui
+                                        .selectable_label(
+                                            app.settings.custom_theme.as_deref()
+                                                == Some(theme.filename.as_str()),
+                                            theme::custom::label(&theme.filename),
+                                        )
+                                        .clicked()
+                                    {
+                                        app.actions
+                                            .push(Action::SetCustomTheme(theme.filename.clone()));
+                                    }
+                                }
+                            });
+                        response.response.widget_info(|| {
+                            let mut info = egui::WidgetInfo::labeled(
+                                egui::WidgetType::ComboBox,
+                                ui.is_enabled(),
+                                "Theme",
+                            );
+                            info.current_text_value = Some(selected.to_owned());
+                            info
                         });
-                    response.response.widget_info(|| {
-                        let mut info = egui::WidgetInfo::labeled(
-                            egui::WidgetType::ComboBox,
-                            ui.is_enabled(),
-                            "Theme",
-                        );
-                        info.current_text_value = Some(selected.to_owned());
-                        info
+                        if ui.link("Open themes folder").clicked() {
+                            app.actions.push(Action::OpenThemesFolder);
+                        }
                     });
                 },
             );

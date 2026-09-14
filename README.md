@@ -421,6 +421,10 @@ from Home through JSON preferences; see
 Custom JSON palettes go in a `themes` folder beside `settings.json`.
 Select them in Appearance; `spotifast reload-themes` loads additions and updates
 without interrupting playback. See [custom themes and Omarchy integration](docs/_reference/settings-and-files.md#custom-themes).
+New installations default to **Follow system**. Linux packages include Omarchy
+integration, set up its per-user template and hook automatically on first launch,
+and follow the current palette. Existing theme choices and custom files stay
+intact. **Open themes folder** in Settings opens the local JSON palette directory.
 Playback settings apply when you press **Apply and restart playback**.
 The Settings page has its own search: type under the title to narrow the
 rows, clear the field to see everything again.

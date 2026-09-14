@@ -69,4 +69,6 @@ package() {
     "${pkgdir}/usr/share/applications/fastpotify.desktop"
   install -Dm644 "packaging/icons/fastpotify.svg" \
     "${pkgdir}/usr/share/icons/hicolor/scalable/apps/fastpotify.svg"
+  install -Dm644 contrib/omarchy/spotifast.json.tpl "${pkgdir}/usr/share/spotifast/omarchy/spotifast.json.tpl"
+  install -Dm755 contrib/omarchy/spotifast-theme "${pkgdir}/usr/share/spotifast/omarchy/spotifast-theme"
 }

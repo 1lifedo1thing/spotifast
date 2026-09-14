@@ -458,6 +458,7 @@ pub enum ApiResponse {
 }
 
 pub enum Command {
+    OpenThemesFolder,
     CredentialsRestored {
         slot: CredentialSlot,
         lease: CredentialLease,
@@ -1120,6 +1121,21 @@ impl Worker {
     async fn run(&mut self, mut commands: mpsc::UnboundedReceiver<Command>) {
         while let Some(command) = commands.recv().await {
             match command {
+                Command::OpenThemesFolder => {
+                    let directory = self.dirs.config.join("themes");
+                    let events = self.events.clone();
+                    let waker = self.waker.clone();
+                    tokio::task::spawn_blocking(move || {
+                        if let Err(error) = std::fs::create_dir_all(&directory)
+                            .and_then(|()| crate::opener::open(&directory))
+                        {
+                            let _ = events.send(Event::Error(format!(
+                                "Couldn't open the themes folder: {error}"
+                            )));
+                            waker.wake();
+                        }
+                    });
+                }
                 Command::CredentialsRestored {
                     slot,
                     lease,

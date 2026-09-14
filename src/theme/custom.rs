@@ -15,6 +15,14 @@ pub struct CustomTheme {
     pub palette: Palette,
 }
 
+pub fn label(filename: &str) -> &str {
+    if filename == "omarchy.json" {
+        "Omarchy"
+    } else {
+        filename
+    }
+}
+
 /// A damaged optional cache must not make the rest of settings unreadable.
 pub fn read_cached_theme<'de, D: serde::Deserializer<'de>>(
     deserializer: D,
@@ -50,7 +58,7 @@ struct ThemeFile {
     colors: std::collections::BTreeMap<String, String>,
 }
 
-fn parse_palette(text: &str) -> Result<Palette, String> {
+pub(super) fn parse_palette(text: &str) -> Result<Palette, String> {
     let file: ThemeFile = serde_json::from_str(text).map_err(|error| error.to_string())?;
     let mut palette = match file.base {
         ThemeBase::Dark => Palette::dark(),
@@ -141,6 +149,8 @@ fn read_theme(directory: &Path, filename: &str) -> Result<CustomTheme, String> {
 struct Loaded {
     themes: Vec<CustomTheme>,
     problem: Option<String>,
+    follows_omarchy: bool,
+    system_theme: Option<CustomTheme>,
 }
 
 fn discover(directory: &Path, selected: Option<&str>) -> Loaded {
@@ -219,9 +229,23 @@ pub struct Catalog {
     problem: Option<String>,
     receiver: Option<mpsc::Receiver<Loaded>>,
     pending: Option<Scan>,
+    follows_omarchy: bool,
+    system_theme: Option<CustomTheme>,
+    #[cfg(target_os = "linux")]
+    setup: Option<super::omarchy::Setup>,
+    #[cfg(target_os = "linux")]
+    setup_pending: bool,
 }
 
 impl Catalog {
+    /// Normal packaged launches may prepare the user's Omarchy integration.
+    /// Demo profiles and ordinary reloads never enable setup themselves.
+    #[cfg(target_os = "linux")]
+    pub fn enable_packaged_omarchy(&mut self) {
+        self.setup = super::omarchy::Setup::discover();
+        self.setup_pending = true;
+    }
+
     pub fn start(
         &mut self,
         directory: PathBuf,
@@ -241,8 +265,29 @@ impl Catalog {
     }
 
     fn scan(&mut self, scan: Scan) {
+        #[cfg(target_os = "linux")]
+        let setup = self.setup.clone();
+        #[cfg(target_os = "linux")]
+        let install = std::mem::take(&mut self.setup_pending);
         self.spawn(&scan.waker, move || {
-            discover(&scan.directory, scan.selected.as_deref())
+            #[cfg(target_os = "linux")]
+            if install
+                && let Some(setup) = &setup
+                && let Err(error) = setup.install(&scan.directory)
+            {
+                log::warn!("unable to prepare the optional Omarchy theme: {error}");
+            }
+            let loaded = discover(&scan.directory, scan.selected.as_deref());
+            #[cfg(target_os = "linux")]
+            let loaded = {
+                let mut loaded = loaded;
+                if setup.as_ref().is_some_and(|setup| setup.available()) {
+                    loaded.follows_omarchy = true;
+                    loaded.system_theme = read_theme(&scan.directory, "omarchy.json").ok();
+                }
+                loaded
+            };
+            loaded
         });
     }
 
@@ -280,6 +325,14 @@ impl Catalog {
         self.themes.iter().find(|theme| theme.filename == filename)
     }
 
+    pub fn follows_omarchy(&self) -> bool {
+        self.follows_omarchy
+    }
+
+    pub fn system_theme(&self) -> Option<&CustomTheme> {
+        self.system_theme.as_ref()
+    }
+
     pub fn loading(&self) -> bool {
         self.receiver.is_some()
     }
@@ -313,6 +366,8 @@ impl Catalog {
             Ok(loaded) => {
                 self.themes = loaded.themes;
                 self.problem = loaded.problem;
+                self.follows_omarchy = loaded.follows_omarchy;
+                self.system_theme = loaded.system_theme;
             }
             Err(mpsc::TryRecvError::Disconnected) => {
                 self.problem = Some(
@@ -337,7 +392,16 @@ impl Catalog {
     pub(crate) fn load_test(&mut self, load: impl FnOnce() -> Vec<CustomTheme> + Send + 'static) {
         self.spawn(&crate::backend::Waker::default(), move || Loaded {
             themes: load(),
-            problem: None,
+            ..Loaded::default()
+        });
+    }
+
+    #[cfg(test)]
+    pub(crate) fn load_system_test(&mut self, theme: Option<CustomTheme>, follows: bool) {
+        self.spawn(&crate::backend::Waker::default(), move || Loaded {
+            system_theme: theme,
+            follows_omarchy: follows,
+            ..Loaded::default()
         });
     }
 }

@@ -41,9 +41,9 @@ impl LibrarySort {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ThemeChoice {
-    #[default]
     Dark,
     Light,
+    #[default]
     System,
 }
 
@@ -89,7 +89,7 @@ impl VisMode {
 }
 
 impl ThemeChoice {
-    pub const ALL: [ThemeChoice; 3] = [Self::Dark, Self::Light, Self::System];
+    pub const ALL: [ThemeChoice; 3] = [Self::System, Self::Dark, Self::Light];
 
     pub fn label(self) -> &'static str {
         match self {
@@ -130,6 +130,13 @@ pub struct Settings {
         skip_serializing_if = "Option::is_none"
     )]
     pub custom_theme_cache: Option<crate::theme::custom::CustomTheme>,
+    /// Last detected system palette, so following Omarchy survives a restart.
+    #[serde(
+        default,
+        deserialize_with = "crate::theme::custom::read_cached_theme",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub system_theme_cache: Option<crate::theme::custom::CustomTheme>,
     pub home: HomeSettings,
     /// Tint the interface with the colour of the playing album's art.
     pub accent_from_art: bool,
@@ -240,9 +247,10 @@ impl Default for Settings {
             audio_buffer_ms: default_buffer_ms(),
             audio_cache: true,
             audio_cache_mb: 1024,
-            theme: ThemeChoice::Dark,
+            theme: ThemeChoice::System,
             custom_theme: None,
             custom_theme_cache: None,
+            system_theme_cache: None,
             home: HomeSettings::default(),
             accent_from_art: true,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
@@ -300,6 +308,17 @@ fn default_buffer_ms() -> u32 {
 }
 
 impl Settings {
+    pub(crate) fn cached_palette(&self) -> Option<crate::theme::Palette> {
+        let theme = if self.custom_theme.is_some() {
+            self.custom_theme_cache.as_ref()
+        } else if self.theme == ThemeChoice::System {
+            self.system_theme_cache.as_ref()
+        } else {
+            None
+        };
+        theme.map(|theme| theme.palette)
+    }
+
     pub fn library_pins(&self) -> Vec<String> {
         let mut pins = self.pinned_contexts.clone();
         if !self.liked_songs_pinned {
@@ -363,6 +382,28 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::Settings;
+
+    #[test]
+    fn new_profiles_follow_the_system_and_saved_choices_are_preserved() {
+        use super::ThemeChoice;
+        assert_eq!(Settings::default().theme, ThemeChoice::System);
+        assert_eq!(ThemeChoice::default(), ThemeChoice::System);
+        let empty: Settings = serde_json::from_str("{}").unwrap();
+        assert_eq!(empty.theme, ThemeChoice::System);
+        for (json, choice) in [("dark", ThemeChoice::Dark), ("light", ThemeChoice::Light)] {
+            let settings: Settings =
+                serde_json::from_value(serde_json::json!({"theme": json, "volume": 37})).unwrap();
+            assert_eq!(settings.theme, choice);
+            assert_eq!(settings.volume, 37);
+        }
+        let settings: Settings = serde_json::from_value(serde_json::json!({
+            "theme": "dark", "system_theme_cache": {"broken": true}, "volume": 37
+        }))
+        .unwrap();
+        assert!(settings.system_theme_cache.is_none());
+        assert_eq!(settings.theme, ThemeChoice::Dark);
+        assert_eq!(settings.volume, 37);
+    }
 
     #[test]
     fn custom_theme_cache_round_trips_and_a_bad_cache_keeps_other_settings() {

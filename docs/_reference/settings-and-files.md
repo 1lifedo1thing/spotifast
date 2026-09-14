@@ -174,9 +174,10 @@ main fields are:
 | `gapless` | `true` | Gapless playback |
 | `audio_backend` | platform | `pulseaudio` or `rodio` on Linux |
 | `audio_cache_mb` | `1024` | On-disk audio cache budget |
-| `theme` | `dark` | Built-in `dark`, `light`, or `system` choice |
+| `theme` | `system` | Follow the system appearance by default; explicit `dark` and `light` choices remain available |
 | `custom_theme` | `null` | Selected JSON filename from the `themes` folder |
 | `custom_theme_cache` | absent | Last accepted custom palette; preserves appearance if its file is missing or invalid |
+| `system_theme_cache` | absent | Last accepted Omarchy palette for Follow system; retained across restarts |
 | `accent_from_art` | `true` | Tint pages with album art |
 | `library_sort` | `{}` | Per-section Library order overrides, after 0.7.1: `library`, `recently_played`, `name`, `recently_added`, `local`, or `spotify`, where supported |
 | `sidebar_order` | `[]` | Saved local playlist arrangement, including an unpinned Liked Songs, retained when another sort is selected |
@@ -285,7 +286,13 @@ refresh in the background.
 Create a `themes` folder beside `settings.json` and put JSON files in it.
 Run `spotifast reload-themes` if the app is already open, then select the
 filename under **Settings → Appearance → Theme**.
-The picker includes the built-in Dark, Light, and Follow system choices.
+The default is **Follow system**. It uses your desktop’s light/dark appearance,
+or the current Omarchy palette on a packaged Omarchy installation. Saved Dark,
+Light and custom choices are preserved when updating. The picker also lists
+**Omarchy** and other available local palettes. **Open themes folder** beside
+the picker creates the folder if needed and opens it in your file manager.
+After adding or editing a JSON file, run `spotifast reload-themes` to refresh
+the list and the selected palette without restarting playback.
 Choosing a built-in theme clears the custom selection.
 
 For example, `themes/gruvbox.json`:
@@ -334,7 +341,23 @@ window; Winamp skins remain separate. This first format controls colors only.
 
 ### Follow an Omarchy theme
 
-For a native Linux installation, the repository includes an
+On `main`, after 0.7.1, native Linux packages include the Omarchy integration.
+The first normal launch on an Omarchy desktop installs its template and
+theme-change hook in your user configuration, in the background. No copy
+commands or desktop restart are needed. A palette for the current theme is
+prepared without reapplying your desktop theme. New installations use
+**Follow system**, so Omarchy colours apply automatically on the first launch
+and track later theme changes. An existing explicit Dark, Light or custom
+choice stays selected. Choose **Follow system** or **Omarchy** under
+**Settings → Appearance → Theme** to follow Omarchy instead.
+
+Setup never replaces an existing template, hook or palette, and never changes
+your selected theme. Other users are set up independently when they launch the
+app. Demo mode, portable archives and Cargo builds do not perform automatic
+setup. A package uninstall removes the shared integration assets; your user
+configuration remains, like the rest of your preferences.
+
+For a manual installation, the repository includes an
 [Omarchy template](https://github.com/crmne/spotifast/blob/main/contrib/omarchy/spotifast.json.tpl)
 and a [theme-change hook](https://github.com/crmne/spotifast/blob/main/contrib/omarchy/spotifast-theme).
 Omarchy resolves its light/dark mode and colors through its
@@ -343,7 +366,7 @@ The hook copies the result atomically into `themes/omarchy.json`, then asks a
 running Spotifast to reload it. It does not change your desktop theme or your
 Spotifast selection itself.
 
-From a checkout of this repository, install the two files:
+For portable or Cargo installations, install the two files from a checkout:
 
 ```sh
 mkdir -p ~/.config/omarchy/themed
@@ -351,7 +374,7 @@ install -m 644 contrib/omarchy/spotifast.json.tpl ~/.config/omarchy/themed/
 omarchy hook install theme-set contrib/omarchy/spotifast-theme
 ```
 
-Apply a theme through Omarchy's theme picker, then select **omarchy.json** in
+Apply a theme through Omarchy's theme picker, then select **Omarchy** in
 Spotifast's **Settings → Appearance → Theme** once. Later Omarchy changes update
 that palette while music keeps playing. Turn off album-art tinting if every
 page should keep the theme's fixed colors.
@@ -365,7 +388,10 @@ The hook uses Omarchy's current theme at
 their own `spotifast.json` file. Missing or invalid palettes leave the last
 accepted appearance in place.
 
-To stop following Omarchy, choose Dark, Light or Follow system in Spotifast.
-To uninstall the integration, remove only
+To stop following Omarchy, choose Dark, Light or another custom theme in Spotifast.
+For a manual installation, remove only
 `~/.config/omarchy/hooks/theme-set.d/spotifast-theme` and
 `~/.config/omarchy/themed/spotifast.json.tpl`. Other hooks remain in place.
+Packaged launches recreate missing integration files. To disable the hook
+while keeping the package installed, leave that hook file empty instead;
+existing user files are preserved. Selecting Dark or Light is sufficient to stop following Omarchy's colors.
