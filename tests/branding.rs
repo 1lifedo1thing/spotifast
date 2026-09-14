@@ -89,7 +89,27 @@ fn both_commands_forward_links_to_the_existing_instance_on_a_private_bus() {
 
     const CHILD: &str = "SPOTIFAST_RENAME_PRIVATE_BUS";
     if std::env::var_os(CHILD).is_none() {
+        // A clean build (including Nix) need not have /etc/dbus-1/session.conf.
+        // Own the bus configuration too, without loading desktop services.
+        let scratch = Scratch::new();
+        let config = scratch.0.join("session.conf");
+        std::fs::write(
+            &config,
+            r#"<busconfig>
+  <type>session</type>
+  <listen>unix:tmpdir=/tmp</listen>
+  <auth>EXTERNAL</auth>
+  <policy context="default">
+    <allow own="*"/>
+    <allow send_destination="*"/>
+    <allow receive_sender="*"/>
+  </policy>
+</busconfig>"#,
+        )
+        .unwrap();
         let result = Command::new("dbus-run-session")
+            .arg("--config-file")
+            .arg(config)
             .args(["--"])
             .arg(std::env::current_exe().unwrap())
             .args([
