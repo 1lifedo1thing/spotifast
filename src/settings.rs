@@ -121,6 +121,15 @@ pub struct Settings {
     pub audio_cache: bool,
     pub audio_cache_mb: u64,
     pub theme: ThemeChoice,
+    /// Filename selected from the local themes directory.
+    pub custom_theme: Option<String>,
+    /// Last accepted appearance, retained if its source file becomes unavailable.
+    #[serde(
+        default,
+        deserialize_with = "crate::theme::custom::read_cached_theme",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub custom_theme_cache: Option<crate::theme::custom::CustomTheme>,
     pub home: HomeSettings,
     /// Tint the interface with the colour of the playing album's art.
     pub accent_from_art: bool,
@@ -232,6 +241,8 @@ impl Default for Settings {
             audio_cache: true,
             audio_cache_mb: 1024,
             theme: ThemeChoice::Dark,
+            custom_theme: None,
+            custom_theme_cache: None,
             home: HomeSettings::default(),
             accent_from_art: true,
             volume: (u16::MAX as u32 * 70 / 100) as u16,
@@ -352,6 +363,31 @@ impl Settings {
 #[cfg(test)]
 mod tests {
     use super::Settings;
+
+    #[test]
+    fn custom_theme_cache_round_trips_and_a_bad_cache_keeps_other_settings() {
+        let mut settings: Settings = serde_json::from_str("{}").unwrap();
+        assert!(settings.custom_theme.is_none() && settings.custom_theme_cache.is_none());
+        settings.custom_theme = Some("gruvbox.json".into());
+        let mut palette = crate::theme::Palette::light();
+        palette.shadow = egui::Color32::from_rgba_unmultiplied(37, 128, 249, 117);
+        settings.custom_theme_cache = Some(crate::theme::custom::CustomTheme {
+            filename: "gruvbox.json".into(),
+            palette,
+        });
+        let encoded = serde_json::to_string(&settings).unwrap();
+        assert_eq!(
+            serde_json::from_str::<Settings>(&encoded).unwrap(),
+            settings
+        );
+        let mut damaged = serde_json::to_value(&settings).unwrap();
+        damaged["custom_theme_cache"] = serde_json::json!({"palette": "broken"});
+        damaged["audio_cache_mb"] = 777.into();
+        let recovered: Settings = serde_json::from_value(damaged).unwrap();
+        assert_eq!(recovered.custom_theme.as_deref(), Some("gruvbox.json"));
+        assert_eq!(recovered.audio_cache_mb, 777);
+        assert!(recovered.custom_theme_cache.is_none());
+    }
 
     #[test]
     fn partial_home_preferences_keep_defaults_and_survive_a_settings_round_trip() {

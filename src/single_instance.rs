@@ -56,6 +56,8 @@ pub enum Outcome {
 pub enum ControlCommand {
     /// Bring the window forward, creating it if needed.
     Show,
+    /// Re-read local palette files without showing the window or restarting audio.
+    ReloadThemes,
     PlayPause,
     Play,
     Pause,
@@ -311,6 +313,7 @@ fn parse(line: &str) -> Option<Request> {
     };
     let command = match (verb, argument) {
         ("show", None) => ControlCommand::Show,
+        ("reload-themes", None) => ControlCommand::ReloadThemes,
         ("playpause", None) => ControlCommand::PlayPause,
         ("play", None) => ControlCommand::Play,
         ("pause", None) => ControlCommand::Pause,
@@ -406,6 +409,14 @@ struct Instance {
 #[cfg(target_os = "linux")]
 #[zbus::interface(name = "rocks.fastpotify.Instance")]
 impl Instance {
+    fn reload_themes(&self) {
+        self.commands
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .push(ControlCommand::ReloadThemes);
+        self.waker.wake();
+    }
+
     /// Opens the page for a Spotify link and brings the window forward. A
     /// link that is not a page the app has is refused, so the caller can
     /// fall back to showing the window.
@@ -419,6 +430,23 @@ impl Instance {
         self.waker.wake();
         Ok(())
     }
+}
+
+/// Re-read local themes in an existing instance. A theme hook must never start
+/// the app or raise its window; use the existing private interface, not MPRIS.
+#[cfg(target_os = "linux")]
+pub fn reload_themes() -> zbus::Result<()> {
+    let connection = zbus::blocking::connection::Builder::session()?
+        .method_timeout(std::time::Duration::from_secs(2))
+        .build()?;
+    let proxy =
+        zbus::blocking::Proxy::new(&connection, INSTANCE_NAME, INSTANCE_PATH, INSTANCE_NAME)?;
+    let _: Option<()> = proxy.call_with_flags(
+        "ReloadThemes",
+        zbus::proxy::MethodFlags::NoAutoStart.into(),
+        &(),
+    )?;
+    Ok(())
 }
 
 /// Claims the running-instance role, or hands `link` (a canonical
@@ -689,6 +717,11 @@ mod tests {
     fn parses_every_control_verb() {
         // #given / #when / #then
         assert_eq!(command("fastpotify:show\n"), Some(ControlCommand::Show));
+        assert_eq!(
+            command("fastpotify:reload-themes"),
+            Some(ControlCommand::ReloadThemes)
+        );
+        assert_eq!(command("fastpotify:reload-themes extra"), None);
         assert_eq!(
             command("fastpotify:playpause"),
             Some(ControlCommand::PlayPause)

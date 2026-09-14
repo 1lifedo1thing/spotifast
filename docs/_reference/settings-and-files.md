@@ -174,7 +174,9 @@ main fields are:
 | `gapless` | `true` | Gapless playback |
 | `audio_backend` | platform | `pulseaudio` or `rodio` on Linux |
 | `audio_cache_mb` | `1024` | On-disk audio cache budget |
-| `theme` | `dark` | `dark`, `light`, or `system` |
+| `theme` | `dark` | Built-in `dark`, `light`, or `system` choice |
+| `custom_theme` | `null` | Selected JSON filename from the `themes` folder |
+| `custom_theme_cache` | absent | Last accepted custom palette; preserves appearance if its file is missing or invalid |
 | `accent_from_art` | `true` | Tint pages with album art |
 | `library_sort` | `{}` | Per-section Library order overrides, after 0.7.1: `library`, `recently_played`, `name`, `recently_added`, `local`, or `spotify`, where supported |
 | `sidebar_order` | `[]` | Saved local playlist arrangement, including an unpinned Liked Songs, retained when another sort is selected |
@@ -254,9 +256,11 @@ The image uses the current window size. `--demo-size WIDTHxHEIGHT` sets that
 size in logical pixels for a shot (for example `760x800` or `1240x800`).
 `--demo-shot-delay <MS>` sets how long to wait for cover art before taking it.
 On `main`, after 0.7.1, demo windows ignore saved window geometry and do not
-read or save the normal window's framework state. Existing appearance settings
-still apply. `--demo-data <DIRECTORY>` keeps demo caches and logs under that
-directory's `cache` and `state` folders, with settings read from `config`.
+read or save the normal window's framework state. Existing built-in appearance
+settings still apply. `--demo-data <DIRECTORY>` keeps demo caches and logs under
+that directory's `cache` and `state` folders, with settings read from `config`.
+Custom palettes and their cache are used only with an explicit `--demo-data`
+directory; the ordinary demo does not scan your real themes folder.
 
 ## Home shelves
 
@@ -275,3 +279,93 @@ Set either `visible` value to `true` to show that shelf again. Omitted
 preferences keep both shelves visible. Other Home sections keep their normal
 order and contents. This changes what is displayed; hidden shelves still
 refresh in the background.
+
+## Custom themes
+
+Create a `themes` folder beside `settings.json` and put JSON files in it.
+Run `spotifast reload-themes` if the app is already open, then select the
+filename under **Settings → Appearance → Theme**.
+The picker includes the built-in Dark, Light, and Follow system choices.
+Choosing a built-in theme clears the custom selection.
+
+For example, `themes/gruvbox.json`:
+
+```json
+{
+  "base": "dark",
+  "colors": {
+    "window": "#282828",
+    "panel": "#1d2021",
+    "surface": "#32302f",
+    "text": "#ebdbb2",
+    "accent": "#b8bb26"
+  }
+}
+```
+
+`base` is `dark` (the default) or `light`. Omitted colors inherit that palette.
+Supported colors are `window`, `panel`, `surface`, `surface_hover`,
+`surface_active`, `outline`, `text`, `secondary`, `dim`, `accent`,
+`accent_hover`, `on_accent`, `danger`, `warning`, `overlay`, and `shadow`.
+Values must be `#RRGGBB` or `#RRGGBBAA`.
+
+Files are read in the background at launch and when `spotifast reload-themes`
+is called. The command updates the selected palette without interrupting
+playback, changing your selection or showing the window. It does not start a
+stopped app. Repeated requests are combined while a scan is running, and no
+continuous file watcher or polling timer is added. Use regular UTF-8 `.json` files, not symbolic links or
+subdirectories. Each file is limited to 64 KiB. Keep at most 128 JSON files and
+512 total entries in the themes folder; the saved selection is still checked
+when a folder exceeds these limits.
+
+Invalid files are skipped with a warning in the log. Spotifast remembers the
+last accepted custom palette in `settings.json`. If the selected file is
+removed or becomes invalid, that appearance stays in place, including after
+a restart, and the Theme row explains the problem. Other preferences are
+preserved. A custom selection without any usable cached colors uses the
+built-in choice. Choosing Dark, Light or Follow system clears the custom
+selection and its cache. Editing or deleting the optional cache does not
+reset unrelated settings.
+
+A custom palette's `base` controls both its inherited colors and the light or
+dark styling of standard controls. Album-art tinting remains an independent
+setting; turn it off for fixed colors throughout. Palettes apply to the main
+window; Winamp skins remain separate. This first format controls colors only.
+
+### Follow an Omarchy theme
+
+For a native Linux installation, the repository includes an
+[Omarchy template](https://github.com/crmne/spotifast/blob/main/contrib/omarchy/spotifast.json.tpl)
+and a [theme-change hook](https://github.com/crmne/spotifast/blob/main/contrib/omarchy/spotifast-theme).
+Omarchy resolves its light/dark mode and colors through its
+[template system](https://omarchy.org/manual/making-your-own-theme/).
+The hook copies the result atomically into `themes/omarchy.json`, then asks a
+running Spotifast to reload it. It does not change your desktop theme or your
+Spotifast selection itself.
+
+From a checkout of this repository, install the two files:
+
+```sh
+mkdir -p ~/.config/omarchy/themed
+install -m 644 contrib/omarchy/spotifast.json.tpl ~/.config/omarchy/themed/
+omarchy hook install theme-set contrib/omarchy/spotifast-theme
+```
+
+Apply a theme through Omarchy's theme picker, then select **omarchy.json** in
+Spotifast's **Settings → Appearance → Theme** once. Later Omarchy changes update
+that palette while music keeps playing. Turn off album-art tinting if every
+page should keep the theme's fixed colors.
+
+The hook uses Omarchy's current theme at
+`~/.local/state/omarchy/current/theme` and Spotifast's existing
+`${XDG_CONFIG_HOME:-~/.config}/fastpotify/themes` directory. The retained
+`fastpotify` directory is intentional. A custom profile can set
+`SPOTIFAST_THEMES_DIR` in the installed hook; this example uses the native
+`spotifast` command, not a Flatpak launcher. Themes without `colors.toml` need
+their own `spotifast.json` file. Missing or invalid palettes leave the last
+accepted appearance in place.
+
+To stop following Omarchy, choose Dark, Light or Follow system in Spotifast.
+To uninstall the integration, remove only
+`~/.config/omarchy/hooks/theme-set.d/spotifast-theme` and
+`~/.config/omarchy/themed/spotifast.json.tpl`. Other hooks remain in place.

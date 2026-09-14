@@ -416,6 +416,9 @@ from artwork, and the mini player's skin and size.
 On `main`, after 0.7.1, you can hide Made for you and Recommended for you
 from Home through JSON preferences; see
 [Home shelves](docs/_reference/settings-and-files.md#home-shelves).
+Custom JSON palettes go in a `themes` folder beside `settings.json`.
+Select them in Appearance; `spotifast reload-themes` loads additions and updates
+without interrupting playback. See [custom themes and Omarchy integration](docs/_reference/settings-and-files.md#custom-themes).
 Playback settings apply when you press **Apply and restart playback**.
 The Settings page has its own search: type under the title to narrow the
 rows, clear the field to see everything again.

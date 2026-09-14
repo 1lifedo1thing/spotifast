@@ -990,6 +990,9 @@ pub enum Action {
     DownloadUpdate,
     InstallUpdate,
     SettingsChanged,
+    SetTheme(crate::settings::ThemeChoice),
+    SetCustomTheme(String),
+    ReloadThemes,
     SetLibrarySort {
         shelf: crate::settings::LibraryShelf,
         sort: crate::settings::LibrarySort,

@@ -145,6 +145,8 @@ enum Control {
     },
     /// Bring the window of the running instance forward
     Show,
+    /// Reload local palette files without starting the app or interrupting playback
+    ReloadThemes,
 }
 
 #[derive(Clone, Copy, Debug, clap::ValueEnum)]
@@ -206,6 +208,7 @@ fn run_control(control: Control) -> i32 {
         Control::Transfer { device_id } => format!("transfer {device_id}"),
         Control::NowPlaying { .. } => "nowplaying".to_owned(),
         Control::Show => "show".to_owned(),
+        Control::ReloadThemes => "reload-themes".to_owned(),
     };
     match single_instance::send(&verb) {
         Ok(single_instance::Reply::Ok) => 0,
@@ -233,7 +236,16 @@ fn run_control(control: Control) -> i32 {
 }
 
 #[cfg(target_os = "linux")]
-fn run_control(_control: Control) -> i32 {
+fn run_control(control: Control) -> i32 {
+    if matches!(control, Control::ReloadThemes) {
+        return match single_instance::reload_themes() {
+            Ok(()) => 0,
+            Err(error) => {
+                eprintln!("Spotifast is not running or could not reload themes: {error}");
+                1
+            }
+        };
+    }
     eprintln!(
         "On Linux the running instance speaks MPRIS instead; use e.g. \
          `playerctl --player=fastpotify play-pause`."
@@ -373,6 +385,12 @@ pub(crate) fn run() -> eframe::Result<()> {
     }
     log_panics(dirs.panic_log());
     let mut settings = settings::Settings::load(&dirs.settings_file());
+    #[cfg(feature = "demo")]
+    if (cli.demo || cli.demo_shot.is_some()) && cli.demo_data.is_none() {
+        // The default demo must not inherit real custom palette files or cache.
+        settings.custom_theme = None;
+        settings.custom_theme_cache = None;
+    }
     if let Some(name) = cli.device_name {
         settings.device_name = name;
     }
@@ -430,6 +448,13 @@ pub(crate) fn run() -> eframe::Result<()> {
     let desktop_surfaces = options.media_controls;
     #[allow(unused_mut)]
     let mut app = app::App::new(&waker, dirs, settings, options);
+    #[cfg(feature = "demo")]
+    let load_themes = guarded || cli.demo_data.is_some();
+    #[cfg(not(feature = "demo"))]
+    let load_themes = true;
+    if load_themes {
+        app.load_custom_themes(&waker);
+    }
     app.update_receipt = cli.update_receipt;
     if let Some(error) = cli.update_error {
         app.report_update_failure(error);

@@ -2427,6 +2427,58 @@ mod tests {
         ]
     }
 
+    #[test]
+    fn custom_theme_picker_applies_the_clicked_palette_and_exposes_its_name_and_value() {
+        let (ctx, mut app) = accessible_app("custom-theme-picker");
+        app.open(Page::Settings);
+        ctx.data_mut(|data| {
+            data.insert_temp(egui::Id::new("settings-filter"), "Appearance".to_string())
+        });
+        let mut palette = crate::theme::Palette::light();
+        palette.accent = egui::Color32::from_rgb(140, 63, 165);
+        app.custom_themes =
+            crate::theme::custom::Catalog::from_themes(vec![crate::theme::custom::CustomTheme {
+                filename: "local.json".into(),
+                palette,
+            }]);
+        for _ in 0..3 {
+            view_frame(&ctx, &mut app, vec![], App::frame_ui);
+        }
+        let painted = view_frame(&ctx, &mut app, vec![], App::frame_ui);
+        let picker = sidebar_text(&painted, "Dark").center();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(picker, egui::PointerButton::Primary),
+            App::frame_ui,
+        );
+        let painted = view_frame(&ctx, &mut app, vec![], App::frame_ui);
+        let custom = sidebar_text(&painted, "local.json").center();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(custom, egui::PointerButton::Primary),
+            App::frame_ui,
+        );
+        assert_eq!(app.settings.custom_theme.as_deref(), Some("local.json"));
+        assert_eq!(app.palette, palette);
+        assert_eq!(
+            app.settings.custom_theme_cache.as_ref().unwrap().palette,
+            palette
+        );
+        assert_eq!(ctx.theme(), egui::Theme::Light);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let id = accessible_node(&tree, "Theme", egui::accesskit::Role::ComboBox);
+        let node = &tree
+            .nodes
+            .iter()
+            .find(|(node_id, _)| *node_id == id)
+            .unwrap()
+            .1;
+        assert_eq!(node.value(), Some("local.json"));
+        app.backend.shutdown();
+    }
+
     /// The painted rect of a sidebar label, for pointer tests against the
     /// sidebar's private rows.
     fn sidebar_text(painted: &[(String, egui::Rect)], label: &str) -> egui::Rect {

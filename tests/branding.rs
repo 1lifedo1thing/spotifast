@@ -129,6 +129,11 @@ fn both_commands_forward_links_to_the_existing_instance_on_a_private_bus() {
     }
 
     let scratch = Scratch::new();
+    for (_, binary) in COMMANDS {
+        let result = Command::new(binary).arg("reload-themes").output().unwrap();
+        assert_eq!(result.status.code(), Some(1));
+        assert!(String::from_utf8_lossy(&result.stderr).contains("not running"));
+    }
     let Outcome::Only(guard) = fastpotify::single_instance::acquire(&Default::default(), None)
     else {
         panic!("the private bus must start without another instance");
@@ -159,6 +164,17 @@ fn both_commands_forward_links_to_the_existing_instance_on_a_private_bus() {
         assert_eq!(
             std::mem::take(&mut *commands.lock().unwrap()),
             vec![ControlCommand::OpenLink(uri.into())]
+        );
+        let result = Command::new(binary).arg("reload-themes").output().unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert_eq!(
+            std::mem::take(&mut *commands.lock().unwrap()),
+            vec![ControlCommand::ReloadThemes],
+            "a reload only asks for themes, never OpenLink or Show"
         );
     }
 }
