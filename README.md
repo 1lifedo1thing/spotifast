@@ -299,6 +299,10 @@ failed keychain deletion from silently restoring a signed-out session.
 See [credential storage and file locations](docs/_reference/settings-and-files.md).
 Since 0.8.0, Flatpak also preserves its fallback state directory
 across full quits, including on older Flatpak versions.
+New Flatpak builds use the application ID `rocks.spotifast.Spotifast`.
+Existing Flatpak users install the new application and remove the old one;
+see [switching Flatpak installations](docs/_reference/renaming.md#flatpak)
+for retaining settings and history.
 
 Playback approval requests Spotify's streaming permission separately. A
 verified personal app can complete sign-in while the shared app is busy.

@@ -10,7 +10,8 @@ use the Fastpotify name.
 ## Existing installations
 
 Settings, saved sign-ins, local pins, history, caches and window positions stay
-where they are. There is no migration to a second set of directories. Saved
+where they are for native packages. Flatpak's new application ID uses a new
+data directory, with migration instructions below. Saved
 Spotify Connect names also stay as you chose them; new settings use Spotifast.
 
 The `spotifast` and `fastpotify` commands open and control the same application.
@@ -57,9 +58,45 @@ Windows keeps its original installer ID, registry identities and installation
 directory. Its app name and new shortcuts say Spotifast. The previous command
 remains installed for existing shortcuts and scripts.
 
-The Flatpak ID `rocks.fastpotify.Fastpotify`, protected credential-store service,
-MPRIS names and single-instance protocol retain their original identities.
-Changing these would create a separate app or disconnect existing integrations.
+The protected credential-store service, MPRIS bus name and single-instance
+protocol retain their original identities for existing integrations.
+
+## Flatpak
+
+New Flatpak builds use **`rocks.spotifast.Spotifast`**. This is a separate
+Flatpak application, so install the new bundle and remove the old application.
+The repackaged 0.8.0 bundle is being prepared; the download page will identify
+the new application once it is available.
+
+To retain settings, local pins and history, quit the old application. Before
+the first launch of the new one, copy its data directory:
+
+```sh
+old_data="$HOME/.var/app/rocks.fastpotify.Fastpotify"
+new_data="$HOME/.var/app/rocks.spotifast.Spotifast"
+test -d "$old_data" && test ! -e "$new_data" && cp -a "$old_data" "$new_data"
+```
+
+This leaves the original directory intact and refuses to overwrite an existing
+new profile. If you have already opened the new application, retain that profile
+or move it aside before copying. Protected sign-ins are scoped to the original
+state directory, so sign in again after switching.
+
+Install the new bundle from the [download page](/download/), then run it:
+
+```sh
+flatpak install --user ~/Downloads/spotifast-v0.8.0-x86_64.flatpak
+flatpak run rocks.spotifast.Spotifast
+```
+
+After checking the new installation, remove the old one:
+
+```sh
+flatpak uninstall --user rocks.fastpotify.Fastpotify
+```
+
+Use `--system` instead of `--user` if the old application was installed
+system-wide. Uninstalling without `--delete-data` retains its data for recovery.
 
 ## Website links
 

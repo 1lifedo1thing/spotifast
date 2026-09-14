@@ -267,7 +267,7 @@ mod tests {
                 "--nocapture",
             ])
             .env(CHILD, "1")
-            .env("FLATPAK_ID", "rocks.fastpotify.Fastpotify")
+            .env("FLATPAK_ID", "rocks.spotifast.Spotifast")
             .env("DBUS_SESSION_BUS_ADDRESS", address.trim())
             .status();
         let _ = bus.kill();

@@ -149,9 +149,13 @@ automatic requests and shows a Retry button in the reserved row space.
 Since 0.8.0, Flatpak also preserves the fallback
 state directory used when `XDG_STATE_HOME` is unset. Session state, history,
 logs, and credential revocation markers survive a full quit and relaunch under
-`~/.var/app/rocks.fastpotify.Fastpotify/.local/state/fastpotify/`. Configuration
+`~/.var/app/rocks.spotifast.Spotifast/.local/state/fastpotify/` in newly named
+Flatpak builds. Older bundles use `~/.var/app/rocks.fastpotify.Fastpotify/`
+as their application data root. Configuration
 and caches remain under the app's `config/` and `cache/` directories. State
 already lost on quitting an older release cannot be recovered.
+See [switching Flatpak installations](/renaming/#flatpak) to retain existing
+settings and history when installing the new application ID.
 
 On macOS, settings, state, and the logs are in
 `~/Library/Application Support/me.paolino.fastpotify` and the caches in

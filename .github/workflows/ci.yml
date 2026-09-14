@@ -46,6 +46,8 @@ jobs:
         run: cargo fmt --all --check
       - name: Issue assessment regression tests
         run: node --test .github/scripts/issue-assessment.test.cjs
+      - name: Flatpak release metadata regression tests
+        run: python3 packaging/flatpak/test-metainfo.py
       - name: Clippy (default features)
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: Clippy (all features)

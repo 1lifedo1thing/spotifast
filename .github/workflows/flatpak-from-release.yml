@@ -26,7 +26,9 @@ jobs:
         run: '[[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][a-zA-Z0-9.-]+)?$ ]]'
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.version }}
+          fetch-depth: 0
+      - name: Check release metainfo handling
+        run: python3 packaging/flatpak/test-metainfo.py
       - name: Verify and unpack the published Linux build
         shell: bash
         run: |
@@ -42,12 +44,12 @@ jobs:
           tar xzf "$name.tar.gz" -C ../packaging/flatpak
           cd ..
           mv "packaging/flatpak/$name" packaging/flatpak/built
-          # Older release archives omitted metainfo. Use the exact tag's copy.
-          install -Dm644 packaging/flatpak/rocks.fastpotify.Fastpotify.metainfo.xml \
-            packaging/flatpak/built/packaging/flatpak/rocks.fastpotify.Fastpotify.metainfo.xml
+          # Keep the exact release version and description, with today's app ID.
+          python3 packaging/flatpak/prepare-metainfo.py "$RELEASE_TAG" \
+            packaging/flatpak/rocks.spotifast.Spotifast.metainfo.xml
       - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
         with:
-          manifest-path: packaging/flatpak/rocks.fastpotify.Fastpotify.bundle.yml
+          manifest-path: packaging/flatpak/rocks.spotifast.Spotifast.bundle.yml
           bundle: spotifast-${{ inputs.version }}-x86_64.flatpak
           cache: false
           upload-artifact: false

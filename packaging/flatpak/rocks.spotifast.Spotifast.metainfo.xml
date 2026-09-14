@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>rocks.fastpotify.Fastpotify</id>
+  <id>rocks.spotifast.Spotifast</id>
   <name>Spotifast</name>
   <summary>A native Spotify client</summary>
   <developer id="me.paolino">
@@ -21,7 +21,7 @@
       Playback needs Spotify Premium.
     </p>
   </description>
-  <launchable type="desktop-id">rocks.fastpotify.Fastpotify.desktop</launchable>
+  <launchable type="desktop-id">rocks.spotifast.Spotifast.desktop</launchable>
   <url type="homepage">https://spotifast.rocks/</url>
   <url type="bugtracker">https://github.com/crmne/spotifast/issues</url>
   <url type="help">https://spotifast.rocks/getting-started/</url>

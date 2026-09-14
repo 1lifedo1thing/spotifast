@@ -93,7 +93,8 @@ for commands and supported formats.
 
 The manual **Flatpak from release** workflow can rebuild a missing Flatpak from
 an existing tag. It verifies the published Linux archive against `checksums.txt`
-and uses that tag's Flatpak metadata, without compiling or replacing binaries.
+and uses that tag's version and description with the current Flatpak app ID,
+`rocks.spotifast.Spotifast`, without compiling or replacing binaries.
 It uploads a workflow artifact only. After checking the bundle, attach it to the
 existing release and add its hash to `checksums.txt`, preserving every existing
 asset and checksum. Release tags stay immutable.

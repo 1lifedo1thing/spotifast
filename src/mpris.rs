@@ -309,9 +309,20 @@ fn uri_from_object_path(path: &str) -> Option<String> {
 
 /// The desktop entry's name: inside a Flatpak the entry is exported under
 /// the app id, and a desktop looking it up by the plain name finds nothing.
-fn desktop_entry() -> &'static str {
-    if std::path::Path::new("/.flatpak-info").exists() {
-        "rocks.fastpotify.Fastpotify"
+fn desktop_entry() -> String {
+    let app_id = std::env::var("FLATPAK_ID").ok();
+    desktop_entry_for(
+        app_id.as_deref(),
+        std::path::Path::new("/.flatpak-info").exists(),
+    )
+    .to_owned()
+}
+
+fn desktop_entry_for(app_id: Option<&str>, in_flatpak: bool) -> &str {
+    if let Some(app_id) = app_id.filter(|id| !id.is_empty()) {
+        app_id
+    } else if in_flatpak {
+        "rocks.spotifast.Spotifast"
     } else {
         "fastpotify"
     }
@@ -320,6 +331,19 @@ fn desktop_entry() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn desktop_entry_matches_the_installed_flatpak_id() {
+        for id in ["rocks.spotifast.Spotifast", "rocks.fastpotify.Fastpotify"] {
+            assert_eq!(desktop_entry_for(Some(id), true), id);
+        }
+        assert_eq!(desktop_entry_for(None, false), "fastpotify");
+        assert_eq!(desktop_entry_for(None, true), "rocks.spotifast.Spotifast");
+        assert_eq!(
+            desktop_entry_for(Some(""), true),
+            "rocks.spotifast.Spotifast"
+        );
+    }
 
     #[test]
     fn object_paths_round_trip() {
