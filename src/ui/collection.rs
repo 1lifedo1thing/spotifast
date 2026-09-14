@@ -115,6 +115,8 @@ pub struct Actions<'a> {
     pub saved_icons: (Icon, Icon),
     pub saved_tooltips: (&'a str, &'a str),
     pub owned_playlist: Option<Playlist>,
+    /// A playlist page can be refreshed from its More menu.
+    pub reload: Option<(Page, bool)>,
     pub name: &'a str,
 }
 
@@ -245,7 +247,23 @@ pub fn actions_row(
                         uri,
                         actions.name,
                         actions.owned_playlist.as_ref(),
-                    )
+                    );
+                    if let Some((page, loading)) = &actions.reload {
+                        widgets::menu_separator(ui, &palette);
+                        let clicked = ui
+                            .add_enabled_ui(!loading, |ui| {
+                                widgets::menu_item(
+                                    ui,
+                                    &palette,
+                                    Some(Icon::Refresh),
+                                    if *loading { "Refreshing…" } else { "Refresh" },
+                                )
+                            })
+                            .inner;
+                        if clicked {
+                            app.actions.push(Action::Reload(page.clone()));
+                        }
+                    }
                 });
         }
         if let Some(filter) = filter {
@@ -1004,6 +1022,7 @@ pub fn playlist(app: &mut App, ui: &mut egui::Ui, id: &str) {
                     saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
                     saved_tooltips: ("Add to Your Library", "Remove from Your Library"),
                     owned_playlist: owned.then_some(playlist_clone),
+                    reload: Some((Page::Playlist(id.to_string()), page.items.loading)),
                     name: &playlist.name,
                 },
                 Some(&mut page.filter),
@@ -1120,6 +1139,7 @@ pub fn album(app: &mut App, ui: &mut egui::Ui, id: &str) {
                     saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
                     saved_tooltips: ("Save to Your Library", "Remove from Your Library"),
                     owned_playlist: None,
+                    reload: None,
                     name: &album.name,
                 },
                 None,
@@ -1320,6 +1340,7 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             saved_icons: (Icon::Heart, Icon::HeartFilled),
             saved_tooltips: ("", ""),
             owned_playlist: None,
+            reload: None,
             name: "Liked Songs",
         },
         Some(&mut filter),
@@ -1915,6 +1936,137 @@ mod tests {
     }
 
     #[test]
+    fn playlist_refresh_lives_in_more_and_accepts_pointer_and_keyboard() {
+        use egui::accesskit::{Action as AccessibleAction, ActionRequest, TreeId};
+        for width in [400.0, 800.0] {
+            for activation in [None, Some(egui::Key::Enter), Some(egui::Key::Space)] {
+                let ctx = egui::Context::default();
+                ctx.enable_accesskit();
+                theme::install(&ctx);
+                let mut app = test_app();
+                let mut filter = String::new();
+                let mut frame = |loading, events| {
+                    app.actions.clear();
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                vec2(width, 520.0),
+                            )),
+                            events,
+                            ..Default::default()
+                        },
+                        |ui| {
+                            actions_row(
+                                &mut app,
+                                ui,
+                                Actions {
+                                    play_uri: Some("spotify:playlist:test".into()),
+                                    view: None,
+                                    saved: None,
+                                    saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
+                                    saved_tooltips: ("", ""),
+                                    owned_playlist: None,
+                                    reload: Some((Page::Playlist("test".into()), loading)),
+                                    name: "Test",
+                                },
+                                Some(&mut filter),
+                            )
+                        },
+                    );
+                    output.textures_delta.clear();
+                    (
+                        output.platform_output.accesskit_update.unwrap(),
+                        std::mem::take(&mut app.actions),
+                    )
+                };
+                let locate = |tree: &egui::accesskit::TreeUpdate, label: &str| {
+                    let (id, node) = tree
+                        .nodes
+                        .iter()
+                        .find(|(_, n)| n.label() == Some(label))
+                        .unwrap_or_else(|| panic!("missing {label}"));
+                    let b = node.bounds().unwrap();
+                    (
+                        *id,
+                        pos2(((b.x0 + b.x1) / 2.0) as f32, ((b.y0 + b.y1) / 2.0) as f32),
+                    )
+                };
+                let click = |pos| {
+                    vec![
+                        egui::Event::PointerMoved(pos),
+                        egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed: true,
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                        egui::Event::PointerButton {
+                            pos,
+                            button: egui::PointerButton::Primary,
+                            pressed: false,
+                            modifiers: egui::Modifiers::NONE,
+                        },
+                    ]
+                };
+                frame(false, vec![]);
+                let (closed, _) = frame(false, vec![]);
+                assert!(
+                    !closed
+                        .nodes
+                        .iter()
+                        .any(|(_, n)| n.label() == Some("Refresh")),
+                    "no toolbar refresh control"
+                );
+                let (_, more) = locate(&closed, "More");
+                frame(false, click(more));
+                let (open, _) = frame(false, vec![]);
+                let (refresh, pos) = locate(&open, "Refresh");
+                assert!(pos.x >= 0.0 && pos.x <= width && pos.y <= 520.0);
+                let events = if let Some(key) = activation {
+                    frame(
+                        false,
+                        vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                            action: AccessibleAction::Focus,
+                            target_tree: TreeId::ROOT,
+                            target_node: refresh,
+                            data: None,
+                        })],
+                    );
+                    vec![egui::Event::Key {
+                        key,
+                        physical_key: None,
+                        pressed: true,
+                        repeat: false,
+                        modifiers: egui::Modifiers::NONE,
+                    }]
+                } else {
+                    click(pos)
+                };
+                let (_, actions) = frame(false, events);
+                assert!(
+                    matches!(actions.as_slice(), [Action::Reload(Page::Playlist(id))] if id == "test")
+                );
+                frame(true, vec![]);
+                frame(true, click(more));
+                let (busy, _) = frame(true, vec![]);
+                let (_, disabled) = locate(&busy, "Refreshing…");
+                assert!(
+                    busy.nodes
+                        .iter()
+                        .any(|(_, n)| n.label() == Some("Refreshing…") && n.is_disabled())
+                );
+                let (_, actions) = frame(true, click(disabled));
+                assert!(
+                    actions.is_empty(),
+                    "an in-flight refresh cannot be repeated"
+                );
+                app.backend.shutdown();
+            }
+        }
+    }
+
+    #[test]
     fn sorted_collection_play_button_plays_context_when_shuffling() {
         let ctx = egui::Context::default();
         let mut app = test_app();
@@ -1942,6 +2094,7 @@ mod tests {
                     saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
                     saved_tooltips: ("", ""),
                     owned_playlist: None,
+                    reload: None,
                     name: "Test",
                 },
                 None,
@@ -1987,6 +2140,7 @@ mod tests {
                     saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
                     saved_tooltips: ("", ""),
                     owned_playlist: None,
+                    reload: None,
                     name: "Test",
                 },
                 None,
@@ -2036,6 +2190,7 @@ mod tests {
                     saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
                     saved_tooltips: ("", ""),
                     owned_playlist: None,
+                    reload: None,
                     name: "Test",
                 },
                 None,
@@ -2081,6 +2236,7 @@ mod tests {
                     saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
                     saved_tooltips: ("", ""),
                     owned_playlist: None,
+                    reload: None,
                     name: "Test",
                 },
                 None,
@@ -2131,6 +2287,7 @@ mod tests {
                     saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
                     saved_tooltips: ("", ""),
                     owned_playlist: None,
+                    reload: None,
                     name: "Test",
                 },
                 Some(&mut filter),
@@ -2176,6 +2333,7 @@ mod tests {
                     saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
                     saved_tooltips: ("", ""),
                     owned_playlist: None,
+                    reload: None,
                     name: "Test",
                 },
                 Some(&mut filter),

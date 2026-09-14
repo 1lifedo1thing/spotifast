@@ -68,6 +68,14 @@ including repeated entries. Play is disabled when the view has no playable
 songs; it never falls back to the unfiltered playlist in that case. Clearing
 the filter restores the original view. Existing Shuffle behavior is unchanged.
 
+## Refreshing a playlist
+
+On `main`, after 0.7.1, choose **Refresh** in a playlist's **…** menu to reload
+its details and songs, including changes made in another Spotify client. The
+menu item reads **Refreshing…** and is disabled while loading. Current songs,
+filtering and sorting stay visible, and pending edits finish before replacement
+rows are requested. A failed refresh keeps the songs and offers **Retry**.
+
 ## Playing from the sidebar
 
 Double-click a playlist, Liked Songs, album, artist, or podcast row in the
