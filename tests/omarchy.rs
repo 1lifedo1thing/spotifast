@@ -24,9 +24,23 @@ fn omarchy_hook_replaces_only_its_palette_and_tolerates_a_stopped_app() {
     for dir in [&source, &target, &bin] {
         std::fs::create_dir_all(dir).unwrap();
     }
+    // Nix provides tools through PATH without /bin or /usr/bin. Keep that
+    // environment and use its actual interpreter for the generated fixture.
+    let search_path = std::env::var_os("PATH").expect("test tools on PATH");
+    let shell = std::env::split_paths(&search_path)
+        .map(|directory| directory.join("bash"))
+        .find(|path| path.is_file())
+        .expect("bash for the Omarchy hook");
+    let command_path = std::env::join_paths(
+        std::iter::once(bin.clone()).chain(std::env::split_paths(&search_path)),
+    )
+    .unwrap();
     std::fs::write(
         bin.join("spotifast"),
-        "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$SPOTIFAST_HOOK_TEST_LOG\"\nexit 1\n",
+        format!(
+            "#!{}\nprintf '%s\\n' \"$*\" >> \"$SPOTIFAST_HOOK_TEST_LOG\"\nexit 1\n",
+            shell.display()
+        ),
     )
     .unwrap();
     std::fs::set_permissions(
@@ -35,12 +49,12 @@ fn omarchy_hook_replaces_only_its_palette_and_tolerates_a_stopped_app() {
     )
     .unwrap();
     let run = || {
-        let output = Command::new("bash")
+        let output = Command::new(&shell)
             .arg(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/contrib/omarchy/spotifast-theme"
             ))
-            .env("PATH", format!("{}:/usr/bin:/bin", bin.display()))
+            .env("PATH", &command_path)
             .env("XDG_CONFIG_HOME", &config)
             .env("SPOTIFAST_OMARCHY_THEME_DIR", &source)
             .env_remove("SPOTIFAST_THEMES_DIR")
