@@ -567,6 +567,9 @@ mod tests {
                         Err(error) => panic!("receiver did not get its direct probe: {error}"),
                     }
                 };
+                // Accept polling is nonblocking; request reads must wait for
+                // data, including on platforms that inherit the listener mode.
+                stream.set_nonblocking(false).unwrap();
                 stream
                     .set_read_timeout(Some(Duration::from_secs(2)))
                     .unwrap();
