@@ -26,14 +26,14 @@ same assets beside its binaries. Flatpak does not install host desktop hooks.
 ```sh
 gem install native-packages --version 0.6.0
 native-packages validate
-native-packages doctor
+native-packages doctor --target linux-amd64 --target linux-arm64
 native-packages build --release v1.2.3 --target linux-amd64 --target linux-arm64
 ```
 
 Replace `v1.2.3` with an existing stable application release. Local use also
 requires nFPM 2.47.0, `bsdtar` and `readelf`; AUR generation needs `makepkg`
 or Docker. CI installs its tooling. To package local release archives, put
-every configured input and recipe asset under `dist/`, then run
+the selected target inputs and recipe assets under `dist/`, then run
 `native-packages build --version 1.2.3 --target linux-amd64 --target linux-arm64`.
 Outputs go to `dist/packages/1.2.3`; use `--output` for a fresh destination when rebuilding.
 
