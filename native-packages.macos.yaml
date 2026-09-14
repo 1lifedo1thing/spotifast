@@ -6,10 +6,10 @@ tool:
 nfpm:
   name: fastpotify
   maintainer: Carmine Paolino <carmine@paolino.me>
-  description: Fastpotify macOS application
+  description: A native Spotify client
   license: MIT
 release:
-  repository: crmne/fastpotify
+  repository: crmne/spotifast
   prereleases: true
 targets:
   macos-universal:

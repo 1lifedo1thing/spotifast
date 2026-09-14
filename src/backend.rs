@@ -2180,7 +2180,7 @@ impl Worker {
                 if !lease.current() {
                     return Err("Sign-in changed before receiver activation.".into());
                 }
-                crate::zeroconf::add_user(&http, &receiver, &info, &credentials, "Fastpotify")
+                crate::zeroconf::add_user(&http, &receiver, &info, &credentials, "Spotifast")
                     .map_err(|error| error.to_string())
             })();
             let _ = events.send(Event::ReceiverActivated { name, result });

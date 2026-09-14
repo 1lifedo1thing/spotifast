@@ -1,11 +1,11 @@
-# Fastpotify agent guide
+# Spotifast agent guide
 
 Follow `CONTRIBUTING.md`; it is the canonical product and contribution policy.
 These instructions add implementation constraints for coding agents.
 
 ## Product boundaries
 
-- Keep Fastpotify a small native Spotify client. Do not add a browser engine,
+- Keep Spotifast a small native Spotify client. Do not add a browser engine,
   telemetry, a hosted backend, or alternate sources for Spotify audio.
 - Playback capabilities come from librespot. Do not advertise or implement a
   capability merely because its name appears in a protobuf or enum. In

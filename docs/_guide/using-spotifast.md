@@ -1,4 +1,5 @@
 ---
+redirect_from: /using-fastpotify/
 title: Everyday Use
 description: Library ordering and local play history.
 nav_order: 3
@@ -107,7 +108,7 @@ search. The playback shortcuts remain available; unmodified letter and
 Space shortcuts yield to the focused control.
 
 This is the first part of screen-reader support. Windows testing with NVDA
-remains tracked in [#262](https://github.com/crmne/fastpotify/issues/262).
+remains tracked in [#262](https://github.com/crmne/spotifast/issues/262).
 Winamp skins do not yet have equivalent accessibility coverage.
 
 ## Library order
@@ -122,7 +123,7 @@ dates come last.
 **Spotify custom order** follows the playlist sequence and folders supplied by
 the existing local playback session. Until that order arrives, available
 playlists stay visible. The last good tree is kept for the same signed-in
-account. Fastpotify's local pins remain at the top, including pins from a closed
+account. Spotifast's local pins remain at the top, including pins from a closed
 folder. Changing an order or dragging a row here does not change Spotify's
 order or folders.
 
@@ -142,7 +143,7 @@ Liked Songs starts pinned at the top. Drag it between pins to choose its
 position, or below the pin block to unpin it and put it in **Local custom
 order**. Other pins can sit above it. Its right-click menu also offers **Unpin**
 and **Pin to top**; pinning adds it after your existing pins. The arrangement
-survives restarting Fastpotify and switching sort choices.
+survives restarting Spotifast and switching sort choices.
 
 When unpinned, Liked Songs follows **Name** or **Recently played** like the other
 rows. In **Spotify custom order**, it appears after the playlists because it
@@ -156,14 +157,14 @@ bullet; each artist name remains a separate link.
 
 ## Windows taskbar controls
 
-On `main`, after 0.7.1, hovering Fastpotify's taskbar button offers **Previous**,
+On `main`, after 0.7.1, hovering Spotifast's taskbar button offers **Previous**,
 **Play/Pause**, and **Next** beneath its window preview. They control the same
 playing device as the player bar, update immediately, and are disabled when
 there is no song or the device refuses controls. The icons follow the system
 appearance and display scaling.
 
 On `main`, after 0.7.1, clicking or double-clicking the Windows tray icon shows
-and raises Fastpotify. Use **Show or hide Fastpotify** in the tray menu to hide
+and raises Spotifast. Use **Show or hide Spotifast** in the tray menu to hide
 it again.
 
 Closing to the tray removes the window and its preview. Reopening the main
@@ -174,7 +175,7 @@ is closed. These buttons add no Spotify requests beyond their playback actions.
 For the Winamp mini player, turn off **Show in taskbar** under
 **Settings > Winamp skins**, or **Show in taskbar** in its options menu.
 The choice survives restarts. The mini player stays visible; the tray icon,
-**Ctrl+M**, the skin logo, and launching Fastpotify again remain ways to reach
+**Ctrl+M**, the skin logo, and launching Spotifast again remain ways to reach
 the app. Returning to the main window always restores its taskbar button.
 Changing the option while the mini player is open replaces that window while
 playback continues. This setting is available on Windows; it does not change
@@ -192,7 +193,7 @@ controls are unavailable, because the window backend cannot apply them.
 Use your desktop's window rule or shortcut instead. In KDE Plasma, configure
 **Keep Window Above Others** under **Settings > Keyboard > Shortcuts >
 Window Management**. Your saved preference remains available when you use
-Fastpotify on a supported backend again.
+Spotifast on a supported backend again.
 
 On `main`, after 0.7.1, the top bar reserves room for the device and update
 badges beside Search. In narrow windows those badges show only their icons.
@@ -203,7 +204,7 @@ picker or update window.
 ## Recent
 
 The queue panel's second tab combines Spotify's history with tracks played
-through Fastpotify, which Spotify does not record.
+through Spotifast, which Spotify does not record.
 
 On `main`, after 0.7.1, choosing any Recent row starts that song on its own,
 and the player bar shows the selection immediately while playback starts.
@@ -220,5 +221,5 @@ The local list is stored in `history.json` and is never uploaded. Settings →
 Storage shows its location and has a **Clear history** button.
 
 On Windows, the main window's minimize, maximize, and close buttons share the
-top bar with Fastpotify's controls. Drag an empty part of that bar to move or
+top bar with Spotifast's controls. Drag an empty part of that bar to move or
 snap the window, and drag a window edge or corner to resize it.

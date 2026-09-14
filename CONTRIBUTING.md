@@ -1,6 +1,6 @@
-# Contributing to Fastpotify
+# Contributing to Spotifast
 
-Fastpotify is a native Spotify client. Changes should improve the
+Spotifast is a native Spotify client. Changes should improve the
 desktop app without adding a browser, fallback services, or another backend.
 
 ## Before opening an issue
@@ -16,13 +16,13 @@ project.
 Some boundaries come from Spotify or from upstream libraries:
 
 - Local playback requires Spotify Premium because librespot requires it.
-- Spotify Lossless is not available through librespot. Fastpotify will
+- Spotify Lossless is not available through librespot. Spotifast will
   reconsider it if librespot gains lawful upstream support; proposals that
   depend on bypassing Spotify's DRM are out of scope.
 - Spotify tracks must come from Spotify. Substituting audio from YouTube,
   Piped, `yt-dlp`, or another catalogue is out of scope.
-- Fastpotify will not embed a browser engine, add telemetry, or introduce a
-  Fastpotify-operated service.
+- Spotifast will not embed a browser engine, add telemetry, or introduce a
+  Spotifast-operated service.
 
 [What Spotify Lets a Client Do](docs/_reference/what-spotify-allows.md)
 lists what each of the three surfaces offers and the requests none of them
@@ -88,7 +88,7 @@ exercise the connection to its tools.
 
 ## Pull requests
 
-Keep each pull request to one change. Explain why it belongs in Fastpotify,
+Keep each pull request to one change. Explain why it belongs in Spotifast,
 what changed, and how you tested it. Avoid unrelated formatting, refactors,
 generated prose, and large mechanical rewrites.
 
@@ -121,7 +121,9 @@ RUSTDOCFLAGS='-D warnings' cargo doc --locked --all-features --no-deps
 ```
 
 Linux needs the development packages listed in the README; `nix develop`
-provides the complete development environment. MilkDrop builds libprojectM
+provides the complete development environment. The command compatibility test
+also needs `dbus-run-session`, to use a private bus instead of the desktop's.
+MilkDrop builds libprojectM
 from source, so every platform also needs CMake, a C++ compiler, and
 libclang (on Windows, vcpkg with `glew:x64-windows-static` installed and
 `VCPKG_INSTALLATION_ROOT` pointing at it); `--no-default-features` leaves
@@ -147,8 +149,13 @@ Translation changes also need `.github/scripts/update-translations.sh --check`,
 using GNU gettext tools with Rust support. Run the script without `--check` when
 translatable source strings change, and review any fuzzy or missing entries in
 the updated PO files. Normal Cargo builds compile the catalogs without gettext
-tools. See [Translating Fastpotify](docs/_reference/translating.md) for the pilot
+tools. See [Translating Spotifast](docs/_reference/translating.md) for the pilot
 scope and contributor workflow.
+
+Documentation deployments take their canonical URL from the domain configured
+in GitHub Pages. When changing domains, configure DNS and GitHub Pages before
+redeploying; the previous hostname keeps working until that switch. Renamed
+guides use `jekyll-redirect-from` to preserve their old URLs.
 
 When changing `Cargo.lock` or `flake.nix`, also verify `nix build .#default`
 on a Nix host or wait for the Nix CI job. A package-version-only lockfile

@@ -1160,7 +1160,7 @@ pub fn marquee_text(
         return notice.to_string();
     }
     let Some(now) = now else {
-        return "Fastpotify".to_string();
+        return "Spotifast".to_string();
     };
     if let Some(fraction) = seek_preview
         && now.duration_ms > 0
@@ -1573,7 +1573,7 @@ mod tests {
             marquee_text(Some(&playing), None, None, None, None),
             "Radiohead - Karma Police (4:24)"
         );
-        assert_eq!(marquee_text(None, None, None, None, None), "Fastpotify");
+        assert_eq!(marquee_text(None, None, None, None, None), "Spotifast");
         let untitled = now("Episode 12", "", 0);
         assert_eq!(
             marquee_text(Some(&untitled), None, None, None, None),

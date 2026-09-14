@@ -5,6 +5,11 @@ it pins the shared CLI and nFPM versions and declares Linux amd64/arm64 inputs,
 DEB/RPM contents, dependencies, recipe templates and downstream repositories.
 Application assets and native recipes stay in `packaging/`.
 
+The Spotifast rename preserves package IDs and release filenames so installed
+copies can upgrade. Linux packages add a `spotifast` command alias; archives
+also include the new command. See [rename compatibility](docs/_reference/renaming.md)
+for the macOS bundle and updater requirements.
+
 ```sh
 gem install native-packages --version 0.5.1
 native-packages validate
@@ -35,7 +40,7 @@ Packaging CI builds both architectures using a pinned published release
 (`v0.7.1`) for pushes and PRs, or the requested version for manual and release
 runs. It then installs and removes each package in clean Ubuntu 24.04, Debian
 13, Fedora 41 and current Fedora containers on native amd64 and arm64 runners.
-The checks run `fastpotify --version`, load the GUI libraries with `dlopen`,
+The checks run both `spotifast --version` and `fastpotify --version`, load the GUI libraries with `dlopen`,
 and verify the desktop entry and icon. They cover installation and library
 resolution, not a running desktop or Spotify playback. On release runs these
 checks follow artifact attachment; a failure marks the workflow as failed.

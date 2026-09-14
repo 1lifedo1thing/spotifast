@@ -1,15 +1,19 @@
 ---
 title: Download
-description: Get Fastpotify for macOS, Windows, or Linux, with install instructions for each.
+description: Download the app for macOS, Windows, or Linux, with install instructions for each.
 nav_order: 1
 ---
 
+Spotifast was previously called **Fastpotify**. The rename is on `main`.
+The current stable download, 0.7.1, still appears as Fastpotify and uses the
+package names and commands below. Your settings and sign-ins carry over.
+
 {% assign v = site.fastpotify_version %}
-{% assign base = "https://github.com/crmne/fastpotify/releases/download/v" | append: v %}
+{% assign base = "https://github.com/crmne/spotifast/releases/download/v" | append: v %}
 
 The current version is **v{{ v }}**. SHA-256 checksums are in
 [checksums.txt]({{ base }}/checksums.txt). Older versions are on the
-[releases page](https://github.com/crmne/fastpotify/releases).
+[releases page](https://github.com/crmne/spotifast/releases).
 
 ## macOS
 
@@ -89,7 +93,7 @@ yay -S fastpotify-git      # built from the latest commit
 
 From 0.4.0 on, every release carries a Flatpak bundle of the Linux build,
 `fastpotify-vX.Y.Z-x86_64.flatpak`, on the
-[releases page](https://github.com/crmne/fastpotify/releases). It runs on
+[releases page](https://github.com/crmne/spotifast/releases). It runs on
 any distribution with Flatpak and the Freedesktop 24.08 runtime:
 
 ```sh
@@ -115,11 +119,11 @@ Or build from source: see [Getting Started](/getting-started/).
 
 ## Nix
 
-Add the repository [flake](https://github.com/crmne/fastpotify) to your
+Add the repository [flake](https://github.com/crmne/spotifast) to your
 inputs:
 
 ```nix
-inputs.fastpotify.url = "github:crmne/fastpotify";
+inputs.fastpotify.url = "github:crmne/spotifast";
 ```
 
 On NixOS, install the default package:
@@ -132,13 +136,13 @@ environment.systemPackages = [
 
 ### nix-darwin
 
-On macOS, use the `fastpotify-app` package instead. It is a `Fastpotify.app`
+On macOS, use the `spotifast-app` package instead. It is a `Spotifast.app`
 bundle built and signed locally, so it is never quarantined and the
 first-open steps above do not apply:
 
 ```nix
 environment.systemPackages = [
-  inputs.fastpotify.packages."${pkgs.stdenv.hostPlatform.system}".fastpotify-app
+  inputs.fastpotify.packages."${pkgs.stdenv.hostPlatform.system}".spotifast-app
 ];
 environment.pathsToLink = [ "/Applications" ];
 ```
@@ -149,6 +153,6 @@ The bundle appears in `/Applications/Nix Apps`. With Home Manager,
 
 ```nix
 home.packages = [
-  inputs.fastpotify.packages."${pkgs.stdenv.hostPlatform.system}".fastpotify-app
+  inputs.fastpotify.packages."${pkgs.stdenv.hostPlatform.system}".spotifast-app
 ];
 ```

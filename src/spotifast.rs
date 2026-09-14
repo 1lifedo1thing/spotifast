@@ -1,4 +1,4 @@
-//! Fastpotify compatibility command, including its original --version output.
+//! Spotifast desktop command.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 

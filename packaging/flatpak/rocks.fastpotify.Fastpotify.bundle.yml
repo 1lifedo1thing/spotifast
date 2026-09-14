@@ -5,7 +5,7 @@ id: rocks.fastpotify.Fastpotify
 runtime: org.freedesktop.Platform
 runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
-command: fastpotify
+command: spotifast
 finish-args:
   - --socket=wayland
   - --socket=fallback-x11
@@ -24,6 +24,7 @@ modules:
     buildsystem: simple
     build-commands:
       - install -Dm755 fastpotify /app/bin/fastpotify
+      - ln -s fastpotify /app/bin/spotifast
       - install -Dm644 packaging/applications/fastpotify.desktop /app/share/applications/rocks.fastpotify.Fastpotify.desktop
       - sed -i 's/^Icon=fastpotify$/Icon=rocks.fastpotify.Fastpotify/' /app/share/applications/rocks.fastpotify.Fastpotify.desktop
       - install -Dm644 packaging/icons/fastpotify.svg /app/share/icons/hicolor/scalable/apps/rocks.fastpotify.Fastpotify.svg

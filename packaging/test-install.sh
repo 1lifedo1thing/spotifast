@@ -41,6 +41,7 @@ docker run --rm \
     # --version exercises linked libraries; the probe checks dlopen libraries
     # without installing a desktop, compiler, interpreter or test dependencies.
     fastpotify --version
+    spotifast --version
     /checks/check-runtime-libs
     test -s /usr/share/applications/fastpotify.desktop
     test -s /usr/share/icons/hicolor/scalable/apps/fastpotify.svg
@@ -50,6 +51,7 @@ docker run --rm \
       dnf remove -y fastpotify
     fi
     test ! -e /usr/bin/fastpotify
+    test ! -e /usr/bin/spotifast
     test ! -e /usr/share/applications/fastpotify.desktop
     test ! -e /usr/share/icons/hicolor/scalable/apps/fastpotify.svg
   '

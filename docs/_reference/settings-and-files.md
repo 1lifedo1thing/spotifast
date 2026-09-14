@@ -1,12 +1,18 @@
 ---
 title: Settings & Files
-description: Where Fastpotify keeps configuration, credentials, and caches, and what is safe to delete.
+description: Configuration, credential and cache locations, and what is safe to delete.
 nav_order: 0
 ---
 
 ## Where things live
 
-Fastpotify follows each platform's conventions. On Linux:
+Spotifast was previously called Fastpotify. The existing `fastpotify` file
+paths, credential-store IDs and desktop integration IDs stay the same, so the
+rename does not require signing in again or moving your settings. Both
+`spotifast` and `fastpotify` commands control the same running app. Saved Spotify
+Connect device names remain unchanged; new settings default to `Spotifast`.
+
+Spotifast follows each platform's conventions. On Linux:
 
 | What | Where | Safe to delete? |
 | --- | --- | --- |
@@ -51,10 +57,10 @@ used for this session, with no new plaintext fallback file.
 On upgrade, each legacy grant is written to the protected store and read back
 before its old file is removed. Valid grants migrate without signing in again.
 If Spotify rejects a saved refresh grant, only that grant is forgotten so the
-next launch cannot keep restoring it. If migration fails, Fastpotify reports it and
+next launch cannot keep restoring it. If migration fails, Spotifast reports it and
 keeps the original so migration can be retried. That grant can still serve the
 current session. A successfully migrated grant is never replaced by a stale
-legacy copy. Librespot's reusable grant stays in memory until Fastpotify saves
+legacy copy. Librespot's reusable grant stays in memory until Spotifast saves
 it through this same store. Volume and disposable audio caches are independent.
 
 Sign-out invalidates pending authorization, refresh, and playback connections,
@@ -75,7 +81,7 @@ and diagnostic uploads.
 
 Progress through a playlist is periodically cached as a contiguous prefix.
 When the playlist has not changed on Spotify, reopening it resumes from that
-prefix instead of requesting the same pages again. Fastpotify validates the
+prefix instead of requesting the same pages again. Spotifast validates the
 cache against Spotify's playlist snapshot and reported song count before
 showing it. A cache with a mismatched count is replaced by live rows even if
 its snapshot matches, so stale cached songs cannot choose the playback order.
@@ -152,7 +158,7 @@ main fields are:
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `device_name` | `Fastpotify` | Name on Spotify Connect |
+| `device_name` | `Spotifast` | Name on Spotify Connect |
 | `bitrate` | `320` | 96, 160, or 320 kbps |
 | `normalisation` | `false` | Volume normalisation |
 | `autoplay` | `true` | Keep playing similar music at the end |
@@ -198,7 +204,7 @@ main fields are:
 ## Command line
 
 ```
-fastpotify [OPTIONS] [LINK]
+spotifast [OPTIONS] [LINK]
 
   LINK                  A Spotify link to open: spotify:track:…, or an
                         open.spotify.com address
@@ -206,12 +212,12 @@ fastpotify [OPTIONS] [LINK]
   -v, --verbose         More logs from librespot and the API client
 ```
 
-A link goes to the running Fastpotify when there is one, which then opens
+A link goes to the running Spotifast when there is one, which then opens
 the page and brings its window forward; otherwise the app starts on it. The
 desktop's handler for `spotify:` links runs exactly this.
 
 Attach `fastpotify.log` from the state directory to bug reports. It contains
-the last run's output, including extra lines from `fastpotify -v`. After a
+the last run's output, including extra lines from `spotifast -v`. After a
 crash, attach `panic.log` too.
 
 ## Demo mode
@@ -246,7 +252,7 @@ directory's `cache` and `state` folders, with settings read from `config`.
 ## Home shelves
 
 On `main`, after 0.7.1, you can hide **Made for you** and **Recommended for you**
-from Home independently. Quit Fastpotify before editing `settings.json`, then
+from Home independently. Quit Spotifast before editing `settings.json`, then
 restart it. Add this field to hide both:
 
 ```json

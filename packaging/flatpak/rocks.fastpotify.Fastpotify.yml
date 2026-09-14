@@ -1,4 +1,4 @@
-# Fastpotify as a Flatpak, built from source: the manifest Flathub builds
+# Spotifast as a Flatpak, built from source: the manifest Flathub builds
 # from. The copy in the Flathub repository names a tag and its commit in
 # the source below and carries cargo-sources.json next to it; flathub.sh
 # writes both. For a local build, this one takes the checkout as it is:
@@ -15,7 +15,7 @@ runtime-version: '24.08'
 sdk: org.freedesktop.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
-command: fastpotify
+command: spotifast
 finish-args:
   # Wayland first, X11 when that is what there is.
   - --socket=wayland
@@ -48,6 +48,7 @@ modules:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
       - cargo --offline build --release --locked
       - install -Dm755 target/release/fastpotify /app/bin/fastpotify
+      - ln -s fastpotify /app/bin/spotifast
       - install -Dm644 packaging/applications/fastpotify.desktop /app/share/applications/rocks.fastpotify.Fastpotify.desktop
       - sed -i 's/^Icon=fastpotify$/Icon=rocks.fastpotify.Fastpotify/' /app/share/applications/rocks.fastpotify.Fastpotify.desktop
       - install -Dm644 packaging/icons/fastpotify.svg /app/share/icons/hicolor/scalable/apps/rocks.fastpotify.Fastpotify.svg

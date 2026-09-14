@@ -79,7 +79,7 @@ jobs:
           $binary = "target\${{ matrix.target }}\release\fastpotify.exe"
           $imports = & dumpbin /dependents $binary | Out-String
           $runtime = $imports | Select-String -Pattern 'MSVCP[0-9_]*\.dll|VCRUNTIME[0-9_]*\.dll'
-          if ($runtime) { throw "Fastpotify imports an MSVC runtime:`n$runtime" }
+          if ($runtime) { throw "Spotifast imports an MSVC runtime:`n$runtime" }
 
       - name: Package
         shell: bash
@@ -87,9 +87,9 @@ jobs:
           name="fastpotify-${GITHUB_REF_NAME}-${{ matrix.target }}"
           mkdir -p "dist/$name"
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp "target/${{ matrix.target }}/release/fastpotify.exe" "dist/$name/"
+            cp "target/${{ matrix.target }}/release/fastpotify.exe" "target/${{ matrix.target }}/release/spotifast.exe" "dist/$name/"
           else
-            cp "target/${{ matrix.target }}/release/fastpotify" "dist/$name/"
+            cp "target/${{ matrix.target }}/release/fastpotify" "target/${{ matrix.target }}/release/spotifast" "dist/$name/"
           fi
           cp README.md LICENSE "dist/$name/"
           cp packaging/fastpotify-portable.txt "dist/$name/"
@@ -172,7 +172,7 @@ jobs:
         run: |
           version="${GITHUB_REF_NAME#v}"
           mkdir -p dist/macos-input
-          bash packaging/macos/bundle.sh universal/fastpotify dist/macos-input/Fastpotify.app "$version"
+          bash packaging/macos/bundle.sh universal/fastpotify dist/macos-input/Spotifast.app "$version"
           cp README.md LICENSE dist/macos-input/
 
       - name: Package, sign and notarize macOS app

@@ -142,7 +142,7 @@ pub struct Settings {
     /// An optional personal Spotify Web API application id. The shared
     /// application remains active for coverage when this is present.
     pub web_client_id: Option<String>,
-    /// Legacy reminder time, retained for older Fastpotify versions.
+    /// Legacy reminder time, retained for older Spotifast versions.
     pub personal_app_nudge_at: Option<String>,
     /// The listener has dismissed or followed the personal-app introduction.
     pub personal_app_intro_seen: bool,
@@ -221,7 +221,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            device_name: "Fastpotify".to_string(),
+            device_name: "Spotifast".to_string(),
             bitrate: 320,
             normalisation: false,
             autoplay: true,

@@ -6,18 +6,18 @@ function fixture(type = 'Issue') {
   const updatedAt = '2026-09-07T12:00:00Z';
   const node = {
     id: 'subject', __typename: type, updatedAt,
-    repository: { nameWithOwner: 'crmne/fastpotify' },
+    repository: { nameWithOwner: 'crmne/spotifast' },
     reactionGroups: [{ content: 'ROCKET', viewerHasReacted: false }],
   };
   const mutations = [];
   const context = {
-    repo: { owner: 'crmne', repo: 'fastpotify' }, eventName: 'issues',
+    repo: { owner: 'crmne', repo: 'spotifast' }, eventName: 'issues',
     payload: {
       issue: { number: 350, node_id: 'subject' }, sender: { type: 'User', login: 'reporter' },
       repository: { default_branch: 'main' },
       workflow_run: {
         conclusion: 'success', path: '.github/workflows/issue-assessment.lock.yml',
-        head_branch: 'main', head_repository: { full_name: 'crmne/fastpotify' },
+        head_branch: 'main', head_repository: { full_name: 'crmne/spotifast' },
       },
     },
   };
@@ -182,7 +182,7 @@ for (const type of ['IssueComment', 'DiscussionComment']) {
 test('completion accepts only this workflow on the default branch of this repository', async () => {
   for (const change of [
     { path: '.github/workflows/other.yml' }, { head_branch: 'contributor' },
-    { head_repository: { full_name: 'someone/fastpotify' } },
+    { head_repository: { full_name: 'someone/spotifast' } },
   ]) {
     const f = fixture();
     Object.assign(f.context.payload.workflow_run, change);

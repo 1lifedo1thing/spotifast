@@ -1502,7 +1502,7 @@ impl App {
                     match result {
                         Ok(Some(notice)) => {
                             if manual || self.update.as_ref() != Some(&notice) {
-                                self.toast(format!("Fastpotify {} is available", notice.version));
+                                self.toast(format!("Spotifast {} is available", notice.version));
                             }
                             self.update = Some(notice);
                             if self.settings.download_updates_automatically
@@ -1517,7 +1517,7 @@ impl App {
                         Ok(None) => {
                             self.update = None;
                             if manual {
-                                self.toast("Fastpotify is up to date");
+                                self.toast("Spotifast is up to date");
                             } else {
                                 log::debug!("this is the newest release");
                             }
@@ -4885,7 +4885,7 @@ impl App {
             }
             _ => {
                 self.pending_link = None;
-                self.toast_error("Fastpotify cannot open this kind of Spotify link");
+                self.toast_error("Spotifast cannot open this kind of Spotify link");
             }
         }
     }
@@ -7216,9 +7216,9 @@ impl App {
     /// Keeps the current track in the window and taskbar title (#94).
     fn sync_window_title(&mut self, ctx: &egui::Context) {
         let title = match self.now_playing().filter(|now| now.playing) {
-            Some(now) if now.subtitle.is_empty() => format!("{} - Fastpotify", now.title),
+            Some(now) if now.subtitle.is_empty() => format!("{} - Spotifast", now.title),
             Some(now) => format!("{} - {}", now.subtitle, now.title),
-            None => "Fastpotify".to_string(),
+            None => "Spotifast".to_string(),
         };
         if title != self.window_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
@@ -10018,7 +10018,7 @@ mod tests {
         );
     }
 
-    /// If Spotify returns an unchanged queue order after shuffle, Fastpotify
+    /// If Spotify returns an unchanged queue order after shuffle, Spotifast
     /// retries up to the limit and then accepts the result as a bounded fallback.
     #[test]
     fn unchanged_shuffle_result_has_bounded_fallback() {
@@ -10058,7 +10058,7 @@ mod tests {
             assert!(app.queue_recheck_at.is_some());
         }
 
-        // The next response exceeds the retry limit, so Fastpotify accepts it.
+        // The next response exceeds the retry limit, so Spotifast accepts it.
         app.handle_api(ApiResponse::Queue {
             seq,
             result: Ok(unchanged_response),
@@ -11681,7 +11681,7 @@ mod tests {
                 manual,
                 result: Ok(Some(crate::updates::Release {
                     version: "1.2.3".into(),
-                    url: "https://github.com/crmne/fastpotify/releases/tag/v1.2.3".into(),
+                    url: "https://github.com/crmne/spotifast/releases/tag/v1.2.3".into(),
                 })),
             }]);
             let ctx = egui::Context::default();
@@ -11698,7 +11698,7 @@ mod tests {
         let mut app = headless_app();
         app.update = Some(crate::updates::Release {
             version: "1.2.3".into(),
-            url: "https://github.com/crmne/fastpotify/releases/tag/v1.2.3".into(),
+            url: "https://github.com/crmne/spotifast/releases/tag/v1.2.3".into(),
         });
         app.update_checking = true;
         app.handle_backend_events(vec![Event::UpdateChecked {
@@ -11710,7 +11710,7 @@ mod tests {
         assert_eq!(app.update, None);
         assert_eq!(
             app.toasts.last().map(|toast| toast.message.as_str()),
-            Some("Fastpotify is up to date")
+            Some("Spotifast is up to date")
         );
 
         app.toasts.clear();
@@ -11749,7 +11749,7 @@ mod tests {
             manual: false,
             result: Ok(Some(crate::updates::Release {
                 version: "1.2.3".into(),
-                url: "https://github.com/crmne/fastpotify/releases/tag/v1.2.3".into(),
+                url: "https://github.com/crmne/spotifast/releases/tag/v1.2.3".into(),
             })),
         }]);
 
@@ -11759,7 +11759,7 @@ mod tests {
         );
         assert_eq!(
             app.toasts.last().map(|toast| toast.message.as_str()),
-            Some("Fastpotify 1.2.3 is available")
+            Some("Spotifast 1.2.3 is available")
         );
     }
 
@@ -14190,7 +14190,7 @@ mod tests {
                 "unknown",
                 // Local playback is this computer, which Spotify has not
                 // named because it is not a remote device.
-                "Fastpotify",
+                "Spotifast",
             ]
         );
         // No devices seen yet is an empty array, not an empty string, so a

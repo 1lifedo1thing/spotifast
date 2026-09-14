@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build Fastpotify.app from a GUI binary, on a macOS machine.
+# Build Spotifast.app from a GUI binary, on a macOS machine.
 #
 #   packaging/macos/bundle.sh <binary> <output.app> <version>
 #

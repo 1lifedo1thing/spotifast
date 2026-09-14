@@ -90,14 +90,14 @@ engine:
 network:
   allowed:
     - defaults
-    - fastpotify.rocks
+    - spotifast.rocks
 
 tools:
   bash: false
   cli-proxy: false
   github:
     allowed-repos:
-      - crmne/fastpotify
+      - crmne/spotifast
     min-integrity: none
     toolsets:
       - discussions
@@ -145,7 +145,7 @@ timeout-minutes: 10
 
 # Assess the report
 
-Assess the triggering issue or discussion as a Fastpotify maintainer. This is
+Assess the triggering issue or discussion as a Spotifast maintainer. This is
 triage only. Never create a branch, commit, pull request, task, or new issue,
 and never assign the report.
 
@@ -177,7 +177,7 @@ Do not add or remove labels on discussions. Leave reopening closed issues to
 the maintainer.
 
 - Use `bug` for a reproducible fault and `enhancement` for a supported feature
-  that Fastpotify does not yet provide.
+  that Spotifast does not yet provide.
 - Use `needs-info` only when one particular missing fact prevents useful
   investigation.
 - Use `duplicate` only for the same request or root cause. For an exact
@@ -185,7 +185,7 @@ the maintainer.
   `duplicate_of` and one short explanation as its body. Do not also use
   `add_comment`.
 - Use `wontfix` when the exact capability is documented as unavailable.
-- Use `out-of-scope` only for a documented Fastpotify product boundary.
+- Use `out-of-scope` only for a documented Spotifast product boundary.
 - Leave uncertain product and policy decisions for the maintainer.
 - Do not infer that an antivirus detection is a false positive from the
   detection name, an unsigned binary, or the repository's source code.
@@ -207,7 +207,7 @@ chain-of-thought or internal analysis.
 - For an exact duplicate discussion, name and link the canonical issue or
   discussion in one short sentence.
 - For a documented unavailable or out-of-scope request, give the plain reason
-  and the relevant Fastpotify documentation link in at most three short
+  and the relevant Spotifast documentation link in at most three short
   sentences.
 - For Web API slowness or throttling, link the Make It Even Faster guide and
   ask the reporter to configure a personal Client ID, then report what remains

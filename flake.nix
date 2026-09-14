@@ -55,6 +55,7 @@
               apple-sdk
             ]
             ++ lib.optionals stdenv.hostPlatform.isLinux [
+              dbus
               alsa-lib
               libpulseaudio
               libxkbcommon
@@ -137,6 +138,9 @@
                   rustPlatform.bindgenHook
                 ]
                 ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ makeWrapper ];
+              # The command-alias regression starts its own bus, isolated from
+              # the listener's desktop and running application.
+              nativeCheckInputs = pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.dbus ];
               buildInputs =
                 pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux (
                   with pkgs;
@@ -159,6 +163,8 @@
               postFixup = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
                 wrapProgram $out/bin/fastpotify \
                   --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
+                wrapProgram $out/bin/spotifast \
+                  --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
               '';
 
               postInstall = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
@@ -170,9 +176,9 @@
 
               meta = {
                 description = "Fast native Spotify client with local playback and Spotify Connect";
-                homepage = "https://fastpotify.rocks";
+                homepage = "https://spotifast.rocks";
                 license = pkgs.lib.licenses.mit;
-                mainProgram = "fastpotify";
+                mainProgram = "spotifast";
               };
             };
 
@@ -192,14 +198,14 @@
             pkgs.runCommand "fastpotify-app"
               {
                 meta = {
-                  description = "Fastpotify as a macOS app bundle";
-                  homepage = "https://fastpotify.rocks";
+                  description = "A native Spotify client in a macOS app bundle";
+                  homepage = "https://spotifast.rocks";
                   license = pkgs.lib.licenses.mit;
                   platforms = pkgs.lib.platforms.darwin;
                 };
               }
               ''
-                app="$out/Applications/Fastpotify.app/Contents"
+                app="$out/Applications/Spotifast.app/Contents"
                 mkdir -p "$app/MacOS" "$app/Resources"
                 cp ${fastpotify}/bin/fastpotify "$app/MacOS/fastpotify"
                 chmod 755 "$app/MacOS/fastpotify"
@@ -207,17 +213,19 @@
                 sed -e "s/__VERSION__/${version}/g" -e "s/__BUILD__/${build}/g" \
                   ${./packaging/macos/Info.plist} > "$app/Info.plist"
                 /usr/bin/codesign --force --sign - \
-                  "$out/Applications/Fastpotify.app"
+                  "$out/Applications/Spotifast.app"
                 /usr/bin/codesign --verify --strict \
-                  "$out/Applications/Fastpotify.app"
+                  "$out/Applications/Spotifast.app"
               '';
         in
         {
           default = fastpotify;
           inherit fastpotify;
+          spotifast = fastpotify;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
           inherit fastpotify-app;
+          spotifast-app = fastpotify-app;
         }
       );
 

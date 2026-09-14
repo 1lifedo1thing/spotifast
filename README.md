@@ -1,6 +1,10 @@
-# Fastpotify
+# Spotifast
 
-**Spotify, native and fast.** Fastpotify is a Spotify client written in
+Previously **Fastpotify**. Same native Spotify client, now at
+[spotifast.rocks](https://spotifast.rocks/). The rename is on `main`; the
+current 0.7.1 download still uses the Fastpotify name.
+
+**Spotify, native and fast.** Spotifast is a Spotify client written in
 Rust with [egui](https://github.com/emilk/egui). It plays music through
 [librespot](https://github.com/librespot-org/librespot). It typically uses
 100–250 MB of RAM, while Spotify's desktop app often uses 600 MB to over 1 GB.
@@ -8,16 +12,20 @@ It runs on Linux, macOS, and Windows, starts in well under a second, and has no
 browser engine.
 
 **Playback needs Spotify Premium.** Free accounts can browse and search, but
-cannot play music through Fastpotify on this computer or another device.
+cannot play music through Spotifast on this computer or another device.
 
-![Fastpotify Home with the playlist library, recommendations, queue, and player visible](docs/screenshot.png)
+![Spotifast Home with the playlist library, recommendations, queue, and player visible](docs/screenshot.png)
 
-See [fastpotify.rocks](https://fastpotify.rocks/) for installation, setup,
+See [spotifast.rocks](https://spotifast.rocks/) for installation, setup,
 everyday use, and connection details.
+
+On `main`, `spotifast` is the main command and `fastpotify` remains available
+for existing scripts. Settings, credential stores and package identities keep
+their established paths. See [rename compatibility](docs/_reference/renaming.md).
 
 ## What it does
 
-- **Plays music on this computer.** Fastpotify appears as a Spotify Connect
+- **Plays music on this computer.** Spotifast appears as a Spotify Connect
   device. Select it from your phone or play music in the app. Playback is
   gapless and supports up to 320 kbps, with
   optional volume normalisation and an on-disk audio cache.
@@ -33,7 +41,7 @@ everyday use, and connection details.
 - **Controls other devices.** Move playback to a speaker, a phone, or
   another computer from the device picker, and keep controlling it: play,
   pause, skip, seek, shuffle, repeat, volume. Long device lists scroll.
-- **Finds speakers on your network.** Fastpotify finds librespot, spotifyd,
+- **Finds speakers on your network.** Spotifast finds librespot, spotifyd,
   and supported hardware receivers over mDNS. Once connected, they appear as
   Spotify Connect devices. The picker uses responding receivers' names and
   combines entries with the same device ID.
@@ -86,7 +94,7 @@ everyday use, and connection details.
   A playlist a friend shared with you takes songs too,
   as Spotify's own apps allow. Filter the **Add to playlist** menu by name to
   find the destination quickly.
-- **Opens Spotify links.** Fastpotify registers for `spotify:` links, so a
+- **Opens Spotify links.** Spotifast registers for `spotify:` links, so a
   song, album, artist, playlist, or podcast shared from another app opens
   in it, whether it is running or not. `open.spotify.com` addresses go
   through the browser, which hands them to the same handler.
@@ -138,7 +146,7 @@ everyday use, and connection details.
   https://github.com/user-attachments/assets/12b31312-0e0c-4b34-9383-e8c66aabc58d
 - **Keyboard-first.** Every common action has a shortcut (`Ctrl+/` or `?` lists
   them).
-- **Keeps playing when you close the window.** Fastpotify stays in the system
+- **Keeps playing when you close the window.** Spotifast stays in the system
   tray. Use the tray icon or media controls to reopen it, and quit from the
   tray menu or with `Ctrl+Q`. You can make the close button quit in Settings.
   On macOS, the Dock icon also reopens the window.
@@ -147,14 +155,14 @@ everyday use, and connection details.
 - **One instance.** Launching it again brings the existing window forward
   instead of starting a second copy, on every platform.
 - **Desktop integration.** MPRIS on Linux, so media keys, the shell, and
-  `playerctl` see Fastpotify like any other player. On macOS and Windows,
+  `playerctl` see Spotifast like any other player. On macOS and Windows,
   `fastpotify next` and its siblings drive the running app from a terminal,
   a launcher, or a hotkey. On Windows, after 0.7.1, hover the taskbar button
   for Previous, Play/Pause, and Next under the window preview.
 
 ## Install
 
-On Arch Linux, Fastpotify is in the AUR:
+On Arch Linux, Spotifast is in the AUR:
 
 ```bash
 yay -S fastpotify-bin      # the released build, ready made
@@ -227,8 +235,8 @@ An official public binary cache is not active yet. CI can publish its Linux
 Nix builds once a maintainer configures Cachix; see
 [Nix binary cache setup](docs/_reference/nix-cache.md).
 
-On macOS, the flake also exposes `packages.<system>.fastpotify-app`, an
-ad-hoc signed `Fastpotify.app` bundle for the Dock, Launch Services, and
+On macOS, the flake also exposes `packages.<system>.spotifast-app`, an
+ad-hoc signed `Spotifast.app` bundle for the Dock, Launch Services, and
 `spotify:` links. With nix-darwin, add it to `environment.systemPackages`
 and link `"/Applications"` through `environment.pathsToLink`; with Home
 Manager, `home.packages` is enough, as its darwin support links the bundle
@@ -238,7 +246,7 @@ On `main`, after 0.7.1, system fallback fonts align with Latin text, including
 Japanese titles drawn with Hiragino Sans on macOS. Yi characters used in
 stylized artist names also use an installed fallback font instead of empty boxes.
 
-Fastpotify uses system fonts for scripts not covered by its interface font,
+Spotifast uses system fonts for scripts not covered by its interface font,
 including Chinese, Japanese, Korean, Arabic, Hebrew, Thai, and Indic scripts.
 On macOS it draws each of them with the face the system itself uses, in the
 language order set in System Settings, so Chinese titles follow the
@@ -251,18 +259,18 @@ On `main`, after 0.7.1, long right-to-left titles in song rows and the player
 bar end with an ellipsis inside their text area, including joined Arabic letters.
 
 A desktop entry is provided in `packaging/applications/fastpotify.desktop`.
-It registers Fastpotify for `spotify:` links; `xdg-mime default
+It registers Spotifast for `spotify:` links; `xdg-mime default
 fastpotify.desktop x-scheme-handler/spotify` makes it the one the desktop
 uses when another Spotify client is installed too.
 
 ## Sign in
 
 Press **Sign in with Spotify**. Your browser opens Spotify's consent page
-(Authorization Code with PKCE), so Fastpotify never sees your password. The
+(Authorization Code with PKCE), so Spotifast never sees your password. The
 app keeps its grants in the system credential store: Secret Service on Linux,
 Keychain on macOS, and Credential Manager on Windows. You usually sign in once
 per machine. If the store is unavailable or locked, a new sign-in works for
-this session and Fastpotify explains that it could not save it.
+this session and Spotifast explains that it could not save it.
 
 Playing music **on this computer** needs a second, one-time browser approval.
 Spotify handles streaming separately from library access. Start it from the
@@ -288,24 +296,24 @@ Playback approval requests Spotify's streaming permission separately. A
 verified personal app can complete sign-in while the shared app is busy.
 
 The Web API uses a shared app by default. You can add a personal Spotify
-Development Mode app in Settings → Account for a separate quota. Fastpotify
+Development Mode app in Settings → Account for a separate quota. Spotifast
 still uses the shared app for requests that personal apps do not support.
 On `main`, after 0.7.1, Premium listeners using shared access see a one-time
 prompt explaining the personal app option, with a button that opens setup.
 Dismissal is remembered across restarts.
 Playlists the shared app would serve are read over the local playback session
 instead when it is signed in. If Spotify stays busy and no personal app is
-configured, Fastpotify points you to that setting at most once a day.
+configured, Spotifast points you to that setting at most once a day.
 
 ## Account safety
 
-We are not aware of a Spotify account being suspended for using Fastpotify
+We are not aware of a Spotify account being suspended for using Spotifast
 or another librespot player with Premium. Sign-in happens on Spotify's own
 pages, audio uses the quality included with Premium, DRM stays intact, and
-Fastpotify does not rip tracks or block ads.
+Spotifast does not rip tracks or block ads.
 
 Reported suspensions usually involve modded apps that remove ads from free
-accounts, track ripping, or stream manipulation. Fastpotify does none of
+accounts, track ripping, or stream manipulation. Spotifast does none of
 those things, and [CONTRIBUTING.md](CONTRIBUTING.md) prohibits them.
 
 ## Keyboard shortcuts
@@ -351,7 +359,7 @@ On macOS, `Cmd` replaces `Ctrl`.
 
 ## Controlling it from outside
 
-On Linux, Fastpotify is an MPRIS player, so `playerctl --player=fastpotify
+On Linux, Spotifast is an MPRIS player, so `playerctl --player=fastpotify
 play-pause` already works.
 
 macOS and Windows have no such bus, so the same verbs are subcommands. They
@@ -382,9 +390,9 @@ loading. New fields are appended to keep older scripts working.
 marked with `*`. `--raw` prints JSON. The command refreshes the device list,
 so the first call after startup may be empty. Run it again if needed.
 
-A verb exits non-zero when Fastpotify is not running.
+A verb exits non-zero when Spotifast is not running.
 
-On every platform, `fastpotify <link>` opens a Spotify link, a `spotify:`
+On every platform, `spotifast <link>` opens a Spotify link, a `spotify:`
 URI or an `open.spotify.com` address, in the running app, or starts the
 app on it. This is what the desktop runs when a link is clicked.
 
@@ -415,7 +423,7 @@ The update popup opens only when you click the green update pill. Update checks
 and automatic downloads leave it closed, and closing it keeps downloads running.
 A failed startup restores the previous installation. An interrupted or damaged
 download leaves the running app alone. Updates keep your settings and sign-in
-files. On macOS, a writable Fastpotify.app downloaded from the release page can
+files. On macOS, a writable app bundle downloaded from the release page can
 update its whole app bundle from the universal DMG. Move the app out of the disk
 image before updating. The updater verifies the app signature and version;
 Developer ID builds also require the same signing team and macOS approval.
@@ -441,7 +449,7 @@ any time without signing you out.
 - `src/app.rs`, `src/model.rs`, `src/ui/`: state, navigation, and views.
 - `src/mpris.rs`: Linux media controls.
 
-Fastpotify pins its Rust toolchain in `rust-toolchain.toml`; `cargo test`
+Spotifast pins its Rust toolchain in `rust-toolchain.toml`; `cargo test`
 covers the API models, dual-session routing, PKCE, the player state machine,
 and a headless render of every page, panel, and dialog.
 
@@ -467,7 +475,7 @@ Translations use standard gettext `.po` files in `assets/i18n/`, with an English
 `.pot` template. The current pilot translates navigation and Library labels in
 12 languages, including Portuguese and Chinese variants, in demo mode; the
 production interface remains English. See
-[Translating Fastpotify](docs/_reference/translating.md) for editing with existing
+[Translating Spotifast](docs/_reference/translating.md) for editing with existing
 translation tools, previewing, and reporting translation problems.
 
 Issues and discussions receive automated triage, including reassessment after
@@ -477,11 +485,11 @@ completed successfully; it does not promise a reply or a fix. See
 
 ## Acknowledgements
 
-Fastpotify uses [librespot](https://github.com/librespot-org/librespot),
+Spotifast uses [librespot](https://github.com/librespot-org/librespot),
 [egui](https://github.com/emilk/egui), the [Inter](https://rsms.me/inter/)
 typeface (OFL), and [Lucide](https://lucide.dev) icons (ISC).
 
-Fastpotify is an independent project and is not affiliated with Spotify.
+Spotifast is an independent project and is not affiliated with Spotify.
 Spotify is a trademark of Spotify AB.
 
 Licensed under the [MIT License](LICENSE).

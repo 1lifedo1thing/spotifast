@@ -65,14 +65,14 @@ unplayable view disables Play instead of starting the unfiltered context.
    below stay. It only shows while this computer is the player, because
    that is the only queue the app can actually clear.
 
-8. **Changes appear immediately.** Fastpotify updates the queue before Spotify
+8. **Changes appear immediately.** Spotifast updates the queue before Spotify
    confirms the change. For local playback, it updates its own player directly.
    Toggling shuffle rechecks the queue so the new playback order appears
    promptly without waiting for the song to finish.
 
-9. **Closing the app keeps the queue.** Fastpotify saves it locally. When you
+9. **Closing the app keeps the queue.** Spotifast saves it locally. When you
    resume the last song, it restores your queued songs and playlist position.
 
 10. **Old answers from Spotify are ignored.** Queue responses can be a few
-    seconds late. Fastpotify ignores stale responses and asks again. Your
+    seconds late. Spotifast ignores stale responses and asks again. Your
     changes stay visible while it waits for confirmation.
