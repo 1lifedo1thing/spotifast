@@ -414,6 +414,21 @@ On every platform, `spotifast <link>` opens a Spotify link, a `spotify:`
 URI or an `open.spotify.com` address, in the running app, or starts the
 app on it. This is what the desktop runs when a link is clicked.
 
+On `main`, after 0.8.0, search links open Search with the query filled in,
+without starting playback. They work on a fresh launch or an existing window;
+if signed out, the search waits for sign-in. For example:
+
+```sh
+spotifast 'https://open.spotify.com/search/here%20comes%20the%20sun'
+# Linux, with Spotifast already running:
+playerctl --player=fastpotify open 'https://open.spotify.com/search/here%20comes%20the%20sun'
+```
+
+Use `spotify:search:here%20comes%20the%20sun` for the equivalent Spotify URI,
+or `https://open.spotify.com/search` to open an empty search box. Encode spaces
+as `%20`; a `+` in the path remains a literal plus. Ordinary MPRIS playback
+URIs still start playback.
+
 Launchers such as Raycast or Alfred can use these commands. The Stream Deck
 plugin uses the same interface.
 

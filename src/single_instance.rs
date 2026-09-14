@@ -377,7 +377,9 @@ fn device_id(text: &str) -> Option<String> {
 #[cfg(not(target_os = "linux"))]
 fn read_line(stream: &mut std::net::TcpStream) -> Option<String> {
     use std::io::Read;
-    let mut buffer = [0u8; 256];
+    // Search links contain percent-encoded text, which can be much longer
+    // than a track id, especially for non-ASCII queries. Keep a finite bound.
+    let mut buffer = [0u8; 16 * 1024];
     let mut filled = 0;
     loop {
         if filled == buffer.len() {
@@ -871,12 +873,28 @@ mod tests {
         let liked = send_to(port, "save-toggle").expect("a reply");
         let snapshot = send_to(port, "nowplaying").expect("a reply");
         let listed = send_to(port, "devices").expect("a reply");
+        let search =
+            crate::link::parse(&format!("spotify:search:{}", "東京の音楽 ".repeat(20))).unwrap();
+        assert!(
+            search.len() > 256,
+            "exercise a query longer than the old frame limit"
+        );
+        let searched = send_to(port, &format!("open-link {search}")).expect("a search reply");
+        let oversized = send_to(
+            port,
+            &format!("open-link spotify:search:{}", "x".repeat(16 * 1024)),
+        );
         let refused = send_to(port, "frobnicate");
 
         // #then
         assert!(matches!(accepted, Reply::Ok));
         assert!(matches!(volume, Reply::Ok));
         assert!(matches!(liked, Reply::Ok));
+        assert!(matches!(searched, Reply::Ok));
+        assert!(
+            oversized.is_err(),
+            "requests beyond the frame bound are rejected"
+        );
         match snapshot {
             Reply::NowPlaying(line) => assert_eq!(line, "playing\tGo\tThe Band"),
             _ => panic!("nowplaying answered with something else"),
@@ -897,6 +915,7 @@ mod tests {
                 ControlCommand::VolumeBy(-5),
                 ControlCommand::ToggleSaved,
                 ControlCommand::RefreshDevices,
+                ControlCommand::OpenLink(search),
             ]
         );
 

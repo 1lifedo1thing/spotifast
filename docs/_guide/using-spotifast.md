@@ -99,6 +99,23 @@ Library sidebar to start playing it. A single click still opens the row's page.
 Pointing at a row's cover art also shows a play button, but only when the
 sidebar is not in compact mode.
 
+## Search from a launcher
+
+On `main`, after 0.8.0, a Spotify search link opens Search and fills the box
+without starting playback. Bind a launcher or keyboard shortcut to:
+
+```sh
+spotifast 'https://open.spotify.com/search/here%20comes%20the%20sun'
+```
+
+This starts the app if needed or opens its existing window. When signed out,
+the latest search link waits for sign-in. Use `https://open.spotify.com/search`
+without a query to open an empty, focused search box.
+
+On Linux, `playerctl --player=fastpotify open` accepts the same search link
+when the app is running. Existing playback URIs keep their playback behavior.
+Search uses the normal Spotify catalogue requests and account permissions.
+
 ## Finding a setting
 
 The Settings page has its own search field under the title. Type to narrow

@@ -138,33 +138,47 @@ fn both_commands_forward_links_to_the_existing_instance_on_a_private_bus() {
     else {
         panic!("the private bus must start without another instance");
     };
-    let uri = "spotify:track:4uLU6hMCjMI75M1A2tKUQC";
+    let commands = guard.commands();
     for (_, binary) in COMMANDS {
-        let mut child = Command::new(binary)
-            .arg(uri)
-            .env("XDG_CONFIG_HOME", scratch.0.join("config"))
-            .env("XDG_STATE_HOME", scratch.0.join("state"))
-            .env("XDG_CACHE_HOME", scratch.0.join("cache"))
-            .spawn()
-            .unwrap();
-        let started = std::time::Instant::now();
-        let status = loop {
-            if let Some(status) = child.try_wait().unwrap() {
-                break status;
-            }
-            if started.elapsed() > std::time::Duration::from_secs(10) {
-                let _ = child.kill();
-                let _ = child.wait();
-                panic!("a second command did not forward its link and exit");
-            }
-            std::thread::sleep(std::time::Duration::from_millis(20));
-        };
-        assert!(status.success());
-        let commands = guard.commands();
-        assert_eq!(
-            std::mem::take(&mut *commands.lock().unwrap()),
-            vec![ControlCommand::OpenLink(uri.into())]
-        );
+        for (link, uri) in [
+            (
+                "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
+                "spotify:track:4uLU6hMCjMI75M1A2tKUQC",
+            ),
+            (
+                "https://open.spotify.com/search/here%20comes%20the%20sun",
+                "spotify:search:here%20comes%20the%20sun",
+            ),
+            (
+                "spotify://search/%E6%9D%B1%E4%BA%AC",
+                "spotify:search:%E6%9D%B1%E4%BA%AC",
+            ),
+        ] {
+            let mut child = Command::new(binary)
+                .arg(link)
+                .env("XDG_CONFIG_HOME", scratch.0.join("config"))
+                .env("XDG_STATE_HOME", scratch.0.join("state"))
+                .env("XDG_CACHE_HOME", scratch.0.join("cache"))
+                .spawn()
+                .unwrap();
+            let started = std::time::Instant::now();
+            let status = loop {
+                if let Some(status) = child.try_wait().unwrap() {
+                    break status;
+                }
+                if started.elapsed() > std::time::Duration::from_secs(10) {
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    panic!("a second command did not forward its link and exit");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(20));
+            };
+            assert!(status.success());
+            assert_eq!(
+                std::mem::take(&mut *commands.lock().unwrap()),
+                vec![ControlCommand::OpenLink(uri.into())]
+            );
+        }
         let result = Command::new(binary).arg("reload-themes").output().unwrap();
         assert!(
             result.status.success(),

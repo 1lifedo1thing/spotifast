@@ -3,21 +3,26 @@
 //! instance.
 //!
 //! Every shape Spotify hands out comes back as the one canonical URI,
-//! `spotify:<kind>:<id>`, or nothing when it is not something the app can
-//! open.
+//! `spotify:<kind>:<id>` or `spotify:search:<encoded query>`, or nothing
+//! when it is not something the app can open.
 
-/// What a link may point at. Anything else, a user, a search, a station,
-/// is not a page here.
+/// Resource pages. Search links carry text instead of a resource id.
 const KINDS: [&str; 6] = ["track", "album", "artist", "playlist", "show", "episode"];
 
 /// The canonical `spotify:<kind>:<id>` behind `text`, or `None` when it is
-/// not a link to a track, album, artist, playlist, show, or episode.
+/// not a link to a track, album, artist, playlist, show, episode, or search.
 ///
 /// Accepted: `spotify:track:ID`, the old `spotify:user:NAME:playlist:ID`,
 /// `spotify://track/ID`, and `https://open.spotify.com/track/ID` with or
 /// without a locale segment (`/intl-de/`), a query string, or the old
 /// `/user/NAME/playlist/ID` shape.
 pub fn parse(text: &str) -> Option<String> {
+    if let Some(query) = search_query(text) {
+        return Some(format!(
+            "spotify:search:{}",
+            percent_encoding::utf8_percent_encode(&query, percent_encoding::NON_ALPHANUMERIC)
+        ));
+    }
     let text = text.trim();
     let mut segments: Vec<&str> = if let Some(rest) = text.strip_prefix("spotify://") {
         // The URL shape of the URI: `spotify://track/ID`, or the web
@@ -59,6 +64,51 @@ pub fn parse(text: &str) -> Option<String> {
         return None;
     }
     Some(format!("spotify:{kind}:{id}"))
+}
+
+/// Decodes a search link once. A path's `+` is literal, not a form-encoded
+/// space. Canonical links encode the whole query so delimiters and Unicode
+/// survive command-line, D-Bus, Apple Event and line-based socket delivery.
+pub fn search_query(text: &str) -> Option<String> {
+    let text = text.trim();
+    let encoded = if text.starts_with("spotify:") && !text.starts_with("spotify://") {
+        let (kind, query) = text.strip_prefix("spotify:")?.split_once(':')?;
+        if !kind.eq_ignore_ascii_case("search") {
+            return None;
+        }
+        query
+    } else {
+        let path = if let Some(rest) = text.strip_prefix("spotify://") {
+            match rest.split_once('/') {
+                Some((host, path)) if is_web_host(host) => path,
+                _ => rest,
+            }
+        } else {
+            let rest = text
+                .strip_prefix("https://")
+                .or_else(|| text.strip_prefix("http://"))?;
+            let (host, path) = rest.split_once('/')?;
+            if !is_web_host(host) {
+                return None;
+            }
+            path
+        };
+        let path = &path[..path.find(['?', '#']).unwrap_or(path.len())];
+        let path = if path.starts_with("intl-") {
+            path.split_once('/')?.1
+        } else {
+            path
+        };
+        let (kind, query) = path.split_once('/').unwrap_or((path, ""));
+        if !kind.eq_ignore_ascii_case("search") {
+            return None;
+        }
+        query
+    };
+    let query = percent_encoding::percent_decode_str(encoded)
+        .decode_utf8()
+        .ok()?;
+    (!query.chars().any(char::is_control)).then(|| query.into_owned())
 }
 
 /// The path of a web address split at slashes, its query and fragment
@@ -158,7 +208,7 @@ mod tests {
             "spotify:track",
             "spotify:track:",
             "spotify:user:carmine",
-            "spotify:search:rock",
+            "spotify:search:bad%0Aquery",
             "spotify:station:track:4uLU6hMCjMI75M1A2tKUQC",
             "spotify:local:Artist:Album:Song:180",
             "spotify:track:4uLU6hMCjMI75M1A2tKUQC/../etc",
@@ -174,5 +224,47 @@ mod tests {
         }
         let long = format!("spotify:track:{}", "x".repeat(65));
         assert_eq!(parse(&long), None);
+    }
+
+    #[test]
+    fn search_links_preserve_the_query_across_normalization_and_delivery() {
+        for (link, query) in [
+            (
+                "https://open.spotify.com/search/here%20comes%20the%20sun",
+                "here comes the sun",
+            ),
+            (
+                "https://open.spotify.com/intl-de/search/artist%3ABj%C3%B6rk?si=share#top",
+                "artist:Björk",
+            ),
+            (
+                "spotify:search:artist:Radiohead year:1997",
+                "artist:Radiohead year:1997",
+            ),
+            ("spotify://search/%E6%9D%B1%E4%BA%AC", "東京"),
+            ("spotify://open.spotify.com/search/AC%2FDC", "AC/DC"),
+            ("http://play.spotify.com/search/C%2B%2B+100%25", "C+++100%"),
+            ("spotify:search:%2520", "%20"),
+            ("https://open.spotify.com/search", ""),
+            ("https://open.spotify.com/search/", ""),
+            ("spotify:search:", ""),
+        ] {
+            assert_eq!(search_query(link).as_deref(), Some(query), "{link}");
+            let canonical = parse(link).unwrap();
+            assert_eq!(search_query(&canonical).as_deref(), Some(query));
+            assert_eq!(parse(&canonical).as_ref(), Some(&canonical));
+            assert!(canonical.is_ascii() && !canonical.contains(['\n', ' ']));
+        }
+        for invalid in [
+            "https://example.com/search/song",
+            "https://open.spotify.com.evil/search/song",
+            "https://user@open.spotify.com/search/song",
+            "file:///search/song",
+            "spotify:search:bad%FFutf8",
+            "https://open.spotify.com/search/line%0Abreak",
+            "spotify:search:zero%00byte",
+        ] {
+            assert_eq!(parse(invalid), None, "{invalid}");
+        }
     }
 }

@@ -2816,11 +2816,17 @@ impl App {
                 )),
                 MediaCommand::SetShuffle(shuffle) => Some(Action::SetShuffle(shuffle)),
                 MediaCommand::SetRepeat(mode) => Some(Action::SetRepeat(mode)),
-                MediaCommand::OpenUri(uri) => Some(Action::PlayContext {
-                    uri,
-                    offset_uri: None,
-                    offset_index: None,
-                }),
+                MediaCommand::OpenUri(uri) => {
+                    if crate::link::search_query(&uri).is_some() {
+                        crate::link::parse(&uri).map(Action::OpenLink)
+                    } else {
+                        Some(Action::PlayContext {
+                            uri,
+                            offset_uri: None,
+                            offset_index: None,
+                        })
+                    }
+                }
                 MediaCommand::Raise => Some(Action::ShowWindow),
                 MediaCommand::Quit => Some(Action::Quit),
             };
@@ -5397,6 +5403,12 @@ impl App {
             return;
         };
         if self.user.is_none() {
+            return;
+        }
+        if let Some(query) = crate::link::search_query(&uri) {
+            self.pending_link = None;
+            self.actions.push(Action::Search(query));
+            self.actions.push(Action::FocusSearch);
             return;
         }
         if let Some(page) = Page::from_uri(&uri) {
@@ -17131,7 +17143,7 @@ mod tests {
 
         // #when
         app.actions
-            .push(Action::OpenLink("spotify:search:rock".into()));
+            .push(Action::OpenLink("spotify:station:track:t1".into()));
         app.apply_actions(&ctx);
 
         // #then
@@ -17141,6 +17153,142 @@ mod tests {
             app.toasts
                 .iter()
                 .any(|toast| toast.message.contains("cannot open"))
+        );
+    }
+
+    #[test]
+    fn search_links_wait_for_sign_in_and_open_the_latest_query_once() {
+        let mut app = headless_app();
+        let ctx = egui::Context::default();
+        for link in [
+            "https://open.spotify.com/search/old",
+            "https://open.spotify.com/search/artist%3ABj%C3%B6rk",
+        ] {
+            app.open_link(crate::link::parse(link).unwrap());
+            app.apply_actions(&ctx);
+        }
+        assert_eq!(*app.page(), Page::Home);
+        assert!(app.search.query.is_empty());
+        assert!(app.pending_link.is_some());
+
+        app.user = Some(User {
+            id: "me".into(),
+            ..User::default()
+        });
+        app.open_pending_link();
+        app.apply_actions(&ctx);
+        assert_eq!(*app.page(), Page::Search);
+        assert_eq!(app.search.query, "artist:Björk");
+        assert_eq!(app.search.committed, "artist:Björk");
+        assert!(app.search.focus_requested);
+        assert!(app.pending_link.is_none());
+        assert!(app.now_playing().is_none());
+        let serial = app.search.serial;
+        app.open_pending_link();
+        app.apply_actions(&ctx);
+        assert_eq!(app.search.serial, serial);
+
+        app.open_link(crate::link::parse("https://open.spotify.com/search").unwrap());
+        app.apply_actions(&ctx);
+        assert_eq!(*app.page(), Page::Search);
+        assert!(app.search.query.is_empty());
+        assert!(app.search.committed.is_empty());
+        assert!(matches!(app.search.results, Loadable::NotLoaded));
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn mpris_search_links_open_search_on_a_private_bus() {
+        use std::time::{Duration, Instant};
+        const CHILD: &str = "SPOTIFAST_SEARCH_PRIVATE_BUS";
+        if std::env::var_os(CHILD).is_none() {
+            let root = std::env::temp_dir().join(format!(
+                "spotifast-search-bus-{:016x}",
+                rand::random::<u64>()
+            ));
+            std::fs::create_dir(&root).unwrap();
+            let config = root.join("session.conf");
+            std::fs::write(&config, r#"<busconfig><type>session</type><listen>unix:tmpdir=/tmp</listen><auth>EXTERNAL</auth><policy context="default"><allow own="*"/><allow send_destination="*"/><allow receive_sender="*"/></policy></busconfig>"#).unwrap();
+            let result = std::process::Command::new("dbus-run-session")
+                .arg("--config-file")
+                .arg(config)
+                .arg("--")
+                .arg(std::env::current_exe().unwrap())
+                .args([
+                    "--exact",
+                    "app::tests::mpris_search_links_open_search_on_a_private_bus",
+                    "--nocapture",
+                ])
+                .env(CHILD, "1")
+                .output()
+                .unwrap();
+            std::fs::remove_dir_all(root).unwrap();
+            assert!(
+                result.status.success(),
+                "{}\n{}",
+                String::from_utf8_lossy(&result.stdout),
+                String::from_utf8_lossy(&result.stderr)
+            );
+            return;
+        }
+        let mut app = headless_app();
+        app.user = Some(User {
+            id: "me".into(),
+            ..User::default()
+        });
+        app.media_controls = Some(MediaService::spawn(|| {}));
+        let client = zbus::blocking::connection::Builder::session()
+            .unwrap()
+            .method_timeout(Duration::from_secs(2))
+            .build()
+            .unwrap();
+        let call = |uri: &str| {
+            client.call_method(
+                Some("org.mpris.MediaPlayer2.fastpotify"),
+                "/org/mpris/MediaPlayer2",
+                Some("org.mpris.MediaPlayer2.Player"),
+                "OpenUri",
+                &(uri,),
+            )
+        };
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while let Err(error) = call("https://open.spotify.com/search/here%20comes%20the%20sun") {
+            assert!(Instant::now() < deadline, "MPRIS did not start: {error}");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let wait_for_command = |app: &mut App| {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            while app.actions.is_empty() {
+                app.handle_media_commands();
+                assert!(
+                    Instant::now() < deadline,
+                    "MPRIS command did not reach the app"
+                );
+                std::thread::sleep(Duration::from_millis(10));
+            }
+        };
+        wait_for_command(&mut app);
+        assert!(matches!(app.actions.as_slice(), [Action::OpenLink(_)]));
+        let schemes: Vec<String> = zbus::blocking::Proxy::new(
+            &client,
+            "org.mpris.MediaPlayer2.fastpotify",
+            "/org/mpris/MediaPlayer2",
+            "org.mpris.MediaPlayer2",
+        )
+        .unwrap()
+        .get_property("SupportedUriSchemes")
+        .unwrap();
+        assert!(schemes.iter().any(|scheme| scheme == "https"));
+        app.apply_actions(&egui::Context::default());
+        assert_eq!(*app.page(), Page::Search);
+        assert_eq!(app.search.query, "here comes the sun");
+        assert_eq!(app.search.committed, "here comes the sun");
+        assert!(app.now_playing().is_none());
+
+        call("spotify:playlist:unchanged").unwrap();
+        wait_for_command(&mut app);
+        assert!(
+            matches!(app.actions.as_slice(), [Action::PlayContext { uri, offset_uri: None, offset_index: None }] if uri == "spotify:playlist:unchanged")
         );
     }
 

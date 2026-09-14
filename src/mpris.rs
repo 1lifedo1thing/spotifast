@@ -121,7 +121,11 @@ async fn run(
         .can_go_next(true)
         .can_go_previous(true)
         .can_seek(true)
-        .supported_uri_schemes(vec!["spotify".to_string()])
+        .supported_uri_schemes(vec![
+            "spotify".to_string(),
+            "https".to_string(),
+            "http".to_string(),
+        ])
         .build()
         .await?;
 
