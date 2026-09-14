@@ -88,6 +88,13 @@ inputs and dependencies; adding a format does not port the application.
 See the [shared CLI documentation](https://github.com/crmne/native-packages/tree/v0.5.1)
 for commands and supported formats.
 
+The manual **Flatpak from release** workflow can rebuild a missing Flatpak from
+an existing tag. It verifies the published Linux archive against `checksums.txt`
+and uses that tag's Flatpak metadata, without compiling or replacing binaries.
+It uploads a workflow artifact only. After checking the bundle, attach it to the
+existing release and add its hash to `checksums.txt`, preserving every existing
+asset and checksum. Release tags stay immutable.
+
 To upgrade the tool, change `tool.version` in both `native-packages.yaml` and
 `native-packages.macos.yaml`, the matching immutable workflow reference, and any release-job gem installation
 pin together. Applications need no packaging Gemfile, lockfile or Ruby wrapper.

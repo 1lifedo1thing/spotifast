@@ -253,7 +253,8 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
 
   packaging:
-    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    # The optional Flatpak job may fail without blocking native packages.
+    if: ${{ !cancelled() && needs.publish.result == 'success' && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
     needs: publish
     uses: ./.github/workflows/packaging.yml
     with:

@@ -33,3 +33,7 @@ modules:
     sources:
       - type: dir
         path: built
+      # Metainfo belongs to this packaging checkout, not the portable archive.
+      - type: file
+        path: rocks.fastpotify.Fastpotify.metainfo.xml
+        dest: packaging/flatpak
