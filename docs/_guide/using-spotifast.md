@@ -259,3 +259,16 @@ which saves the playlist name, description, and visibility.
 
 If Spotify refuses permission, sign in again and approve image uploads. If you
 use a personal Spotify app, reconnect it in Settings as well.
+
+## Lyrics
+
+Choose the microphone button in the player bar, or press **L**, to open lyrics.
+Synced lyrics follow the playing line automatically. Scroll to pause following,
+choose **Follow** to resume it, or choose a line to seek there. On `main`, after 0.8.0, the expand
+button opens the full-screen view; press **Esc** or choose the shrink button to
+return to the previous window mode. In full screen, the waveform button reduces or restores
+scroll and highlight motion. The side panel keeps its usual appearance.
+
+| Dark theme | Light theme |
+| --- | --- |
+| ![Full-screen lyrics with the dark player bar](/assets/images/lyrics-fullscreen-dark.png) | ![Full-screen lyrics with the light player bar](/assets/images/lyrics-fullscreen-light.png) |
