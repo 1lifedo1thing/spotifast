@@ -92,6 +92,15 @@ picture. Zero volume still dances.
   approval of changed appearance or interaction.
 - Inspect before-and-after evidence at representative window sizes and in both
   light and dark themes. If that evidence is missing, request it.
+- Use the HTML comparison format in `CONTRIBUTING.md` under "Visual reviews":
+  matching captures, theme and size selectors, Before/After controls, and
+  relevant interaction states. For a batch, provide one index with PR numbers,
+  a selector, Previous/Next controls and links to individual comparisons.
+- Record approval and requested adjustments by PR number in the triage ledger.
+  Keep visual approval separate from outstanding implementation or test gates.
+  Do not ask again for unchanged approved scope after a rebase. A concrete
+  requested adjustment is authorization to make that adjustment and update its
+  evidence; ask again only for scope beyond the approval or request.
 
 ## Branches
 

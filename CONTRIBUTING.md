@@ -106,6 +106,29 @@ should include before/after screenshots or a short recording and should use
 demo mode where possible. User-visible behaviour, settings, files, or network
 access must be documented in the same pull request.
 
+### Visual reviews
+
+Provide an HTML comparison with actual before-and-after captures, using demo
+mode where possible. Match the data, page, interaction state, zoom and window
+size so the difference shows the proposed change. Identify the baseline and
+candidate, and report which platforms actually produced the captures.
+
+Include light/dark and narrow/normal window selectors, plus Before and After
+buttons or a comparison slider. Show relevant open menus, loading, error and
+empty states. Explain the visible change briefly and list any remaining checks.
+
+When reviewing several changes, provide one index with the PR number and name,
+a selector and Previous/Next controls, and a direct link to each comparison.
+Load only the selected review. The maintainer can approve by PR number and
+give exceptions or requested adjustments in a normal message.
+
+Visual approval covers the described appearance and interaction; integration
+still requires the relevant checks. Retain approval across rebases that preserve
+that scope. Implement explicitly requested adjustments and update the evidence;
+ask again only if the resulting scope goes beyond what was approved or requested.
+
+### Checks
+
 Run the same checks CI runs before submitting:
 
 ```sh
