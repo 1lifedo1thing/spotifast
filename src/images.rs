@@ -239,8 +239,8 @@ impl Inner {
         .await
         .ok()
         .flatten();
-        let bytes: Vec<u8> = match cached {
-            Some(bytes) if !bytes.is_empty() => bytes,
+        let bytes: Arc<[u8]> = match cached {
+            Some(bytes) if !bytes.is_empty() => Arc::from(bytes),
             _ => {
                 let response = self
                     .http
@@ -256,9 +256,10 @@ impl Inner {
                 if bytes.len() > MAX_ART_BYTES {
                     return Err("artwork is too large".to_string());
                 }
-                let bytes = bytes.to_vec();
+                // The loader and file worker share one immutable payload.
+                let bytes: Arc<[u8]> = Arc::from(bytes.as_ref());
                 let write_path = path.clone();
-                let payload = bytes.clone();
+                let payload = Arc::clone(&bytes);
                 self.runtime.spawn_blocking(move || {
                     let temporary = write_path.with_extension("part");
                     if std::fs::write(&temporary, &payload).is_ok() {
@@ -268,7 +269,7 @@ impl Inner {
                 bytes
             }
         };
-        Ok(Arc::from(bytes))
+        Ok(bytes)
     }
 
     fn start(self: &Arc<Self>, ctx: &egui::Context, url: String) {
@@ -500,6 +501,153 @@ fn lyrics_background(bytes: &[u8]) -> Option<egui::ColorImage> {
 mod tests {
     use super::*;
     use std::time::Duration;
+
+    async fn serve_artwork(status: &str, bytes: Vec<u8>) -> (String, tokio::task::JoinHandle<()>) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/cover", listener.local_addr().unwrap());
+        let header = format!(
+            "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            bytes.len()
+        );
+        let server = tokio::spawn(async move {
+            tokio::time::timeout(Duration::from_secs(10), async move {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                while !request.ends_with(b"\r\n\r\n") {
+                    request.push(socket.read_u8().await.unwrap());
+                    assert!(request.len() < 8192);
+                }
+                socket.write_all(header.as_bytes()).await.unwrap();
+                socket.write_all(&bytes).await.unwrap();
+            })
+            .await
+            .expect("the owned artwork request completes");
+        });
+        (url, server)
+    }
+
+    fn artwork_test_runtime() -> tokio::runtime::Runtime {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+    }
+
+    fn artwork_test_loader(runtime: &tokio::runtime::Runtime, dir: PathBuf) -> ArtLoader {
+        ArtLoader::new(
+            reqwest::Client::builder()
+                .no_proxy()
+                .timeout(Duration::from_secs(10))
+                .build()
+                .unwrap(),
+            runtime.handle().clone(),
+            dir,
+        )
+    }
+
+    async fn wait_for_artwork_file(path: &std::path::Path, expected: &[u8]) {
+        tokio::time::timeout(Duration::from_secs(10), async {
+            loop {
+                if tokio::fs::read(path)
+                    .await
+                    .is_ok_and(|bytes| bytes == expected)
+                {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .expect("the background writer completes while its runtime is alive");
+    }
+
+    #[test]
+    fn downloaded_artwork_survives_caller_drop_and_reloads_without_network() {
+        let dir =
+            std::env::temp_dir().join(format!("fastpotify-art-roundtrip-{}", std::process::id()));
+        let runtime = artwork_test_runtime();
+        let loader = artwork_test_loader(&runtime, dir.clone());
+        let expected: Vec<u8> = (0..256 * 1024).map(|index| (index % 251) as u8).collect();
+        let url = runtime.block_on(async {
+            let (url, server) = serve_artwork("200 OK", expected.clone()).await;
+            let bytes = loader.fetch(&url).await.expect("downloaded artwork");
+            assert_eq!(&*bytes, expected.as_slice());
+            drop(bytes);
+            server.await.unwrap();
+            wait_for_artwork_file(&loader.inner.cache_path(&url), &expected).await;
+            url
+        });
+        let path = loader.inner.cache_path(&url);
+        drop(loader);
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        assert_eq!(std::fs::read(&path).unwrap(), expected);
+        assert!(!path.with_extension("part").exists());
+
+        let runtime = artwork_test_runtime();
+        let loader = artwork_test_loader(&runtime, dir.clone());
+        // The server is gone. A new loader must recover the original bytes
+        // from the completed cache, without requesting the URL again.
+        assert_eq!(&*runtime.block_on(loader.fetch(&url)).unwrap(), expected);
+        assert_eq!(loader.cached_file(&url), Some(path));
+        drop(loader);
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn artwork_cache_write_failure_keeps_download_usable() {
+        let dir = std::env::temp_dir().join(format!(
+            "fastpotify-art-write-failure-{}",
+            std::process::id()
+        ));
+        let runtime = artwork_test_runtime();
+        let loader = artwork_test_loader(&runtime, dir.clone());
+        let (bytes, path) = runtime.block_on(async {
+            let (url, server) = serve_artwork("200 OK", b"complete artwork".to_vec()).await;
+            let path = loader.inner.cache_path(&url);
+            // A directory cannot be replaced by a file, even by an admin.
+            std::fs::create_dir(&path).unwrap();
+            let bytes = loader
+                .fetch(&url)
+                .await
+                .expect("display does not depend on caching");
+            server.await.unwrap();
+            wait_for_artwork_file(&path.with_extension("part"), b"complete artwork").await;
+            (bytes, path)
+        });
+        drop(loader);
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        assert_eq!(&*bytes, b"complete artwork");
+        assert!(
+            path.is_dir(),
+            "the failed replacement preserves the old path"
+        );
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn rejected_artwork_responses_do_not_create_cache_files() {
+        let dir =
+            std::env::temp_dir().join(format!("fastpotify-art-rejected-{}", std::process::id()));
+        let runtime = artwork_test_runtime();
+        let loader = artwork_test_loader(&runtime, dir.clone());
+        runtime.block_on(async {
+            for (status, body, message) in [
+                ("404 Not Found", Vec::new(), "artwork request failed: 404"),
+                ("200 OK", vec![1; MAX_ART_BYTES + 1], "artwork is too large"),
+            ] {
+                let (url, server) = serve_artwork(status, body).await;
+                let error = loader.fetch(&url).await.unwrap_err();
+                assert!(error.starts_with(message), "{error}");
+                server.await.unwrap();
+            }
+        });
+        drop(loader);
+        runtime.shutdown_timeout(Duration::from_secs(10));
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
 
     #[test]
     fn transient_backdrop_load_errors_remain_retryable() {

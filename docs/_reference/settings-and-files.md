@@ -117,6 +117,11 @@ a small buffer on a background file worker. The full JSON file no longer
 stays in memory alongside the loaded songs. Existing caches remain readable;
 missing or invalid caches are ignored and fetched again as before.
 
+On `main`, after 0.8.0, the artwork loader shares downloaded image bytes with
+the background cache writer instead of making a separate copy. Cached files,
+image quality and the memory budget are unchanged. A failed cache write does
+not prevent the downloaded image from being displayed.
+
 The following Liked Songs caching behavior is on `main`, for the release
 since 0.8.0.
 
