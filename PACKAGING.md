@@ -24,18 +24,18 @@ the integration; the git recipe requires the current files. Nix installs the
 same assets beside its binaries. Flatpak does not install host desktop hooks.
 
 ```sh
-gem install native-packages --version 0.5.1
+gem install native-packages --version 0.6.0
 native-packages validate
 native-packages doctor
-native-packages build --release v1.2.3
+native-packages build --release v1.2.3 --target linux-amd64 --target linux-arm64
 ```
 
 Replace `v1.2.3` with an existing stable application release. Local use also
 requires nFPM 2.47.0, `bsdtar` and `readelf`; AUR generation needs `makepkg`
 or Docker. CI installs its tooling. To package local release archives, put
 every configured input and recipe asset under `dist/`, then run
-`native-packages build --version 1.2.3`. Outputs go to
-`dist/packages/1.2.3`; use `--output` for a fresh destination when rebuilding.
+`native-packages build --version 1.2.3 --target linux-amd64 --target linux-arm64`.
+Outputs go to `dist/packages/1.2.3`; use `--output` for a fresh destination when rebuilding.
 
 Stable tags run the existing native build jobs first. After binaries and
 `checksums.txt` are published, the shared workflow verifies their hashes,
@@ -71,7 +71,7 @@ bash packaging/test-install.sh fedora:latest dist/packages/1.2.3
 Review or publish an existing build with the same installed CLI:
 
 ```sh
-native-packages publish --from dist/packages/1.2.3 --to github
+native-packages publish --from dist/packages/1.2.3 --to github --target linux-amd64 --target linux-arm64
 native-packages repositories
 native-packages status --offline
 ```
@@ -85,10 +85,10 @@ AUR automation needs `PUBLISH_AUR=true`, `AUR_SSH_KEY` and `AUR_KNOWN_HOSTS`;
 Homebrew automation needs `PUBLISH_HOMEBREW=true` and
 `HOMEBREW_TAP_GITHUB_TOKEN`. Enable only configured destinations.
 
-The native macOS configuration, Windows and Flatpak build steps remain responsible
+The macOS target, Windows and Flatpak build steps remain responsible
 for their native artifacts. Additional nFPM formats require suitable platform
 inputs and dependencies; adding a format does not port the application.
-See the [shared CLI documentation](https://github.com/crmne/native-packages/tree/v0.5.1)
+See the [shared CLI documentation](https://github.com/crmne/native-packages/tree/v0.6.0)
 for commands and supported formats.
 
 The manual **Flatpak from release** workflow can rebuild a missing Flatpak from
@@ -103,14 +103,18 @@ with `bash packaging/test-arch-source.sh SOURCE_ARCHIVE VERSION`. It runs the
 recipe's prepare/build/check directory handling with Cargo calls stubbed out;
 it does not replace compilation or native package installation checks.
 
-To upgrade the tool, change `tool.version` in both `native-packages.yaml` and
-`native-packages.macos.yaml`, the matching immutable workflow reference, and any release-job gem installation
-pin together. Applications need no packaging Gemfile, lockfile or Ruby wrapper.
+To upgrade the tool, change `tool.version` in `native-packages.yaml`, the matching
+immutable workflow reference, and any release-job gem installation pin together.
+Applications need no packaging Gemfile, lockfile or Ruby wrapper.
 
 ## Automatic macOS notarization
 
-The macOS release job builds the app first, then uses
-`native-packages.macos.yaml` and `packaging/macos/dmg.rb` to package it.
+The macOS release job builds the app first, then selects
+`macos-universal` from `native-packages.yaml` and uses `packaging/macos/dmg.rb`
+to package it. Native Mac builds pass `--defer-recipes`, so they do not require
+Linux inputs, AUR tooling or the not-yet-published DMG for Homebrew. The Linux
+packaging job selects `linux-amd64,linux-arm64` from the same configuration
+after the release assets exist and generates downstream recipes then.
 The shared gem signs its owned input copy, notarizes the DMG, staples and validates
 Apple's ticket, and only then records final checksums. Configure these repository
 secrets, which the job exposes as environment variables:
@@ -123,13 +127,13 @@ secrets, which the job exposes as environment variables:
 A complete set enables notarization automatically. An incomplete set fails;
 no values retain local builds without Developer ID signing. Application inputs
 and the user's normal keychains remain unchanged. See the shared
-[Apple setup and phase contract](https://github.com/crmne/native-packages/blob/v0.5.1/docs/apple-notarization.md).
+[Apple setup and phase contract](https://github.com/crmne/native-packages/blob/v0.6.0/docs/apple-notarization.md).
 
 After preparing `dist/macos-input` on a Mac, test packaging without publishing:
 
 ```sh
-native-packages --config native-packages.macos.yaml build \
-  --version 1.2.3 --target macos-universal --output dist/macos-packages-test
+native-packages build \
+  --version 1.2.3 --target macos-universal --defer-recipes --output dist/macos-packages-test
 ```
 
 Secret configuration applies to future builds. Existing published DMGs retain

@@ -1,8 +1,8 @@
-# Shared CLI: gem install native-packages --version 0.5.1
+# Shared CLI: gem install native-packages --version 0.6.0
 ---
 schema: 1
 tool:
-  version: 0.5.1
+  version: 0.6.0
   nfpm: 2.47.0
 # Ubuntu 24.04 and Debian 13 use the ALSA t64 package name. Override ELF
 # inference as well as the explicit dependencies below.
@@ -97,6 +97,16 @@ nfpm:
   rpm:
     buildhost: github-actions
 targets:
+  macos-universal:
+    platform: macos
+    arch: universal
+    formats: [dmg]
+    input:
+      kind: directory
+      local: dist/macos-input
+    native:
+      command: [ruby, packaging/macos/dmg.rb, '@PAYLOAD@', '@PACKAGE@']
+      output: 'spotifast-@TAG@-macos-universal.dmg'
   linux-amd64:
     platform: linux
     arch: amd64
@@ -121,6 +131,7 @@ targets:
       release_asset: spotifast-v@VERSION@-aarch64-unknown-linux-gnu.tar.gz
 release:
   repository: crmne/spotifast
+  prereleases: true
   checksums: checksums.txt
 assets:
   AMD64:
