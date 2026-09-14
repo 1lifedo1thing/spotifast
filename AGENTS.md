@@ -27,6 +27,9 @@ These instructions add implementation constraints for coding agents.
   atomically written. Never log credentials or authorization responses.
 - Prefer existing dependencies. Explain any new crate in `Cargo.toml` next to
   the dependency when the reason is not obvious.
+- For dependency fixes, use a maintainer-owned fork pinned to a commit and
+  contribute the fix upstream. Use the fork until a release includes the fix;
+  do not copy dependency source into this repository.
 
 Read `docs/_reference/how-it-connects.md` before changing authentication,
 Spotify requests, Connect, credential storage, or network behaviour. Read
