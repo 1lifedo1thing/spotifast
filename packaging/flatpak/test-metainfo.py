@@ -3,8 +3,12 @@
 
 import importlib.util
 from pathlib import Path
+import os
+import subprocess
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 sys.dont_write_bytecode = True
@@ -42,6 +46,27 @@ class ReleaseMetainfoTests(unittest.TestCase):
                          self.fixture().replace(metainfo.LEGACY_ID + ".desktop", "wrong.desktop")]:
             with self.subTest(contents=contents), self.assertRaises(ValueError):
                 metainfo.rename_metainfo(contents, "0.8.0")
+
+    def test_reads_the_tag_when_the_checkout_owner_differs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            original = root / "packaging/flatpak" / (metainfo.LEGACY_ID + ".metainfo.xml")
+            original.parent.mkdir(parents=True)
+            original.write_text(self.fixture())
+            def git(*args):
+                return subprocess.check_output(["git", *args], cwd=root, stderr=subprocess.DEVNULL)
+            git("init")
+            git("add", ".")
+            git("-c", "user.name=Metadata Test", "-c", "user.email=test@example.invalid",
+                "-c", "commit.gpgsign=false", "commit", "-m", "Release fixture")
+            git("tag", "v0.8.0")
+            # The working copy differs; preparation must still read the tag.
+            original.write_text(self.fixture(version="0.8.1"))
+            with patch.dict(os.environ, {"GIT_TEST_ASSUME_DIFFERENT_OWNER": "1"}):
+                result = metainfo.release_metainfo(root, "v0.8.0")
+            component = ET.fromstring(result)
+            self.assertEqual(component.findtext("id"), metainfo.APP_ID)
+            self.assertEqual(component.find("releases/release").get("version"), "0.8.0")
 
 
 if __name__ == "__main__":

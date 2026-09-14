@@ -29,19 +29,25 @@ def rename_metainfo(contents, version):
     return ET.tostring(component, encoding="utf-8", xml_declaration=True) + b"\n"
 
 
+def release_metainfo(root, tag):
+    for app_id in (APP_ID, LEGACY_ID):
+        result = subprocess.run(
+            # The hosted container can have a different UID from checkout.
+            # Trust only this known source directory, for this read command.
+            ["git", "-c", f"safe.directory={root}", "show",
+             f"{tag}:packaging/flatpak/{app_id}.metainfo.xml"],
+            cwd=root, capture_output=True, check=False,
+        )
+        if result.returncode == 0:
+            return rename_metainfo(result.stdout, tag[1:])
+    raise ValueError("no application metainfo found at the requested release tag")
+
+
 def main(tag, output):
     if not re.fullmatch(r"v\d+\.\d+\.\d+(?:[.-][a-zA-Z0-9.-]+)?", tag):
         raise ValueError("expected a release tag such as v0.8.0")
     root = Path(__file__).resolve().parents[2]
-    for app_id in (APP_ID, LEGACY_ID):
-        result = subprocess.run(
-            ["git", "show", f"{tag}:packaging/flatpak/{app_id}.metainfo.xml"],
-            cwd=root, capture_output=True, check=False,
-        )
-        if result.returncode == 0:
-            Path(output).write_bytes(rename_metainfo(result.stdout, tag[1:]))
-            return
-    raise ValueError("no application metainfo found at the requested release tag")
+    Path(output).write_bytes(release_metainfo(root, tag))
 
 
 if __name__ == "__main__":
