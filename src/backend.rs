@@ -2762,26 +2762,22 @@ impl Worker {
             .join(format!("{id}.json"));
         let account_id = account.as_str().to_string();
         tokio::spawn(async move {
-            let cache = tokio::fs::read_to_string(&path)
-                .await
-                .ok()
-                .and_then(|text| serde_json::from_str::<CachedPlaylist>(&text).ok())
-                .and_then(|cached| {
-                    let total = cached
-                        .total
-                        .unwrap_or_else(|| cached.items.len().try_into().unwrap_or(u32::MAX));
-                    if cached.items.len() > total as usize
-                        || cached.next_offset.is_some_and(|offset| offset > total)
-                    {
-                        return None;
-                    }
-                    Some(PlaylistCache {
-                        snapshot: cached.snapshot,
-                        items: cached.items,
-                        total,
-                        next_offset: cached.next_offset,
-                    })
-                });
+            let cache = read_cached_playlist(path).await.ok().and_then(|cached| {
+                let total = cached
+                    .total
+                    .unwrap_or_else(|| cached.items.len().try_into().unwrap_or(u32::MAX));
+                if cached.items.len() > total as usize
+                    || cached.next_offset.is_some_and(|offset| offset > total)
+                {
+                    return None;
+                }
+                Some(PlaylistCache {
+                    snapshot: cached.snapshot,
+                    items: cached.items,
+                    total,
+                    next_offset: cached.next_offset,
+                })
+            });
             let _ = events.send(Event::PlaylistCache {
                 account_id,
                 id,
@@ -3579,6 +3575,17 @@ struct CachedPlaylist {
     next_offset: Option<u32>,
 }
 
+async fn read_cached_playlist(path: std::path::PathBuf) -> std::io::Result<CachedPlaylist> {
+    tokio::task::spawn_blocking(move || {
+        let file = std::fs::File::open(path)?;
+        // Parse on the file worker without keeping the entire JSON alongside
+        // the deserialized playlist. Snapshot/count validation still follows.
+        serde_json::from_reader(std::io::BufReader::new(file)).map_err(std::io::Error::other)
+    })
+    .await
+    .map_err(std::io::Error::other)?
+}
+
 async fn write_cached_playlist(
     path: std::path::PathBuf,
     cached: CachedPlaylist,
@@ -3733,7 +3740,7 @@ mod album_type_lookup_tests {
 
 #[cfg(test)]
 mod playlist_cache_tests {
-    use super::{CachedPlaylist, write_cached_playlist};
+    use super::{CachedPlaylist, read_cached_playlist, write_cached_playlist};
     use crate::api::models::{PlayableItem, PlaylistItem, Track};
 
     #[test]
@@ -3744,6 +3751,56 @@ mod playlist_cache_tests {
         assert_eq!(cached.snapshot, "old");
         assert_eq!(cached.total, None);
         assert_eq!(cached.next_offset, None);
+    }
+
+    #[tokio::test]
+    async fn the_file_reader_accepts_legacy_caches_and_ignores_unknown_fields() {
+        let root = std::env::temp_dir().join(format!(
+            "fastpotify-playlist-cache-legacy-read-test-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let path = root.join("playlist.json");
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(
+            &path,
+            b"{\"snapshot\":\"old\",\"items\":[],\"future_field\":true} \n\t",
+        )
+        .unwrap();
+
+        let cached = read_cached_playlist(path).await.unwrap();
+
+        assert_eq!(cached.snapshot, "old");
+        assert!(cached.items.is_empty());
+        assert_eq!(cached.total, None);
+        assert_eq!(cached.next_offset, None);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn the_file_reader_rejects_missing_corrupt_and_trailing_data() {
+        let root = std::env::temp_dir().join(format!(
+            "fastpotify-playlist-cache-invalid-read-test-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let path = root.join("playlist.json");
+        std::fs::create_dir_all(&root).unwrap();
+        assert!(read_cached_playlist(path.clone()).await.is_err());
+        for bytes in [
+            b"".as_slice(),
+            b"{\"snapshot\":\"partial\",\"items\":[",
+            b"{\"snapshot\":\"bad utf8: \xff\",\"items\":[]}",
+            b"{\"snapshot\":\"missing items\"}",
+            b"{\"snapshot\":\"ok\",\"items\":[]}{}",
+            b"{\"snapshot\":\"ok\",\"items\":[]}trailing",
+        ] {
+            std::fs::write(&path, bytes).unwrap();
+
+            assert!(read_cached_playlist(path.clone()).await.is_err());
+            assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        }
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[tokio::test]
@@ -3816,7 +3873,8 @@ mod playlist_cache_tests {
 
         let bytes = std::fs::read(&path).unwrap();
         assert_eq!(bytes, expected, "existing readers see the identical format");
-        let restored: CachedPlaylist = serde_json::from_slice(&bytes).unwrap();
+        let restored = read_cached_playlist(path.clone()).await.unwrap();
+        assert_eq!(restored.snapshot, "unchanged-snapshot");
         assert_eq!(restored.items.len(), 1_500);
         for chunk in restored.items.chunks(3) {
             assert_eq!(chunk, rows);

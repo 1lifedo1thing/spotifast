@@ -118,7 +118,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   a failed refresh keeps the current rows and offers a retry.
   Choose **Refresh** in a playlist's **…** menu to pick up changes made in
   another Spotify client.
-  Large playlist checkpoints write their JSON through a small background
+  Large playlist checkpoints read and write their JSON through a small background
   buffer, preserving the existing cache format without another full JSON copy.
 - **Lyrics.** Follow synced lyrics in a side panel or full-screen view, or read
   unsynced lyrics when timestamps are unavailable.

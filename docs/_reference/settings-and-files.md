@@ -112,6 +112,11 @@ file on a background file worker. Saving a large playlist no longer needs a
 second complete JSON buffer in memory. The cache format and checkpoint order
 are unchanged, and a failed write leaves the previous cache in place.
 
+On `main`, for the release after 0.8.0, reading a playlist cache also uses
+a small buffer on a background file worker. The full JSON file no longer
+stays in memory alongside the loaded songs. Existing caches remain readable;
+missing or invalid caches are ignored and fetched again as before.
+
 The following Liked Songs caching behavior is on `main`, for the release
 since 0.8.0.
 
