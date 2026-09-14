@@ -17,8 +17,8 @@ browser engine.
 **How to say it:** “spot-ee-fast,” written as one word.
 
 Spotifast was previously called **Fastpotify**. Existing settings, sign-ins,
-playlists and upgrade paths carry over. The rename is on `main`; the current
-0.7.1 download still uses the previous name.
+playlists and upgrade paths carry over. Version 0.8.0 is the first release
+with the new name.
 
 **Playback needs Spotify Premium.** Free accounts can browse and search, but
 cannot play music through Spotifast on this computer or another device.

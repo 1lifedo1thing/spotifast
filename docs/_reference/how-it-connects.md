@@ -29,18 +29,18 @@ consent dialog. The playback session uses the account ID verified by either
 Web API grant. A verified personal app can complete sign-in while the shared
 app's verification is still waiting.
 
-On `main`, for the release after 0.7.1, local playback retains the artist IDs
+Since 0.8.0, local playback retains the artist IDs
 already supplied by librespot. Artist links in the player bar work before the
 Web API's track metadata arrives, without an extra request.
 
-On `main`, after 0.7.1, local seeks discard audio queued from the previous
+Since 0.8.0, local seeks discard audio queued from the previous
 position once librespot confirms the seek. This also applies when another
 Spotify client controls playback on this computer. Natural track transitions
 retain their queue for gapless playback. The seek still waits for librespot to
 find and fetch the requested audio, and sound already handed to the device
 cannot be recalled. Seeking adds no Web API request or full-track download.
 
-On `main`, for the release after 0.7.1, requests that need a grant still being
+Since 0.8.0, requests that need a grant still being
 verified wait for it instead of showing "not signed in". Sign-out cancels
 pending requests, and their late results cannot undo a new sign-in. If Spotify
 rejects a saved refresh grant, Spotifast removes that grant and asks for a new
@@ -52,7 +52,7 @@ and Omarchy Spotify. Spotify divides its quota among all users. A personal app
 adds a separate Development Mode quota. See
 [Use a Personal Spotify App](/make-it-even-faster/).
 
-On `main`, for the release after 0.7.1, a search runs as two requests when a
+Since 0.8.0, a search runs as two requests when a
 personal app is ready: songs, artists, albums, podcasts, and episodes on the
 personal app, and playlists on the shared app. This moves catalogue search off the quota Spotify divides among every user
 of the shared app. Each half is shown the moment it
@@ -67,11 +67,11 @@ with ten results for each type where the shared app answers with twenty, because
 Development Mode rejects the larger page. Without a personal app, one request
 still asks for all six types and nothing about a search changes.
 
-On `main`, after 0.7.1, verified Premium accounts using shared access see a
+Since 0.8.0, verified Premium accounts using shared access see a
 one-time introduction to that option. Setup and dismissal are remembered in
 settings. The prompt uses the existing account profile and adds no request.
 
-On `main`, after 0.7.1, explicitly sorting a Library section loads its remaining
+Since 0.8.0, explicitly sorting a Library section loads its remaining
 pages through the existing Web API grant, one at a time, while loaded entries
 stay visible. A failed page stops automatic loading. Spotify custom playlist
 order uses the existing account-scoped rootlist from local playback; sorting
@@ -79,7 +79,7 @@ and dragging never write that order back to Spotify.
 
 ## What the client stores
 
-- On `main`, for the release after 0.7.1, shared and personal Web API grants
+- Since 0.8.0, shared and personal Web API grants
   and the reusable playback credential use the platform credential store:
   Secret Service on Linux, Keychain on macOS, and Credential Manager on
   Windows. Librespot retains its reusable credential in memory; Spotifast
@@ -98,7 +98,7 @@ and dragging never write that order back to Spotify.
   nothing extra.
 - Lyrics, in the cache directory, for a month.
 - Liked Songs metadata, scoped to the verified account, in the cache directory.
-  This behavior is on `main`, for the release after 0.7.1.
+  This behavior is available since 0.8.0.
   Cached pages less than 15 minutes old need no repeat request. Older cached
   prefixes refresh through the existing Web API grant, one page at a time,
   while the saved rows remain visible. Manual refresh starts immediately.
@@ -130,7 +130,7 @@ and dragging never write that order back to Spotify.
   macOS security assessment. Apps running from a disk image or an App Translocation
   directory must be moved to a writable installation directory first.
 
-On `main`, after 0.7.1, album and playlist scrollbars can request a distant track
+Since 0.8.0, album and playlist scrollbars can request a distant track
 page through the existing session or Web API read path, without fetching all
 preceding tracks. These reads run one at a time per list and retain the existing
 rate-limit handling. Unloaded
@@ -156,7 +156,7 @@ Before adding songs to an existing playlist, Spotifast checks the rows it
 already holds. A known duplicate produces an immediate confirmation naming the
 song. Only a playlist that has not been fully loaded needs a background scan to
 rule out duplicates. Once confirmed, the new rows appear locally at once.
-On `main`, after 0.7.1,
+Since 0.8.0,
 a drop into an open editable playlist sends its chosen insertion position
 through the same Web API grant. Duplicate checks and confirmation retain that
 position; partial loaded pages keep the correct continuation offset. A
@@ -164,7 +164,7 @@ successful write advances the cached playlist to Spotify's returned snapshot
 instead of downloading the playlist again. If Spotify cannot answer the scan,
 Spotifast preserves the requested edit and lets the write report its result.
 
-On `main`, after 0.7.1, manually reloading an edited playlist waits for all
+Since 0.8.0, manually reloading an edited playlist waits for all
 pending writes and confirmation of the returned Spotify revision before
 requesting replacement rows. Current rows, filtering, sorting, and selection
 stay visible while it loads. Automatic paging also waits for those edits.
@@ -214,7 +214,7 @@ five seconds. A stalled TCP connection or HTTP proxy tunnel therefore lets
 librespot retry and move on to another endpoint instead of waiting for the
 operating system's longer connection timeout.
 
-On `main`, after 0.7.1, the access-point and Dealer TCP connectors resolve
+Since 0.8.0, the access-point and Dealer TCP connectors resolve
 names off the playback runtime thread and try all returned addresses. If
 the preferred IPv4 or IPv6 route stalls, the other family starts after
 300 ms. DNS, TCP setup and any HTTP proxy tunnel share a five-second limit.

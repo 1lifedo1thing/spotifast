@@ -19,8 +19,8 @@ Spotifast follows each platform's conventions. On Linux:
 | Settings | `~/.config/fastpotify/settings.json` | Yes, you lose preferences |
 | Winamp skins | `~/.config/fastpotify/skins/` | Yes, you add them again |
 | MilkDrop presets | `~/.config/fastpotify/milkdrop/` | Yes, you fetch them again |
-| Spotify grants (on `main`, after 0.7.1) | System credential store | Use Sign out in Settings |
-| Credential revocation markers (on `main`, after 0.7.1) | `~/.local/state/fastpotify/credential-storage/` | Keep after a failed sign-out deletion |
+| Spotify grants (available since 0.8.0) | System credential store | Use Sign out in Settings |
+| Credential revocation markers (available since 0.8.0) | `~/.local/state/fastpotify/credential-storage/` | Keep after a failed sign-out deletion |
 | Legacy shared Web API grant | `~/.local/state/fastpotify/shared_web_api_token.json` | Removed after migration or sign-out |
 | Legacy personal Web API grant | `~/.local/state/fastpotify/personal_web_api_token.json` | Removed after migration or sign-out |
 | Legacy playback credential | `~/.local/state/fastpotify/credentials/` | Removed after migration or sign-out |
@@ -36,7 +36,7 @@ Spotifast follows each platform's conventions. On Linux:
 Clearing caches never signs you out. Sign-out from Settings covers the shared
 and personal Web API grants and the independent playback credential.
 
-The following credential storage is on `main`, for the release after 0.7.1.
+The following credential storage is available since 0.8.0.
 
 Durable grants use **Secret Service on Linux**, **Keychain on macOS**, and
 **Credential Manager on Windows**, under the service name
@@ -90,13 +90,13 @@ new snapshot after all pending writes have succeeded. Pending edits remain
 visible immediately, but are not saved as confirmed playlist rows. A failed
 write reloads the playlist to reconcile the edit.
 
-On `main`, after 0.7.1, playlist checkpoints stream their JSON to a temporary
+Since 0.8.0, playlist checkpoints stream their JSON to a temporary
 file on a background file worker. Saving a large playlist no longer needs a
 second complete JSON buffer in memory. The cache format and checkpoint order
 are unchanged, and a failed write leaves the previous cache in place.
 
 The following Liked Songs caching behavior is on `main`, for the release
-after 0.7.1.
+since 0.8.0.
 
 Liked Songs metadata is stored separately under `liked-songs/` in the cache
 directory, one JSON file per account. Only the verified account's rows are
@@ -112,7 +112,7 @@ The last good playlist folder tree is kept in `session.json`, scoped to the
 account that supplied it. This keeps folders visible when local playback is
 temporarily unavailable. Live session data is still required for edit grants.
 
-On `main`, for the release after 0.7.1, memory caches retain the open page,
+Since 0.8.0, memory caches retain the open page,
 the playing context, and a limited set of recently used playlist, album,
 artist, and show pages. Older pages reload when revisited, using the saved
 playlist prefix when its snapshot still matches. Pending playlist edits and
@@ -126,13 +126,13 @@ may ignore saved positions. On Windows, a position
 whose title bar is no longer on an available monitor's work area is discarded
 when reopening the window, keeping its initial on-screen placement instead.
 
-On `main`, for the release after 0.7.1, a main window left maximized or full
+Since 0.8.0, a main window left maximized or full
 screen reopens that way, and comes back that way from the mini player. The
 remembered size and position describe an ordinary window and are not applied
 to one that already fills the screen, because sizing or moving such a window
 restores it down.
 
-On `main`, after 0.7.1, album and playlist scrollbars reserve the full track count
+Since 0.8.0, album and playlist scrollbars reserve the full track count
 as soon as Spotify reports it. Dragging to an unloaded section shows placeholders and requests
 that section directly. Loaded windows stay in memory while the page is retained;
 returning to one does not download it again. Unavailable entries keep their row
@@ -146,7 +146,7 @@ sorting returns to the beginning and loads remaining pages as needed, since
 local search and ordering require the track metadata. A failed window stops
 automatic requests and shows a Retry button in the reserved row space.
 
-On `main`, for the release after 0.7.1, Flatpak also preserves the fallback
+Since 0.8.0, Flatpak also preserves the fallback
 state directory used when `XDG_STATE_HOME` is unset. Session state, history,
 logs, and credential revocation markers survive a full quit and relaunch under
 `~/.var/app/rocks.fastpotify.Fastpotify/.local/state/fastpotify/`. Configuration
@@ -179,14 +179,14 @@ main fields are:
 | `custom_theme_cache` | absent | Last accepted custom palette; preserves appearance if its file is missing or invalid |
 | `system_theme_cache` | absent | Last accepted Omarchy palette for Follow system; retained across restarts |
 | `accent_from_art` | `true` | Tint pages with album art |
-| `library_sort` | `{}` | Per-section Library order overrides, after 0.7.1: `library`, `recently_played`, `name`, `recently_added`, `local`, or `spotify`, where supported |
+| `library_sort` | `{}` | Per-section Library order overrides, since 0.8.0: `library`, `recently_played`, `name`, `recently_added`, `local`, or `spotify`, where supported |
 | `sidebar_order` | `[]` | Saved local playlist arrangement, including an unpinned Liked Songs, retained when another sort is selected |
 | `pinned_contexts` | `[]` | Local Library pin order; Liked Songs uses `fastpotify:liked-songs`, a local key never sent to Spotify |
 | `liked_songs_pinned` | `true` | Keep Liked Songs in the pin block; older settings place it first until moved |
 | `sidebar_compact` | `false` | Names only in the library sidebar, no covers |
 | `tracklist_compact` | `false` | One-line track rows without covers |
 | `winamp_window` | `false` | The window is the Winamp mini player |
-| `winamp_show_taskbar` | `true` | Windows only, after 0.7.1: show the Winamp window's taskbar button; the main window always keeps its button |
+| `winamp_show_taskbar` | `true` | Windows only, since 0.8.0: show the Winamp window's taskbar button; the main window always keeps its button |
 | `skin` | none | File or folder name in the skins folder; blank uses the built-in skin |
 | `skin_scale` | by display | Screen pixels per skin pixel, 1 to 4 |
 | `winamp_on_top` | `false` | Keep the mini player above other windows |
@@ -211,7 +211,7 @@ main fields are:
 | `check_for_updates` | `true` | Ask GitHub once a day for a newer release |
 | `web_client_id` | none | Optional personal Spotify app id used alongside shared coverage |
 | `personal_app_nudge_at` | none | Legacy daily-reminder timestamp, retained for older releases |
-| `personal_app_intro_seen` | `false` | Whether the Premium personal-app introduction was dismissed or followed (on `main`, after 0.7.1) |
+| `personal_app_intro_seen` | `false` | Whether the Premium personal-app introduction was dismissed or followed (available since 0.8.0) |
 
 ## Command line
 
@@ -256,7 +256,7 @@ cargo run --release --features demo -- \
 The image uses the current window size. `--demo-size WIDTHxHEIGHT` sets that
 size in logical pixels for a shot (for example `760x800` or `1240x800`).
 `--demo-shot-delay <MS>` sets how long to wait for cover art before taking it.
-On `main`, after 0.7.1, demo windows ignore saved window geometry and do not
+Since 0.8.0, demo windows ignore saved window geometry and do not
 read or save the normal window's framework state. Existing built-in appearance
 settings still apply. `--demo-data <DIRECTORY>` keeps demo caches and logs under
 that directory's `cache` and `state` folders, with settings read from `config`.
@@ -265,7 +265,7 @@ directory; the ordinary demo does not scan your real themes folder.
 
 ## Home shelves
 
-On `main`, after 0.7.1, you can hide **Made for you** and **Recommended for you**
+Since 0.8.0, you can hide **Made for you** and **Recommended for you**
 from Home independently. Quit Spotifast before editing `settings.json`, then
 restart it. Add this field to hide both:
 
@@ -345,7 +345,7 @@ window; Winamp skins remain separate. This first format controls colors only.
 
 ### Follow an Omarchy theme
 
-On `main`, after 0.7.1, native Linux packages include the Omarchy integration.
+Since 0.8.0, native Linux packages include the Omarchy integration.
 The first normal launch on an Omarchy desktop installs its template and
 theme-change hook in your user configuration, in the background. No copy
 commands or desktop restart are needed. A palette for the current theme is

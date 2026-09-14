@@ -18,7 +18,7 @@ the shortcut again, to return to the main window.
 Drop a `.wsz` file on either window to install and use it. Settings lists the
 installed skins and can open the skins folder.
 
-On `main`, for the release after 0.7.1, unpacked skins can keep their files
+Since 0.8.0, unpacked skins can keep their files
 inside nested folders, up to eight levels below the selected skin folder.
 File names are matched without regard to case. If a name appears more than
 once, the copy closest to the selected folder wins; ties use folder and file

@@ -29,7 +29,7 @@ On Debian or Ubuntu:
 sudo apt install libasound2-dev libpulse-dev libxkbcommon-dev libwayland-dev libgl1-mesa-dev
 ```
 
-On `main`, after 0.7.1, letters from system fallback fonts share the Latin
+Since 0.8.0, letters from system fallback fonts share the Latin
 baseline. This keeps mixed Japanese and Latin titles aligned when macOS
 selects Hiragino Sans, including when Japanese is a preferred language.
 
@@ -39,7 +39,7 @@ scripts. macOS and Windows include fonts for the common cases. On Linux,
 install `noto-fonts` and `noto-fonts-cjk` (Arch) or `fonts-noto` and
 `fonts-noto-cjk` (Debian or Ubuntu) if titles appear as empty boxes.
 
-On `main`, after 0.7.1, long right-to-left titles in song rows and the player
+Since 0.8.0, long right-to-left titles in song rows and the player
 bar end with an ellipsis inside their text area. Joined Arabic letters are
 measured together so the last visible letter stays whole at the edge.
 
@@ -82,7 +82,7 @@ You can rename it in Settings.
   between songs and playback on another device are unchanged.
 - **Play buttons show progress.** The button spins until Spotify responds.
 - **Artist names are links.** Click a credited artist in the player bar to
-  open their page. On `main`, for the release after 0.7.1, local playback
+  open their page. Since 0.8.0, local playback
   preserves these links before Web API metadata arrives.
 - **Common actions have shortcuts.** Space plays and pauses, Ctrl+F or `/`
   searches, and `Q` opens the queue. Ctrl+/ shows the full list.
@@ -92,7 +92,7 @@ You can rename it in Settings.
   playlist, or podcast it shows. Search shelves and filtered grids, and Home's
   playlist shortcuts, Made for you, Recently played, and top artist cards offer
   the same menus. Your own playlists include **Edit details** and **Delete**.
-  On `main`, for the release after 0.7.1, Library's album, artist, and podcast
+  Since 0.8.0, Library's album, artist, and podcast
   grids and artist pages' discography and related-artist cards offer these
   menus too. Right-clicking opens the menu without starting playback.
   **Add to playlist** includes a local name filter for the playlists you can

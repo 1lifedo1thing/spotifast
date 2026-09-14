@@ -10,7 +10,7 @@ bundled in the application. No translation service is contacted at runtime.
 
 ## Pilot scope
 
-On `main`, after 0.7.1, the pilot covers Home and Search navigation, Library
+Since 0.8.0, the pilot covers Home and Search navigation, Library
 controls, filters, search hints, and the Liked Songs name and count. These
 languages are available for preview in demo mode:
 

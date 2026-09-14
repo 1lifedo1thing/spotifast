@@ -11,7 +11,7 @@ default, it shares a public app with several other open-source players. When
 that app reaches Spotify's request limit, requests are delayed and the top bar
 shows a spinner.
 
-On `main`, for the release after 0.7.1, Premium listeners using shared access
+Since 0.8.0, Premium listeners using shared access
 see a one-time introduction to personal apps after their account is verified.
 **Set up personal app** opens Settings at the Client ID field, beside the
 setup guide. **Keep shared app**, Escape, or clicking outside the prompt

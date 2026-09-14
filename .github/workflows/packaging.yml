@@ -43,7 +43,7 @@ jobs:
     with:
       # Packaging changes exercise real release binaries on both architectures.
       # Update this fixture deliberately; releases use their own tag instead.
-      version: ${{ inputs.version || 'v0.7.1' }}
+      version: ${{ inputs.version || 'v0.8.0' }}
       publish: ${{ inputs.publish == true && inputs.version != '' }}
     secrets: inherit
 

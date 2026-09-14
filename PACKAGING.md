@@ -49,7 +49,7 @@ inspection only discovers linked dependencies. The ALSA library mapping also
 uses the Debian/Ubuntu `libasound2t64` name for this baseline.
 
 Packaging CI builds both architectures using a pinned published release
-(`v0.7.1`) for pushes and PRs, or the requested version for manual and release
+(`v0.8.0`) for pushes and PRs, or the requested version for manual and release
 runs. It then installs and removes each package in clean Ubuntu 24.04, Debian
 13, Fedora 41 and current Fedora containers on native amd64 and arm64 runners.
 The checks run both `spotifast --version` and `fastpotify --version`, load the GUI libraries with `dlopen`,

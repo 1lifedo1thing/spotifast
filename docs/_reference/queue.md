@@ -23,7 +23,7 @@ Starting and resuming are separate actions. With Shuffle off, a playlist's
 Double-clicking a row starts there, including with Shuffle on. **Play** in
 the player bar resumes the current song at its paused position.
 
-On `main`, after 0.7.1, starting a playlist in its original order explicitly
+Since 0.8.0, starting a playlist in its original order explicitly
 names its first available song from the loaded prefix. If that prefix is not
 loaded, it requests playlist position zero. A page loaded from the middle
 never becomes the beginning. This keeps the full Spotify playlist context;
@@ -77,7 +77,7 @@ unplayable view disables Play instead of starting the unfiltered context.
     seconds late. Spotifast ignores stale responses and asks again. Your
     changes stay visible while it waits for confirmation.
 
-On `main`, after 0.7.1, selecting several playlist rows and choosing
+Since 0.8.0, selecting several playlist rows and choosing
 **Add to queue** preserves repeated occurrences in their selected order.
 For example, selecting B, C, B adds all three rows. A repeated click still
 counts once, and the notification reports only the rows actually added.

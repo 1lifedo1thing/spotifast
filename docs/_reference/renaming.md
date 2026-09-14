@@ -4,8 +4,8 @@ description: How existing installations, commands, settings and links survive th
 ---
 
 Fastpotify is now **Spotifast**, at [spotifast.rocks](https://spotifast.rocks/).
-The rename is on `main`. The current stable release, 0.7.1, still uses the
-Fastpotify name; a new application release has not been published yet.
+Version 0.8.0 is the first release with the new name. Releases through 0.7.1
+use the Fastpotify name.
 
 ## Existing installations
 

@@ -7,7 +7,7 @@ nav_order: 3
 
 ## Middle-click autoscroll
 
-On Windows, after 0.7.1, middle-click a scrolling list or its empty background,
+On Windows, since 0.8.0, middle-click a scrolling list or its empty background,
 then move the pointer
 away from the starting point. That list follows the pointer, faster as the
 distance grows. Moving across another pane keeps the original list in control.
@@ -26,20 +26,20 @@ the surrounding page stays put. Release `Shift` to scroll the page normally.
 
 ## Dragging beyond the visible list
 
-On `main`, for the release after 0.7.1, hold a dragged song near the top or
+Since 0.8.0, hold a dragged song near the top or
 bottom of an editable playlist's visible area to scroll. Scrolling gets faster
 closer to the edge and stops when you move away or release the mouse. This
 lets you move a song from the end to the beginning without dropping it along
 the way. Clear filters and sorting before reordering playlist songs.
 
-On `main`, after 0.7.1, drag a song from the player bar, the queue, or another
+Since 0.8.0, drag a song from the player bar, the queue, or another
 list into an open editable playlist. The line between rows marks its insertion
 position. Dropping below the last row appends; the blank area of an empty
 playlist accepts its first song. The source song stays in its list or queue,
 and playback continues unchanged. Dragging a row within the same playlist
 still moves that row.
 
-On `main`, after 0.7.1, select several songs with `Ctrl`-click (`Cmd`-click
+Since 0.8.0, select several songs with `Ctrl`-click (`Cmd`-click
 on macOS) or `Shift`-click, then drag any selected row. The whole selection
 travels together in its displayed order, even if you selected the rows in
 a different order. The preview names the first song and counts the rest.
@@ -61,7 +61,7 @@ playlist or reorder its entries. Only the list under the pointer scrolls.
 
 ## Starting a playlist and resuming
 
-On `main`, after 0.7.1, with Shuffle off and the playlist in its original
+Since 0.8.0, with Shuffle off and the playlist in its original
 order, its **Play** button explicitly starts at the first available song.
 The selected song appears in the player immediately, including while local
 playback reconnects. The full playlist remains the playback source, even
@@ -72,7 +72,7 @@ order when Shuffle is off. Shuffle chooses a random starting song unless you
 choose a specific row. To resume the current song at its paused position,
 use **Play** in the bottom player bar or press `Space`.
 
-On `main`, after 0.7.1, starting playback from a sorted playlist or Liked Songs
+Since 0.8.0, starting playback from a sorted playlist or Liked Songs
 view immediately shows the requested song from the loaded rows. The preview
 stays while local playback connects, even when that song was not previously
 in the track cache. The selected order and the playlist stored on Spotify stay
@@ -86,7 +86,7 @@ the filter restores the original view. Existing Shuffle behavior is unchanged.
 
 ## Refreshing a playlist
 
-On `main`, after 0.7.1, choose **Refresh** in a playlist's **…** menu to reload
+Since 0.8.0, choose **Refresh** in a playlist's **…** menu to reload
 its details and songs, including changes made in another Spotify client. The
 menu item reads **Refreshing…** and is disabled while loading. Current songs,
 filtering and sorting stay visible, and pending edits finish before replacement
@@ -110,7 +110,7 @@ field to see everything again.
 Right-click a search, filter, settings or playlist-editing text field for
 **Cut**, **Copy**, **Paste** and **Select all**. Cut and Copy require a text
 selection. The usual keyboard shortcuts, including Undo, still work.
-On `main`, after 0.7.1, Ctrl, Cmd and Alt arrow keys move the caret while
+Since 0.8.0, Ctrl, Cmd and Alt arrow keys move the caret while
 a text field has focus. Playback and navigation shortcuts on those keys
 remain available from song rows and other controls.
 
@@ -137,7 +137,7 @@ Winamp skins do not yet have equivalent accessibility coverage.
 
 ## Library order
 
-On `main`, after 0.7.1, the menu below the Library filters selects an order
+Since 0.8.0, the menu below the Library filters selects an order
 for each section. **Name** and **Recently played** are available throughout.
 Albums and podcasts also offer **Recently added**, using their actual save
 dates. Spotify does not supply equivalent dates for followed playlists or
@@ -181,13 +181,13 @@ bullet; each artist name remains a separate link.
 
 ## Windows taskbar controls
 
-On `main`, after 0.7.1, hovering Spotifast's taskbar button offers **Previous**,
+Since 0.8.0, hovering Spotifast's taskbar button offers **Previous**,
 **Play/Pause**, and **Next** beneath its window preview. They control the same
 playing device as the player bar, update immediately, and are disabled when
 there is no song or the device refuses controls. The icons follow the system
 appearance and display scaling.
 
-On `main`, after 0.7.1, clicking or double-clicking the Windows tray icon shows
+Since 0.8.0, clicking or double-clicking the Windows tray icon shows
 and raises Spotifast. Use **Show or hide Spotifast** in the tray menu to hide
 it again.
 
@@ -205,7 +205,7 @@ Changing the option while the mini player is open replaces that window while
 playback continues. This setting is available on Windows; it does not change
 Linux panels or the macOS Dock.
 
-On Windows, after 0.7.1, the mini player starts on the current desktop if its
+On Windows, since 0.8.0, the mini player starts on the current desktop if its
 saved title bar is outside every connected monitor’s work area. Positions on
 connected secondary monitors still restore. Reinstalling preserves settings;
 it is not needed to recover a position left on an unplugged display.
@@ -219,7 +219,7 @@ Use your desktop's window rule or shortcut instead. In KDE Plasma, configure
 Window Management**. Your saved preference remains available when you use
 Spotifast on a supported backend again.
 
-On `main`, after 0.7.1, the top bar reserves room for the device and update
+Since 0.8.0, the top bar reserves room for the device and update
 badges beside Search. In narrow windows those badges show only their icons.
 The bar stays above the page. Library, Queue and Lyrics keep their full height.
 Hover to read the device name or available version; click to open the device
@@ -230,13 +230,13 @@ picker or update window.
 The queue panel's second tab combines Spotify's history with tracks played
 through Spotifast, which Spotify does not record.
 
-On `main`, after 0.7.1, choosing any Recent row starts that song on its own,
+Since 0.8.0, choosing any Recent row starts that song on its own,
 and the player bar shows the selection immediately while playback starts.
 
 A song is added after about 30 seconds, or halfway through a shorter song.
 Paused time and seeking do not count.
 
-On `main`, after 0.7.1, each repeat remains a separate play, including songs
+Since 0.8.0, each repeat remains a separate play, including songs
 shorter than a minute. A newly loaded local repeat earns its own listening
 time; pausing or seeking the current play does not create another entry.
 The same play reported both locally and by Spotify appears once.

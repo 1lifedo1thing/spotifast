@@ -1,8 +1,8 @@
 # Spotifast
 
 Previously **Fastpotify**. Same native Spotify client, now at
-[spotifast.rocks](https://spotifast.rocks/). The rename is on `main`; the
-current 0.7.1 download still uses the Fastpotify name.
+[spotifast.rocks](https://spotifast.rocks/). The new name starts with version 0.8.0;
+your existing settings and sign-ins carry over.
 
 **Spotify, native and fast.** Spotifast is a Spotify client written in
 Rust with [egui](https://github.com/emilk/egui). It plays music through
@@ -31,11 +31,10 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
   optional volume normalisation and an on-disk audio cache.
   Stalled Spotify connections time out after five seconds per attempt so
   playback can try another endpoint.
-  On `main`, after 0.7.1, a confirmed local seek discards audio queued from
+  Since 0.8.0, a confirmed local seek discards audio queued from
   the old position. Decoder, download, and device-buffer delays can still apply.
   Starting a sorted playlist or Liked Songs view shows the requested song
-  immediately while playback connects, using its loaded metadata (on `main`,
-  after 0.7.1). Sorted views start at their first playable row. Filtering a
+  immediately while playback connects, using its loaded metadata (available since 0.8.0). Sorted views start at their first playable row. Filtering a
   playlist or Liked Songs keeps playback within the shown songs and preserves
   repeated songs; Play is unavailable when no shown song can play.
 - **Controls other devices.** Move playback to a speaker, a phone, or
@@ -47,11 +46,11 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
   combines entries with the same device ID.
 - **Library.** Browse playlists, Liked Songs, saved albums, followed artists,
   podcasts, and saved episodes. Filter, pin, and reorder sidebar items.
-  On `main`, after 0.7.1, double-click a playlist in Library to start playback;
+  Since 0.8.0, double-click a playlist in Library to start playback;
   a single click opens it.
   Settings offers a compact track list with one line per song and spaced
   separators between its name, artists and added date.
-  On `main`, after 0.7.1, choose name, recent plays, or saved-date order where
+  Since 0.8.0, choose name, recent plays, or saved-date order where
   available. Follow Spotify’s playlist order or keep a separate local arrangement.
   Move Liked Songs among your pins or unpin it and choose its local position;
   the placement survives restarts.
@@ -59,32 +58,30 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
   are labelled EP when librespot confirms that type.
   Liked Songs reopens from an account-specific metadata cache. Older rows
   refresh in the background while Like and Unlike take effect immediately.
-  Right-click album, artist, and podcast cards for their actions (on `main`,
-  after 0.7.1).
+  Right-click album, artist, and podcast cards for their actions (available since 0.8.0).
 - **Search** across songs, artists, albums, playlists, podcasts, and episodes,
   with a top result and per-type views. Right-click results and cards for their actions.
   Text fields offer Cut, Copy, Paste and Select all from their right-click menu.
-  On `main`, after 0.7.1, a personal app searches the catalogue while shared
+  Since 0.8.0, a personal app searches the catalogue while shared
   access finds playlists. Each part appears independently, even if the other fails.
 
-  On `main`, after 0.7.1, the search field stays clear of the device and update
+  Since 0.8.0, the search field stays clear of the device and update
   badges in narrow windows; hover their icons to read the labels.
 - **Home** with Made for you, Recently played, your top artists and songs, and
   recommendations. Right-click playlist shortcuts and shelf cards for their actions.
 - **Artist pages** with popular songs, a filterable discography, and related
   artists. **Album**, **playlist**, and **podcast** pages support playback
-  from any row. On `main`, after 0.7.1, album and playlist scrollbars represent the full track count;
+  from any row. Since 0.8.0, album and playlist scrollbars represent the full track count;
   dragging to an unloaded section fetches that section directly.
-  Discography and related-artist cards also have right-click menus (on `main`,
-  after 0.7.1).
+  Discography and related-artist cards also have right-click menus (available since 0.8.0).
   Artist names in the player bar open their pages, including during local
-  playback before Web API metadata arrives (on `main`, after 0.7.1).
+  playback before Web API metadata arrives (available since 0.8.0).
 - **Edit your playlists.** Create, rename, describe, reorder, and delete them.
-  On `main`, after 0.7.1, hold a dragged song near the playlist's top or bottom
+  Since 0.8.0, hold a dragged song near the playlist's top or bottom
   edge to scroll to rows beyond the screen. The Library sidebar scrolls while
   dragging toward offscreen playlists too.
   Add songs from a row menu, or drag a row or the currently playing song to a
-  playlist in the sidebar. On `main`, after 0.7.1, dragging a selected row
+  playlist in the sidebar. Since 0.8.0, dragging a selected row
   copies the whole selection in displayed order; the preview shows its count.
   Drop the selection on Liked Songs to save every selected song. Selection
   uses a translucent neutral highlight, without a row outline.
@@ -105,11 +102,11 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
   after those already queued and before the context continues.
   Selecting repeated playlist rows queues every occurrence in the selected
   order. A repeated click counts once, and the notification counts actual additions.
-  On `main`, after 0.7.1, Recent keeps repeated short-song plays separate,
+  Since 0.8.0, Recent keeps repeated short-song plays separate,
   including consecutive local repeats of the same song.
   Each Recent row starts the song it names and shows it in the player bar
   immediately while playback starts.
-- On `main`, after 0.7.1, a playlist's **Play** button explicitly starts at
+- Since 0.8.0, a playlist's **Play** button explicitly starts at
   its first available song when Shuffle is off and the original order is
   selected. Double-click a row to start there; use the player bar to resume.
   Cached playlists must match Spotify's revision and song count before their
@@ -132,11 +129,11 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
   and equalizer. It keeps its shade mode and, where the desktop permits,
   its own position when switching views. Drop a skin from the
   [Winamp Skin Museum](https://skins.webamp.org) on either window to add it.
-  On Windows, after 0.7.1, a mini player saved on a disconnected monitor
+  On Windows, since 0.8.0, a mini player saved on a disconnected monitor
   starts at a default position on the current desktop.
   Clicking or double-clicking the Windows tray icon brings the window forward;
   the tray menu still offers Show or hide.
-  On Windows, after 0.7.1, hide its taskbar button from Settings or the mini
+  On Windows, since 0.8.0, hide its taskbar button from Settings or the mini
   player's options menu while keeping the window and tray controls available.
   On Wayland, use the desktop's Keep Above shortcut or rule; the app's
   Always on top controls are unavailable there.
@@ -163,7 +160,7 @@ their established paths. See [rename compatibility](docs/_reference/renaming.md)
 - **Desktop integration.** MPRIS on Linux, so media keys, the shell, and
   `playerctl` see Spotifast like any other player. On macOS and Windows,
   `fastpotify next` and its siblings drive the running app from a terminal,
-  a launcher, or a hotkey. On Windows, after 0.7.1, hover the taskbar button
+  a launcher, or a hotkey. On Windows, since 0.8.0, hover the taskbar button
   for Previous, Play/Pause, and Next under the window preview.
 
 ## Install
@@ -248,7 +245,7 @@ and link `"/Applications"` through `environment.pathsToLink`; with Home
 Manager, `home.packages` is enough, as its darwin support links the bundle
 into `~/Applications`.
 
-On `main`, after 0.7.1, system fallback fonts align with Latin text, including
+Since 0.8.0, system fallback fonts align with Latin text, including
 Japanese titles drawn with Hiragino Sans on macOS. Yi characters used in
 stylized artist names also use an installed fallback font instead of empty boxes.
 
@@ -261,7 +258,7 @@ fonts. On Linux, install `noto-fonts` and `noto-fonts-cjk` (Arch) or
 `fonts-noto` and `fonts-noto-cjk` (Debian or Ubuntu) if titles appear as
 empty boxes.
 
-On `main`, after 0.7.1, long right-to-left titles in song rows and the player
+Since 0.8.0, long right-to-left titles in song rows and the player
 bar end with an ellipsis inside their text area, including joined Arabic letters.
 
 A desktop entry is provided in `packaging/applications/fastpotify.desktop`.
@@ -284,7 +281,7 @@ device menu (**Set up playback here**) or Settings. It needs Spotify
 Premium. Its reusable credential uses the same protected storage, independently
 of the two Web API grants.
 
-On `main`, after 0.7.1, local playback tries the other available server
+Since 0.8.0, local playback tries the other available server
 addresses when one cannot connect, including a prompt IPv4/IPv6 fallback.
 Socket and proxy tunnel setup have a five-second limit. See
 [how it connects](docs/_reference/how-it-connects.md#the-engine).
@@ -295,7 +292,7 @@ an error. Sign-out removes shared, personal, and playback grants, including
 legacy files and pending writes. Non-secret revocation markers prevent a
 failed keychain deletion from silently restoring a signed-out session.
 See [credential storage and file locations](docs/_reference/settings-and-files.md).
-On `main`, after 0.7.1, Flatpak also preserves its fallback state directory
+Since 0.8.0, Flatpak also preserves its fallback state directory
 across full quits, including on older Flatpak versions.
 
 Playback approval requests Spotify's streaming permission separately. A
@@ -304,7 +301,7 @@ verified personal app can complete sign-in while the shared app is busy.
 The Web API uses a shared app by default. You can add a personal Spotify
 Development Mode app in Settings → Account for a separate quota. Spotifast
 still uses the shared app for requests that personal apps do not support.
-On `main`, after 0.7.1, Premium listeners using shared access see a one-time
+Since 0.8.0, Premium listeners using shared access see a one-time
 prompt explaining the personal app option, with a button that opens setup.
 Dismissal is remembered across restarts.
 Playlists the shared app would serve are read over the local playback session
@@ -324,7 +321,7 @@ those things, and [CONTRIBUTING.md](CONTRIBUTING.md) prohibits them.
 
 ## Keyboard shortcuts
 
-On `main`, after 0.7.1, text fields keep their usual Ctrl, Cmd and Alt arrow
+Since 0.8.0, text fields keep their usual Ctrl, Cmd and Alt arrow
 keys for moving the caret while you type.
 
 Hold `Shift` while turning the mouse wheel to scroll horizontal shelves,
@@ -363,7 +360,7 @@ still in progress.
 
 On macOS, `Cmd` replaces `Ctrl`.
 
-On Windows, after 0.7.1, middle-click a scrolling list and move the pointer to
+On Windows, since 0.8.0, middle-click a scrolling list and move the pointer to
 autoscroll. Click, press Esc, use the wheel or switch windows to stop.
 It works automatically, with no Settings toggle. See [autoscroll](docs/_guide/using-spotifast.md#middle-click-autoscroll).
 
@@ -416,7 +413,7 @@ on Linux). They include the Connect device name, bitrate, normalisation,
 autoplay, gapless playback, the audio backend (PulseAudio/PipeWire or ALSA on
 Linux), audio cache size, theme, sidebar state, whether pages take colour
 from artwork, and the mini player's skin and size.
-On `main`, after 0.7.1, you can hide Made for you and Recommended for you
+Since 0.8.0, you can hide Made for you and Recommended for you
 from Home through JSON preferences; see
 [Home shelves](docs/_reference/settings-and-files.md#home-shelves).
 Custom JSON palettes go in a `themes` folder beside `settings.json`.
