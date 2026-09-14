@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-13 18:21+0200\n"
+"POT-Creation-Date: 2026-09-14 23:45+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -110,3 +110,79 @@ msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
 msgstr[0] ""
 msgstr[1] ""
+
+#: src/ui/player_bar.rs:85
+msgid "Nothing playing"
+msgstr ""
+
+#: src/ui/player_bar.rs:91
+msgid "Pick a song, album, or playlist"
+msgstr ""
+
+#: src/ui/player_bar.rs:223
+msgid "Remove from Liked Songs"
+msgstr ""
+
+#: src/ui/player_bar.rs:229
+msgid "Save to Liked Songs"
+msgstr ""
+
+#: src/ui/player_bar.rs:311 src/ui/player_bar.rs:318
+msgid "Shuffle"
+msgstr ""
+
+#: src/ui/player_bar.rs:332
+msgid "Previous"
+msgstr ""
+
+#: src/ui/player_bar.rs:365
+msgid "Pause"
+msgstr ""
+
+#: src/ui/player_bar.rs:367
+msgid "Play"
+msgstr ""
+
+#: src/ui/player_bar.rs:383
+msgid "Next"
+msgstr ""
+
+#: src/ui/player_bar.rs:391
+msgid "Repeat"
+msgstr ""
+
+#: src/ui/player_bar.rs:395
+msgid "Repeat one"
+msgstr ""
+
+#: src/ui/player_bar.rs:400
+msgid "Repeat off"
+msgstr ""
+
+#: src/ui/player_bar.rs:461
+msgid "Playback position (%)"
+msgstr ""
+
+#: src/ui/player_bar.rs:499
+msgid "Volume (%)"
+msgstr ""
+
+#: src/ui/player_bar.rs:532
+msgid "Unmute"
+msgstr ""
+
+#: src/ui/player_bar.rs:534
+msgid "Mute"
+msgstr ""
+
+#: src/ui/player_bar.rs:553
+msgid "Connect to a device"
+msgstr ""
+
+#: src/ui/player_bar.rs:572
+msgid "Queue"
+msgstr ""
+
+#: src/ui/player_bar.rs:588
+msgid "Lyrics"
+msgstr ""

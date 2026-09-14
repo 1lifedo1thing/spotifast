@@ -1,5 +1,5 @@
 //! Bundled gettext pilot. English remains the production language while demo
-//! mode exercises translated navigation, library labels and accessibility.
+//! mode exercises translated navigation, library and player labels, and accessibility.
 
 use std::borrow::Cow;
 use tr::Translator;

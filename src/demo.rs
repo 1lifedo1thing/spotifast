@@ -1118,6 +1118,136 @@ mod tests {
     }
 
     #[test]
+    fn translated_player_bar_keeps_control_identity_and_keyboard_actions() {
+        use crate::i18n::{Locale, gettext};
+        use clap::ValueEnum;
+        use egui::accesskit::{Action as AccessibleAction, Role};
+
+        for &locale in Locale::value_variants() {
+            let (ctx, mut app) = accessible_app(&format!("translated-player-{locale:?}"));
+            accessible_frame(&ctx, &mut app, vec![]);
+            let english = accessible_frame(&ctx, &mut app, vec![]);
+            let controls = [
+                ("Shuffle", Role::CheckBox),
+                ("Previous", Role::Button),
+                ("Pause", Role::Button),
+                ("Next", Role::Button),
+                ("Repeat", Role::Button),
+                ("Playback position (%)", Role::Slider),
+                ("Volume (%)", Role::Slider),
+                ("Mute", Role::Button),
+                ("Connect to a device", Role::Button),
+                ("Queue", Role::Button),
+                ("Lyrics", Role::Button),
+            ];
+            let ids: Vec<_> = controls
+                .iter()
+                .map(|(source, role)| accessible_node(&english, source, *role))
+                .collect();
+            let pause = accessible_node(&english, "Pause", Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(pause, AccessibleAction::Focus, None)],
+            );
+            app.locale = locale;
+            let translated = accessible_frame(&ctx, &mut app, vec![]);
+            assert_eq!(translated.focus, pause, "translation must retain focus");
+            for ((source, role), id) in controls.iter().zip(ids) {
+                assert_eq!(
+                    accessible_node(&translated, &gettext(locale, source), *role),
+                    id,
+                    "translation must retain the {source} control"
+                );
+            }
+
+            // A reported pause uses the same control with its new label.
+            // Offline demo requests have no backend acknowledgment, so a
+            // requested remote pause would keep the pending spinner visible.
+            app.remote.as_mut().unwrap().state.is_playing = false;
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            assert_eq!(
+                accessible_node(&tree, &gettext(locale, "Play"), Role::Button),
+                pause
+            );
+            app.remote.as_mut().unwrap().state.is_playing = true;
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let volume = accessible_node(&tree, &gettext(locale, "Volume (%)"), Role::Slider);
+            let before = app.now_playing().unwrap().volume_percent;
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(volume, AccessibleAction::Focus, None)],
+            );
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![keyboard(egui::Key::ArrowRight, egui::Modifiers::NONE)],
+            );
+            assert_eq!(app.now_playing().unwrap().volume_percent, before + 5);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(pause, AccessibleAction::Focus, None)],
+            );
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![keyboard(egui::Key::Space, egui::Modifiers::NONE)],
+            );
+            assert!(!app.believed_playing());
+            app.backend.shutdown();
+        }
+    }
+
+    #[test]
+    fn translated_player_bar_labels_follow_control_state_and_empty_playback() {
+        use crate::i18n::{Locale, gettext};
+        use clap::ValueEnum;
+        use egui::accesskit::{Action as AccessibleAction, Role};
+
+        for &locale in Locale::value_variants() {
+            let (ctx, mut app) = accessible_app(&format!("translated-player-state-{locale:?}"));
+            app.locale = locale;
+            accessible_frame(&ctx, &mut app, vec![]);
+            for (source, next) in [
+                ("Repeat", "Repeat one"),
+                ("Repeat one", "Repeat off"),
+                ("Repeat off", "Repeat"),
+                ("Mute", "Unmute"),
+                ("Unmute", "Mute"),
+                ("Remove from Liked Songs", "Save to Liked Songs"),
+                ("Save to Liked Songs", "Remove from Liked Songs"),
+            ] {
+                let tree = accessible_frame(&ctx, &mut app, vec![]);
+                let button = accessible_node(&tree, &gettext(locale, source), Role::Button);
+                accessible_frame(
+                    &ctx,
+                    &mut app,
+                    vec![accessible_action(button, AccessibleAction::Click, None)],
+                );
+                let tree = accessible_frame(&ctx, &mut app, vec![]);
+                accessible_node(&tree, &gettext(locale, next), Role::Button);
+            }
+
+            app.remote = None;
+            assert!(app.now_playing().is_none());
+            let render = |app: &mut App, ui: &mut egui::Ui| crate::ui::player_bar::show(app, ui);
+            view_frame(&ctx, &mut app, vec![], render);
+            let painted = view_frame(&ctx, &mut app, vec![], render);
+            for source in ["Nothing playing", "Pick a song, album, or playlist"] {
+                assert!(
+                    painted
+                        .iter()
+                        .any(|(text, _)| text == &gettext(locale, source)),
+                    "missing translated empty playback label: {source}"
+                );
+            }
+            app.backend.shutdown();
+        }
+    }
+
+    #[test]
     fn library_sort_menu_preserves_saved_order_and_keyboard_activation() {
         use crate::settings::{LibraryShelf, LibrarySort};
         use egui::accesskit::{Action as AccessibleAction, Role};

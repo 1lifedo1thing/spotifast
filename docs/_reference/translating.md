@@ -31,6 +31,12 @@ languages are available for preview in demo mode:
 | Chinese (Simplified) | `zh-Hans` |
 | Chinese (Traditional) | `zh-Hant` |
 
+Current `main` also translates the player bar's empty state, tooltips and
+screen-reader labels for playback, repeat, shuffle, Like, volume, device
+selection, Queue and Lyrics controls. This addition is not in 0.8.0. It keeps
+the same control positions and keyboard actions. The panels and menus opened
+by those controls remain outside this part of the pilot.
+
 The production interface remains English while the translation workflow and
 coverage are developed. These are initial pilot translations, not complete
 localized interfaces or a language setting. Corrections from fluent speakers

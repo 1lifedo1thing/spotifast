@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-13 18:21+0200\n"
+"POT-Creation-Date: 2026-09-14 23:39+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Russian\n"
@@ -109,3 +109,79 @@ msgid_plural "Playlist • {count} songs"
 msgstr[0] "Плейлист • {count} трек"
 msgstr[1] "Плейлист • {count} трека"
 msgstr[2] "Плейлист • {count} треков"
+
+#: src/ui/player_bar.rs:85
+msgid "Nothing playing"
+msgstr "Ничего не играет"
+
+#: src/ui/player_bar.rs:91
+msgid "Pick a song, album, or playlist"
+msgstr "Выберите трек, альбом или плейлист"
+
+#: src/ui/player_bar.rs:223
+msgid "Remove from Liked Songs"
+msgstr "Удалить из Любимых треков"
+
+#: src/ui/player_bar.rs:229
+msgid "Save to Liked Songs"
+msgstr "Сохранить в Любимые треки"
+
+#: src/ui/player_bar.rs:311 src/ui/player_bar.rs:318
+msgid "Shuffle"
+msgstr "Перемешать"
+
+#: src/ui/player_bar.rs:332
+msgid "Previous"
+msgstr "Предыдущий"
+
+#: src/ui/player_bar.rs:365
+msgid "Pause"
+msgstr "Пауза"
+
+#: src/ui/player_bar.rs:367
+msgid "Play"
+msgstr "Воспроизвести"
+
+#: src/ui/player_bar.rs:383
+msgid "Next"
+msgstr "Следующий"
+
+#: src/ui/player_bar.rs:391
+msgid "Repeat"
+msgstr "Повтор"
+
+#: src/ui/player_bar.rs:395
+msgid "Repeat one"
+msgstr "Повторять один трек"
+
+#: src/ui/player_bar.rs:400
+msgid "Repeat off"
+msgstr "Выключить повтор"
+
+#: src/ui/player_bar.rs:461
+msgid "Playback position (%)"
+msgstr "Позиция воспроизведения (%)"
+
+#: src/ui/player_bar.rs:499
+msgid "Volume (%)"
+msgstr "Громкость (%)"
+
+#: src/ui/player_bar.rs:532
+msgid "Unmute"
+msgstr "Включить звук"
+
+#: src/ui/player_bar.rs:534
+msgid "Mute"
+msgstr "Выключить звук"
+
+#: src/ui/player_bar.rs:553
+msgid "Connect to a device"
+msgstr "Подключиться к устройству"
+
+#: src/ui/player_bar.rs:572
+msgid "Queue"
+msgstr "Очередь"
+
+#: src/ui/player_bar.rs:588
+msgid "Lyrics"
+msgstr "Текст песни"

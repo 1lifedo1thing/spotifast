@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-13 18:21+0200\n"
+"POT-Creation-Date: 2026-09-14 23:39+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Traditional Chinese\n"
@@ -106,3 +106,79 @@ msgstr "藝人"
 msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
 msgstr[0] "播放清單 • {count} 首歌曲"
+
+#: src/ui/player_bar.rs:85
+msgid "Nothing playing"
+msgstr "未在播放"
+
+#: src/ui/player_bar.rs:91
+msgid "Pick a song, album, or playlist"
+msgstr "選擇歌曲、專輯或播放清單"
+
+#: src/ui/player_bar.rs:223
+msgid "Remove from Liked Songs"
+msgstr "從喜歡的歌曲中移除"
+
+#: src/ui/player_bar.rs:229
+msgid "Save to Liked Songs"
+msgstr "儲存至喜歡的歌曲"
+
+#: src/ui/player_bar.rs:311 src/ui/player_bar.rs:318
+msgid "Shuffle"
+msgstr "隨機播放"
+
+#: src/ui/player_bar.rs:332
+msgid "Previous"
+msgstr "上一首"
+
+#: src/ui/player_bar.rs:365
+msgid "Pause"
+msgstr "暫停"
+
+#: src/ui/player_bar.rs:367
+msgid "Play"
+msgstr "播放"
+
+#: src/ui/player_bar.rs:383
+msgid "Next"
+msgstr "下一首"
+
+#: src/ui/player_bar.rs:391
+msgid "Repeat"
+msgstr "重複播放"
+
+#: src/ui/player_bar.rs:395
+msgid "Repeat one"
+msgstr "單曲循環"
+
+#: src/ui/player_bar.rs:400
+msgid "Repeat off"
+msgstr "關閉重複播放"
+
+#: src/ui/player_bar.rs:461
+msgid "Playback position (%)"
+msgstr "播放進度 (%)"
+
+#: src/ui/player_bar.rs:499
+msgid "Volume (%)"
+msgstr "音量 (%)"
+
+#: src/ui/player_bar.rs:532
+msgid "Unmute"
+msgstr "取消靜音"
+
+#: src/ui/player_bar.rs:534
+msgid "Mute"
+msgstr "靜音"
+
+#: src/ui/player_bar.rs:553
+msgid "Connect to a device"
+msgstr "連接至裝置"
+
+#: src/ui/player_bar.rs:572
+msgid "Queue"
+msgstr "播放佇列"
+
+#: src/ui/player_bar.rs:588
+msgid "Lyrics"
+msgstr "歌詞"

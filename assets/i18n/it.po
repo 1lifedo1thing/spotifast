@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-13 18:21+0200\n"
+"POT-Creation-Date: 2026-09-14 23:39+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Italian\n"
@@ -107,3 +107,79 @@ msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
 msgstr[0] "Playlist • {count} brano"
 msgstr[1] "Playlist • {count} brani"
+
+#: src/ui/player_bar.rs:85
+msgid "Nothing playing"
+msgstr "Nessun brano in riproduzione"
+
+#: src/ui/player_bar.rs:91
+msgid "Pick a song, album, or playlist"
+msgstr "Scegli un brano, un album o una playlist"
+
+#: src/ui/player_bar.rs:223
+msgid "Remove from Liked Songs"
+msgstr "Rimuovi dai Brani che ti piacciono"
+
+#: src/ui/player_bar.rs:229
+msgid "Save to Liked Songs"
+msgstr "Salva nei Brani che ti piacciono"
+
+#: src/ui/player_bar.rs:311 src/ui/player_bar.rs:318
+msgid "Shuffle"
+msgstr "Riproduzione casuale"
+
+#: src/ui/player_bar.rs:332
+msgid "Previous"
+msgstr "Precedente"
+
+#: src/ui/player_bar.rs:365
+msgid "Pause"
+msgstr "Pausa"
+
+#: src/ui/player_bar.rs:367
+msgid "Play"
+msgstr "Riproduci"
+
+#: src/ui/player_bar.rs:383
+msgid "Next"
+msgstr "Successivo"
+
+#: src/ui/player_bar.rs:391
+msgid "Repeat"
+msgstr "Ripeti"
+
+#: src/ui/player_bar.rs:395
+msgid "Repeat one"
+msgstr "Ripeti un brano"
+
+#: src/ui/player_bar.rs:400
+msgid "Repeat off"
+msgstr "Disattiva ripetizione"
+
+#: src/ui/player_bar.rs:461
+msgid "Playback position (%)"
+msgstr "Posizione di riproduzione (%)"
+
+#: src/ui/player_bar.rs:499
+msgid "Volume (%)"
+msgstr "Volume (%)"
+
+#: src/ui/player_bar.rs:532
+msgid "Unmute"
+msgstr "Riattiva l’audio"
+
+#: src/ui/player_bar.rs:534
+msgid "Mute"
+msgstr "Disattiva audio"
+
+#: src/ui/player_bar.rs:553
+msgid "Connect to a device"
+msgstr "Connetti a un dispositivo"
+
+#: src/ui/player_bar.rs:572
+msgid "Queue"
+msgstr "Coda"
+
+#: src/ui/player_bar.rs:588
+msgid "Lyrics"
+msgstr "Testo"

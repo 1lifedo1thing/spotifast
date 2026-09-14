@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-13 18:21+0200\n"
+"POT-Creation-Date: 2026-09-14 23:39+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Swedish\n"
@@ -107,3 +107,79 @@ msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
 msgstr[0] "Spellista • {count} låt"
 msgstr[1] "Spellista • {count} låtar"
+
+#: src/ui/player_bar.rs:85
+msgid "Nothing playing"
+msgstr "Inget spelas"
+
+#: src/ui/player_bar.rs:91
+msgid "Pick a song, album, or playlist"
+msgstr "Välj en låt, ett album eller en spellista"
+
+#: src/ui/player_bar.rs:223
+msgid "Remove from Liked Songs"
+msgstr "Ta bort från Gillade låtar"
+
+#: src/ui/player_bar.rs:229
+msgid "Save to Liked Songs"
+msgstr "Spara i Gillade låtar"
+
+#: src/ui/player_bar.rs:311 src/ui/player_bar.rs:318
+msgid "Shuffle"
+msgstr "Blanda"
+
+#: src/ui/player_bar.rs:332
+msgid "Previous"
+msgstr "Föregående"
+
+#: src/ui/player_bar.rs:365
+msgid "Pause"
+msgstr "Pausa"
+
+#: src/ui/player_bar.rs:367
+msgid "Play"
+msgstr "Spela"
+
+#: src/ui/player_bar.rs:383
+msgid "Next"
+msgstr "Nästa"
+
+#: src/ui/player_bar.rs:391
+msgid "Repeat"
+msgstr "Upprepa"
+
+#: src/ui/player_bar.rs:395
+msgid "Repeat one"
+msgstr "Upprepa en låt"
+
+#: src/ui/player_bar.rs:400
+msgid "Repeat off"
+msgstr "Stäng av upprepning"
+
+#: src/ui/player_bar.rs:461
+msgid "Playback position (%)"
+msgstr "Uppspelningsposition (%)"
+
+#: src/ui/player_bar.rs:499
+msgid "Volume (%)"
+msgstr "Volym (%)"
+
+#: src/ui/player_bar.rs:532
+msgid "Unmute"
+msgstr "Slå på ljudet"
+
+#: src/ui/player_bar.rs:534
+msgid "Mute"
+msgstr "Stäng av ljudet"
+
+#: src/ui/player_bar.rs:553
+msgid "Connect to a device"
+msgstr "Anslut till en enhet"
+
+#: src/ui/player_bar.rs:572
+msgid "Queue"
+msgstr "Kö"
+
+#: src/ui/player_bar.rs:588
+msgid "Lyrics"
+msgstr "Låttext"
