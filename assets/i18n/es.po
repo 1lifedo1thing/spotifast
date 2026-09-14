@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-14 23:39+0200\n"
+"POT-Creation-Date: 2026-09-15 00:25+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Spanish\n"
@@ -16,11 +16,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/ui/sidebar.rs:64
+#: src/ui/sidebar.rs:64 src/app.rs:1930 src/app.rs:12699
 msgid "Liked Songs"
 msgstr "Canciones favoritas"
 
-#: src/ui/sidebar.rs:67
+#: src/ui/sidebar.rs:67 src/app.rs:1956 src/app.rs:12694
 msgid "Playlist"
 msgstr "Playlist"
 
@@ -48,7 +48,7 @@ msgstr "Orden personalizado local"
 msgid "Spotify custom order"
 msgstr "Orden personalizado de Spotify"
 
-#: src/ui/sidebar.rs:518 src/i18n.rs:102 src/i18n.rs:105
+#: src/ui/sidebar.rs:518 src/i18n.rs:111 src/i18n.rs:114
 msgid "Home"
 msgstr "Inicio"
 
@@ -96,7 +96,7 @@ msgstr "Pódcasts"
 msgid "Search in Your Library"
 msgstr "Buscar en tu biblioteca"
 
-#: src/ui/sidebar.rs:780
+#: src/ui/sidebar.rs:780 src/app.rs:1991
 msgid "Artist"
 msgstr "Artista"
 
@@ -108,7 +108,7 @@ msgid_plural "Playlist • {count} songs"
 msgstr[0] "Playlist • {count} canción"
 msgstr[1] "Playlist • {count} canciones"
 
-#: src/ui/player_bar.rs:85
+#: src/ui/player_bar.rs:85 src/ui/lyrics.rs:108 src/ui/lyrics.rs:432
 msgid "Nothing playing"
 msgstr "No se está reproduciendo nada"
 
@@ -176,10 +176,144 @@ msgstr "Silenciar"
 msgid "Connect to a device"
 msgstr "Conectar a un dispositivo"
 
-#: src/ui/player_bar.rs:572
+#: src/ui/player_bar.rs:572 src/ui/queue.rs:23 src/ui/queue.rs:72
 msgid "Queue"
 msgstr "Cola"
 
-#: src/ui/player_bar.rs:588
+#: src/ui/player_bar.rs:588 src/ui/lyrics.rs:46 src/ui/lyrics.rs:334
 msgid "Lyrics"
 msgstr "Letra"
+
+#: src/ui/queue.rs:73
+msgid "Recent"
+msgstr "Recientes"
+
+#: src/ui/queue.rs:85 src/ui/lyrics.rs:57
+msgid "Close"
+msgstr "Cerrar"
+
+#: src/ui/queue.rs:143
+msgid "Save as a playlist"
+msgstr "Guardar como playlist"
+
+#: src/ui/queue.rs:160
+msgid "Clear queue"
+msgstr "Vaciar cola"
+
+#: src/ui/queue.rs:203
+msgid "Playing from"
+msgstr "Reproduciendo desde"
+
+#: src/ui/queue.rs:223
+msgid "Now playing"
+msgstr "Sonando ahora"
+
+#: src/ui/queue.rs:256
+msgid "Nothing queued"
+msgstr "No hay canciones en cola"
+
+#: src/ui/queue.rs:257
+msgid "Queued songs appear here."
+msgstr "Las canciones en cola aparecen aquí."
+
+#: src/ui/queue.rs:278
+msgid "Playing next"
+msgstr "En cola"
+
+#: src/ui/queue.rs:299
+msgid "Next up"
+msgstr "A continuación"
+
+#: src/ui/queue.rs:339 src/ui/queue.rs:372 src/ui/widgets.rs:2028
+msgid "Retry"
+msgstr "Reintentar"
+
+#: src/ui/queue.rs:354
+msgid "No recent plays"
+msgstr "No hay reproducciones recientes"
+
+#: src/ui/queue.rs:355
+msgid "Played songs appear here."
+msgstr "Las canciones reproducidas aparecen aquí."
+
+#: src/ui/queue.rs:430
+msgid "Load more"
+msgstr "Cargar más"
+
+#: src/ui/lyrics.rs:69
+msgid "Full screen lyrics"
+msgstr "Letra a pantalla completa"
+
+#: src/ui/lyrics.rs:81 src/ui/lyrics.rs:378
+msgctxt "lyrics"
+msgid "Follow"
+msgstr "Seguir"
+
+#: src/ui/lyrics.rs:109 src/ui/lyrics.rs:433
+msgid "Play a song to see its lyrics."
+msgstr "Reproduce una canción para ver su letra."
+
+#: src/ui/lyrics.rs:121 src/ui/lyrics.rs:445
+#, rust-format
+msgid "Couldn't fetch the lyrics: {error}"
+msgstr "No se pudo obtener la letra: {error}"
+
+#: src/ui/lyrics.rs:125 src/ui/lyrics.rs:449
+msgid "Try again"
+msgstr "Volver a intentar"
+
+#: src/ui/lyrics.rs:136 src/ui/lyrics.rs:460
+msgid "No lyrics"
+msgstr "Sin letra"
+
+#: src/ui/lyrics.rs:137 src/ui/lyrics.rs:461
+msgid "No lyrics found for this track."
+msgstr "No se encontró la letra de esta canción."
+
+#: src/ui/lyrics.rs:146 src/ui/lyrics.rs:470
+msgid "Instrumental"
+msgstr "Instrumental"
+
+#: src/ui/lyrics.rs:147 src/ui/lyrics.rs:471
+msgid "No timed lyrics for this track."
+msgstr "Esta canción no tiene letra sincronizada."
+
+#: src/ui/lyrics.rs:345
+msgid "Leave full screen (Esc)"
+msgstr "Salir de pantalla completa (Esc)"
+
+#: src/ui/lyrics.rs:352
+msgid "Enable lyrics motion"
+msgstr "Activar movimiento de la letra"
+
+#: src/ui/lyrics.rs:354
+msgid "Reduce lyrics motion"
+msgstr "Reducir movimiento de la letra"
+
+#: src/ui/widgets.rs:2013
+msgid "Loading…"
+msgstr "Cargando…"
+
+#: src/app.rs:1938
+msgid "Radio"
+msgstr "Radio"
+
+#: src/app.rs:1972
+msgid "Album"
+msgstr "Álbum"
+
+#: src/app.rs:2010
+msgid "Podcast"
+msgstr "Pódcast"
+
+#. Translators: Keep {track} unchanged. The song title itself is not translated.
+#: src/app.rs:2028 src/app.rs:12704
+#, rust-format
+msgid "{track} Radio"
+msgstr "Radio de {track}"
+
+#. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
+#: src/app.rs:3798 src/app.rs:12684
+#, rust-format
+msgid "Queue {date}"
+msgstr "Cola {date}"

@@ -775,7 +775,7 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
     }
     if finite.is_none() && table.loading {
         ui.add_space(8.0);
-        widgets::loading_row(ui, &palette);
+        widgets::loading_row(ui, &palette, app.locale);
     }
     if finite.is_none()
         && let Some(error) = table.error
@@ -1001,7 +1001,7 @@ pub fn top_songs(app: &mut App, ui: &mut egui::Ui) {
     let tracks = match &app.home.top_songs {
         Loadable::Loaded(tracks) => tracks,
         Loadable::Loading | Loadable::NotLoaded => {
-            widgets::loading_row(ui, &palette);
+            widgets::loading_row(ui, &palette, app.locale);
             return;
         }
         Loadable::Failed(error) => {
@@ -1231,7 +1231,7 @@ pub fn playlist(app: &mut App, ui: &mut egui::Ui, id: &str) {
         }
         Loadable::Loading | Loadable::NotLoaded => {
             ui.add_space(40.0);
-            widgets::loading_row(ui, &palette);
+            widgets::loading_row(ui, &palette, app.locale);
         }
         Loadable::Failed(error) => {
             let error = error.clone();
@@ -1379,7 +1379,7 @@ pub fn album(app: &mut App, ui: &mut egui::Ui, id: &str) {
         }
         Loadable::Loading | Loadable::NotLoaded => {
             ui.add_space(40.0);
-            widgets::loading_row(ui, &palette);
+            widgets::loading_row(ui, &palette, app.locale);
         }
         Loadable::Failed(error) => {
             let error = error.clone();

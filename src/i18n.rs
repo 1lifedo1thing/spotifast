@@ -1,5 +1,5 @@
 //! Bundled gettext pilot. English remains the production language while demo
-//! mode exercises translated navigation, library and player labels, and accessibility.
+//! mode exercises translated navigation, library, player and panel labels.
 
 use std::borrow::Cow;
 use tr::Translator;
@@ -80,6 +80,15 @@ pub fn gettext(locale: Locale, source: &'static str) -> Cow<'static, str> {
         })
 }
 
+/// Translate a phrase whose meaning depends on its interface context.
+pub fn pgettext(locale: Locale, context: &'static str, source: &'static str) -> Cow<'static, str> {
+    locale
+        .translator()
+        .map_or(Cow::Borrowed(source), |catalog| {
+            catalog.translate(source, Some(context))
+        })
+}
+
 /// Select a whole translated phrase using the catalog's gettext plural rules.
 pub fn ngettext(
     locale: Locale,
@@ -104,6 +113,17 @@ mod tests {
         assert_eq!(gettext(Locale::German, missing), missing);
         assert_eq!(gettext(Locale::English, "Home"), "Home");
         assert_eq!(Locale::default(), Locale::English);
+    }
+
+    #[test]
+    fn contextual_messages_do_not_leak_into_other_meanings() {
+        let source = "Follow";
+        let context = "lyrics";
+        assert_eq!(pgettext(Locale::German, context, source), "Folgen");
+        assert_eq!(pgettext(Locale::Japanese, context, source), "追従");
+        assert_eq!(pgettext(Locale::English, context, source), source);
+        assert_eq!(pgettext(Locale::German, "artist", source), source);
+        assert_eq!(gettext(Locale::German, source), source);
     }
 
     #[test]

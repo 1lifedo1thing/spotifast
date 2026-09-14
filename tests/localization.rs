@@ -30,7 +30,7 @@ fn compiled_po_omits_unfinished_messages_and_uses_locale_plural_rules() {
 }
 
 #[test]
-fn all_pilot_catalogs_cover_the_template_and_preserve_count_placeholders() {
+fn all_pilot_catalogs_cover_the_template_and_preserve_named_placeholders() {
     // A POT leaves these values for msginit. For this comparison its source
     // language is English; the translator's PO carries its own actual rules.
     let template = include_str!("../assets/i18n/fastpotify.pot").replace(
@@ -63,10 +63,19 @@ fn all_pilot_catalogs_cover_the_template_and_preserve_count_placeholders() {
                     translated_catalog.metadata.plural_rules.nplurals
                 );
                 for form in forms {
-                    assert_eq!(form.matches("{count}").count(), 1);
+                    assert!(!form.is_empty());
+                    assert_eq!(named_placeholders(form), named_placeholders(source.msgid()));
                 }
             } else {
-                assert!(!translated.msgstr().unwrap().is_empty());
+                let text = translated.msgstr().unwrap();
+                assert!(!text.is_empty());
+                assert_eq!(
+                    named_placeholders(text),
+                    named_placeholders(source.msgid()),
+                    "{}: {}",
+                    path.display(),
+                    source.msgid()
+                );
             }
         }
     }
@@ -74,4 +83,14 @@ fn all_pilot_catalogs_cover_the_template_and_preserve_count_placeholders() {
         catalogs + 1,
         <fastpotify::i18n::Locale as clap::ValueEnum>::value_variants().len()
     );
+}
+
+fn named_placeholders(text: &str) -> Vec<&str> {
+    let mut names: Vec<_> = text
+        .split('{')
+        .skip(1)
+        .filter_map(|rest| rest.split_once('}').map(|(name, _)| name))
+        .collect();
+    names.sort_unstable();
+    names
 }

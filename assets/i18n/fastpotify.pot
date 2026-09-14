@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-14 23:45+0200\n"
+"POT-Creation-Date: 2026-09-15 00:25+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,11 +19,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: src/ui/sidebar.rs:64
+#: src/ui/sidebar.rs:64 src/app.rs:1930 src/app.rs:12699
 msgid "Liked Songs"
 msgstr ""
 
-#: src/ui/sidebar.rs:67
+#: src/ui/sidebar.rs:67 src/app.rs:1956 src/app.rs:12694
 msgid "Playlist"
 msgstr ""
 
@@ -51,7 +51,7 @@ msgstr ""
 msgid "Spotify custom order"
 msgstr ""
 
-#: src/ui/sidebar.rs:518 src/i18n.rs:102 src/i18n.rs:105
+#: src/ui/sidebar.rs:518 src/i18n.rs:111 src/i18n.rs:114
 msgid "Home"
 msgstr ""
 
@@ -99,7 +99,7 @@ msgstr ""
 msgid "Search in Your Library"
 msgstr ""
 
-#: src/ui/sidebar.rs:780
+#: src/ui/sidebar.rs:780 src/app.rs:1991
 msgid "Artist"
 msgstr ""
 
@@ -111,7 +111,7 @@ msgid_plural "Playlist • {count} songs"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/player_bar.rs:85
+#: src/ui/player_bar.rs:85 src/ui/lyrics.rs:108 src/ui/lyrics.rs:432
 msgid "Nothing playing"
 msgstr ""
 
@@ -179,10 +179,144 @@ msgstr ""
 msgid "Connect to a device"
 msgstr ""
 
-#: src/ui/player_bar.rs:572
+#: src/ui/player_bar.rs:572 src/ui/queue.rs:23 src/ui/queue.rs:72
 msgid "Queue"
 msgstr ""
 
-#: src/ui/player_bar.rs:588
+#: src/ui/player_bar.rs:588 src/ui/lyrics.rs:46 src/ui/lyrics.rs:334
 msgid "Lyrics"
+msgstr ""
+
+#: src/ui/queue.rs:73
+msgid "Recent"
+msgstr ""
+
+#: src/ui/queue.rs:85 src/ui/lyrics.rs:57
+msgid "Close"
+msgstr ""
+
+#: src/ui/queue.rs:143
+msgid "Save as a playlist"
+msgstr ""
+
+#: src/ui/queue.rs:160
+msgid "Clear queue"
+msgstr ""
+
+#: src/ui/queue.rs:203
+msgid "Playing from"
+msgstr ""
+
+#: src/ui/queue.rs:223
+msgid "Now playing"
+msgstr ""
+
+#: src/ui/queue.rs:256
+msgid "Nothing queued"
+msgstr ""
+
+#: src/ui/queue.rs:257
+msgid "Queued songs appear here."
+msgstr ""
+
+#: src/ui/queue.rs:278
+msgid "Playing next"
+msgstr ""
+
+#: src/ui/queue.rs:299
+msgid "Next up"
+msgstr ""
+
+#: src/ui/queue.rs:339 src/ui/queue.rs:372 src/ui/widgets.rs:2028
+msgid "Retry"
+msgstr ""
+
+#: src/ui/queue.rs:354
+msgid "No recent plays"
+msgstr ""
+
+#: src/ui/queue.rs:355
+msgid "Played songs appear here."
+msgstr ""
+
+#: src/ui/queue.rs:430
+msgid "Load more"
+msgstr ""
+
+#: src/ui/lyrics.rs:69
+msgid "Full screen lyrics"
+msgstr ""
+
+#: src/ui/lyrics.rs:81 src/ui/lyrics.rs:378
+msgctxt "lyrics"
+msgid "Follow"
+msgstr ""
+
+#: src/ui/lyrics.rs:109 src/ui/lyrics.rs:433
+msgid "Play a song to see its lyrics."
+msgstr ""
+
+#: src/ui/lyrics.rs:121 src/ui/lyrics.rs:445
+#, rust-format
+msgid "Couldn't fetch the lyrics: {error}"
+msgstr ""
+
+#: src/ui/lyrics.rs:125 src/ui/lyrics.rs:449
+msgid "Try again"
+msgstr ""
+
+#: src/ui/lyrics.rs:136 src/ui/lyrics.rs:460
+msgid "No lyrics"
+msgstr ""
+
+#: src/ui/lyrics.rs:137 src/ui/lyrics.rs:461
+msgid "No lyrics found for this track."
+msgstr ""
+
+#: src/ui/lyrics.rs:146 src/ui/lyrics.rs:470
+msgid "Instrumental"
+msgstr ""
+
+#: src/ui/lyrics.rs:147 src/ui/lyrics.rs:471
+msgid "No timed lyrics for this track."
+msgstr ""
+
+#: src/ui/lyrics.rs:345
+msgid "Leave full screen (Esc)"
+msgstr ""
+
+#: src/ui/lyrics.rs:352
+msgid "Enable lyrics motion"
+msgstr ""
+
+#: src/ui/lyrics.rs:354
+msgid "Reduce lyrics motion"
+msgstr ""
+
+#: src/ui/widgets.rs:2013
+msgid "Loading…"
+msgstr ""
+
+#: src/app.rs:1938
+msgid "Radio"
+msgstr ""
+
+#: src/app.rs:1972
+msgid "Album"
+msgstr ""
+
+#: src/app.rs:2010
+msgid "Podcast"
+msgstr ""
+
+#. Translators: Keep {track} unchanged. The song title itself is not translated.
+#: src/app.rs:2028 src/app.rs:12704
+#, rust-format
+msgid "{track} Radio"
+msgstr ""
+
+#. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
+#: src/app.rs:3798 src/app.rs:12684
+#, rust-format
+msgid "Queue {date}"
 msgstr ""

@@ -7,6 +7,7 @@ use egui::{
 
 use crate::api::models::*;
 use crate::app::App;
+use crate::i18n::{Locale, gettext};
 use crate::model::{Action, Dialog, DragEntry, DragTrack, Page, RowContext, RowPick};
 use crate::theme::{self, Icon, Palette};
 use crate::util;
@@ -2005,11 +2006,11 @@ pub fn grid(ui: &mut Ui, add_contents: impl FnOnce(&mut Ui)) {
     });
 }
 
-pub fn loading_row(ui: &mut Ui, palette: &Palette) {
+pub fn loading_row(ui: &mut Ui, palette: &Palette, locale: Locale) {
     ui.horizontal(|ui| {
         ui.add_space(8.0);
         theme::spinner(ui, 18.0, palette.accent);
-        theme::subtle(ui, palette, "Loading…");
+        theme::subtle(ui, palette, &gettext(locale, "Loading…"));
     });
 }
 
@@ -2020,7 +2021,14 @@ pub fn error_row(ui: &mut Ui, app: &mut App, message: &str, retry: Option<Page>)
         theme::icon(ui, Icon::CircleAlert, 16.0, palette.danger);
         theme::text(ui, message, theme::regular(13.0), palette.secondary);
         if let Some(page) = retry
-            && theme::soft_button(ui, &palette, Some(Icon::Refresh), "Retry", false).clicked()
+            && theme::soft_button(
+                ui,
+                &palette,
+                Some(Icon::Refresh),
+                &gettext(app.locale, "Retry"),
+                false,
+            )
+            .clicked()
         {
             app.actions.push(Action::Reload(page));
         }

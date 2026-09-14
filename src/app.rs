@@ -15,6 +15,7 @@ use crate::backend::{
     ApiRequest, ApiResponse, AuthStatus, Backend, Command, Event, LocalPlayback, LyricsRequest,
     PLAYLIST_PAGE_SIZE, RecentsFor, RemoteAction, Waker,
 };
+use crate::i18n::gettext;
 use crate::media::{MediaCommand, MediaState, MediaTrack};
 use crate::media_controls::MediaService;
 use crate::model::QueueTab;
@@ -1926,7 +1927,7 @@ impl App {
         let context = self.playing_context_uri()?;
         if context.ends_with(":collection") {
             return Some(PlayingFrom {
-                name: "Liked Songs".into(),
+                name: gettext(self.locale, "Liked Songs").into_owned(),
                 page: Some(Page::LikedSongs),
             });
         }
@@ -1934,7 +1935,7 @@ impl App {
             return Some(PlayingFrom {
                 name: self
                     .station_name(&context)
-                    .unwrap_or_else(|| "Radio".into()),
+                    .unwrap_or_else(|| gettext(self.locale, "Radio").into_owned()),
                 page: None,
             });
         }
@@ -1952,7 +1953,7 @@ impl App {
                             .map(|playlist| playlist.name.clone())
                     });
                 (
-                    name.unwrap_or_else(|| "Playlist".into()),
+                    name.unwrap_or_else(|| gettext(self.locale, "Playlist").into_owned()),
                     Page::Playlist(id),
                 )
             }
@@ -1967,7 +1968,10 @@ impl App {
                             .filter(|now| now.album_id.as_deref() == Some(id.as_str()))
                             .map(|now| now.album_name)
                     });
-                (name.unwrap_or_else(|| "Album".into()), Page::Album(id))
+                (
+                    name.unwrap_or_else(|| gettext(self.locale, "Album").into_owned()),
+                    Page::Album(id),
+                )
             }
             "artist" => {
                 let name = self
@@ -1983,7 +1987,10 @@ impl App {
                                 .map(|artist| artist.name)
                         })
                     });
-                (name.unwrap_or_else(|| "Artist".into()), Page::Artist(id))
+                (
+                    name.unwrap_or_else(|| gettext(self.locale, "Artist").into_owned()),
+                    Page::Artist(id),
+                )
             }
             "show" => {
                 let name = self
@@ -1999,7 +2006,10 @@ impl App {
                             .find(|saved| saved.show.id == id)
                             .map(|saved| saved.show.name.clone())
                     });
-                (name.unwrap_or_else(|| "Podcast".into()), Page::Show(id))
+                (
+                    name.unwrap_or_else(|| gettext(self.locale, "Podcast").into_owned()),
+                    Page::Show(id),
+                )
             }
             _ => return None,
         };
@@ -2013,7 +2023,10 @@ impl App {
     fn station_name(&self, context: &str) -> Option<String> {
         let id = context.strip_prefix("spotify:station:track:")?;
         let track = self.track_cache.get(id)?;
-        Some(format!("{} Radio", track.name))
+        Some(
+            // Translators: Keep {track} unchanged. The song title itself is not translated.
+            gettext(self.locale, "{track} Radio").replace("{track}", &track.name),
+        )
     }
 
     /// Encodes a context as a value accepted by `Page::decode`.
@@ -3781,7 +3794,8 @@ impl App {
             return name;
         }
         let today = jiff::Zoned::now().strftime("%Y-%m-%d").to_string();
-        format!("Queue {today}")
+        // Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
+        gettext(self.locale, "Queue {date}").replace("{date}", &today)
     }
 
     /// Saves the queue as a new playlist.
@@ -12638,6 +12652,72 @@ mod tests {
         assert_eq!(app.queue_playlist_name(), "Wish You Were Here Radio");
         app.assumed_context = None;
         assert!(app.queue_playlist_name().starts_with("Queue "));
+    }
+
+    #[test]
+    fn translated_context_labels_preserve_spotify_names() {
+        use crate::i18n::Locale;
+        use clap::ValueEnum;
+        let mut app = headless_app();
+        let today = jiff::Zoned::now().strftime("%Y-%m-%d").to_string();
+        let title = "Home {date} 夜";
+        app.track_cache.insert(
+            "xyz".into(),
+            crate::api::models::Track {
+                id: Some("xyz".into()),
+                uri: "spotify:track:xyz".into(),
+                name: title.into(),
+                ..Default::default()
+            },
+        );
+        app.library.playlists = Loadable::Loaded(vec![crate::api::models::Playlist {
+            id: "pl9".into(),
+            uri: "spotify:playlist:pl9".into(),
+            name: title.into(),
+            ..Default::default()
+        }]);
+        for &locale in Locale::value_variants() {
+            app.locale = locale;
+            app.assumed_context = None;
+            assert_eq!(
+                app.queue_playlist_name(),
+                gettext(locale, "Queue {date}").replace("{date}", &today)
+            );
+            for (uri, expected, page) in [
+                (
+                    "spotify:playlist:pl9",
+                    title.into(),
+                    Some(Page::Playlist("pl9".into())),
+                ),
+                (
+                    "spotify:playlist:unloaded",
+                    gettext(locale, "Playlist").into_owned(),
+                    Some(Page::Playlist("unloaded".into())),
+                ),
+                (
+                    "spotify:user:me:collection",
+                    gettext(locale, "Liked Songs").into_owned(),
+                    Some(Page::LikedSongs),
+                ),
+                (
+                    "spotify:station:track:xyz",
+                    gettext(locale, "{track} Radio").replace("{track}", title),
+                    None,
+                ),
+            ] {
+                app.assumed_context = Some(AssumedContext {
+                    uri: uri.into(),
+                    shuffle: None,
+                    at: Instant::now(),
+                });
+                let from = app.playing_from().unwrap();
+                assert_eq!(from.name, expected);
+                assert_eq!(from.page, page);
+                if uri.starts_with("spotify:station:") {
+                    assert_eq!(app.queue_playlist_name(), expected);
+                }
+            }
+        }
     }
 
     /// The queue names where the playing song comes from and opens it.

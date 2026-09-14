@@ -234,7 +234,7 @@ fn footer(
     let palette = app.palette;
     if loading {
         ui.add_space(8.0);
-        widgets::loading_row(ui, &palette);
+        widgets::loading_row(ui, &palette, app.locale);
     }
     if let Some(error) = error {
         widgets::error_row(ui, app, &error, Some(page.clone()));

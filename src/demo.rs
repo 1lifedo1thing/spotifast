@@ -623,6 +623,49 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.show_queue_panel = true;
                 app.queue_tab = QueueTab::Recents;
             }
+            // Deterministic panel states for translation and layout reviews.
+            "queue-empty" | "queue-loading" | "queue-error" => {
+                app.show_queue_panel = true;
+                app.queue = match surface {
+                    "queue-loading" => Loadable::Loading,
+                    "queue-error" => Loadable::Failed("Connection interrupted".into()),
+                    _ => Loadable::Loaded(Queue::default()),
+                };
+            }
+            "recents-empty" | "recents-loading" | "recents-error" => {
+                app.show_queue_panel = true;
+                app.queue_tab = QueueTab::Recents;
+                app.recents.items.clear();
+                app.recents_view.clear();
+                app.recents.complete = true;
+                app.recents.loaded_once = true;
+                app.recents.loading = surface == "recents-loading";
+                app.recents.error =
+                    (surface == "recents-error").then(|| "Connection interrupted".into());
+            }
+            "lyrics-follow"
+            | "lyrics-empty"
+            | "lyrics-loading"
+            | "lyrics-error"
+            | "lyrics-instrumental"
+            | "lyrics-no-playback" => {
+                app.show_lyrics_panel = true;
+                app.lyrics_uri = app.now_playing().map(|now| now.uri);
+                app.lyrics_following = false;
+                app.lyrics = match surface {
+                    "lyrics-empty" => Loadable::Loaded(None),
+                    "lyrics-loading" => Loadable::Loading,
+                    "lyrics-error" => Loadable::Failed("Connection interrupted".into()),
+                    _ => {
+                        let mut lyrics = sample_lyrics();
+                        lyrics.instrumental = surface == "lyrics-instrumental";
+                        Loadable::Loaded(Some(lyrics))
+                    }
+                };
+                if surface == "lyrics-no-playback" {
+                    app.remote = None;
+                }
+            }
             "devices" => app.show_devices = true,
             "german" => app.locale = crate::i18n::Locale::German,
             "update" => {
@@ -1242,6 +1285,305 @@ mod tests {
                         .any(|(text, _)| text == &gettext(locale, source)),
                     "missing translated empty playback label: {source}"
                 );
+            }
+            app.backend.shutdown();
+        }
+    }
+
+    #[test]
+    fn translated_queue_controls_preserve_manual_and_context_rows() {
+        use crate::i18n::{Locale, gettext};
+        use clap::ValueEnum;
+        use egui::accesskit::{Action as AccessibleAction, Role};
+
+        for &locale in Locale::value_variants() {
+            let (ctx, mut app) = accessible_app(&format!("translated-queue-{locale:?}"));
+            app.locale = locale;
+            app.show_queue_panel = true;
+            app.local_ready = true;
+            app.local.track = Some(crate::player::LocalTrack {
+                uri: app.now_playing().unwrap().uri,
+                ..Default::default()
+            });
+            app.local.playback = crate::player::Playback::Paused;
+            let rows = app.queue.get().unwrap().queue.clone();
+            app.manual_queue = rows[..2]
+                .iter()
+                .map(|item| item.uri().to_string())
+                .collect();
+            let saved_uris = app.queue_playlist_uris();
+            accessible_frame(&ctx, &mut app, vec![]);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let save = accessible_node(&tree, &gettext(locale, "Save as a playlist"), Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(save, AccessibleAction::Click, None)],
+            );
+            let Some(Dialog::CreatePlaylist {
+                name,
+                public,
+                add_uris,
+            }) = &app.dialog
+            else {
+                panic!("saving the translated queue must open the existing playlist dialog");
+            };
+            assert_eq!(name, &app.queue_playlist_name());
+            assert!(!public);
+            assert_eq!(add_uris, &saved_uris);
+            app.dialog = None;
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let clear = accessible_node(&tree, &gettext(locale, "Clear queue"), Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(clear, AccessibleAction::Click, None)],
+            );
+            assert!(app.manual_queue.is_empty());
+            assert_eq!(app.queue.get().unwrap().queue, rows[2..]);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let recent = accessible_node(&tree, &gettext(locale, "Recent"), Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(recent, AccessibleAction::Click, None)],
+            );
+            assert_eq!(app.queue_tab, QueueTab::Recents);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let close = accessible_node(&tree, &gettext(locale, "Close"), Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(close, AccessibleAction::Click, None)],
+            );
+            assert!(!app.show_queue_panel);
+            app.backend.shutdown();
+        }
+    }
+
+    #[test]
+    fn translated_lyrics_controls_keep_follow_retry_and_fullscreen_actions() {
+        use crate::i18n::{Locale, gettext, pgettext};
+        use clap::ValueEnum;
+        use egui::accesskit::{Action as AccessibleAction, Role};
+
+        for &locale in Locale::value_variants() {
+            let (ctx, mut app) = accessible_app(&format!("translated-lyrics-{locale:?}"));
+            app.locale = locale;
+            app.show_lyrics_panel = true;
+            app.lyrics_uri = app.now_playing().map(|now| now.uri);
+            app.lyrics = Loadable::Loaded(Some(sample_lyrics()));
+            app.lyrics_following = false;
+            accessible_frame(&ctx, &mut app, vec![]);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let follow =
+                accessible_node(&tree, &pgettext(locale, "lyrics", "Follow"), Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(follow, AccessibleAction::Click, None)],
+            );
+            assert!(app.lyrics_following);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let expand =
+                accessible_node(&tree, &gettext(locale, "Full screen lyrics"), Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(expand, AccessibleAction::Click, None)],
+            );
+            assert!(app.lyrics_fullscreen.is_some());
+            for source in ["Reduce lyrics motion", "Enable lyrics motion"] {
+                let before = app.lyrics_reduce_motion;
+                let tree = accessible_frame(&ctx, &mut app, vec![]);
+                let motion = accessible_node(&tree, &gettext(locale, source), Role::Button);
+                accessible_frame(
+                    &ctx,
+                    &mut app,
+                    vec![accessible_action(motion, AccessibleAction::Click, None)],
+                );
+                assert_ne!(app.lyrics_reduce_motion, before);
+            }
+            app.lyrics_following = false;
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let follow =
+                accessible_node(&tree, &pgettext(locale, "lyrics", "Follow"), Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(follow, AccessibleAction::Click, None)],
+            );
+            assert!(app.lyrics_following);
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let leave = accessible_node(
+                &tree,
+                &gettext(locale, "Leave full screen (Esc)"),
+                Role::Button,
+            );
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(leave, AccessibleAction::Click, None)],
+            );
+            assert!(app.lyrics_fullscreen.is_none());
+            for fullscreen in [false, true] {
+                app.lyrics_fullscreen = fullscreen.then_some(false);
+                app.lyrics = Loadable::Failed("fixture failure".into());
+                let tree = accessible_frame(&ctx, &mut app, vec![]);
+                let retry = accessible_node(&tree, &gettext(locale, "Try again"), Role::Button);
+                accessible_frame(
+                    &ctx,
+                    &mut app,
+                    vec![accessible_action(retry, AccessibleAction::Click, None)],
+                );
+                // Offline retries finish without contacting a lyrics provider.
+                assert!(matches!(app.lyrics, Loadable::Loaded(None)));
+            }
+            app.lyrics_fullscreen = None;
+            let tree = accessible_frame(&ctx, &mut app, vec![]);
+            let close = accessible_node(&tree, &gettext(locale, "Close"), Role::Button);
+            accessible_frame(
+                &ctx,
+                &mut app,
+                vec![accessible_action(close, AccessibleAction::Click, None)],
+            );
+            assert!(!app.show_lyrics_panel);
+            app.backend.shutdown();
+        }
+    }
+
+    #[test]
+    fn translated_panel_states_keep_original_lyrics_and_failure_details() {
+        use crate::i18n::{Locale, gettext};
+        use clap::ValueEnum;
+        for &locale in Locale::value_variants() {
+            let (ctx, mut app) = accessible_app(&format!("translated-panel-states-{locale:?}"));
+            app.locale = locale;
+            app.show_lyrics_panel = true;
+            app.lyrics_uri = app.now_playing().map(|now| now.uri);
+            for fullscreen in [false, true] {
+                app.lyrics_fullscreen = fullscreen.then_some(false);
+                let view = |app: &mut App, ui: &mut egui::Ui| app.frame_ui(ui);
+                let mut instrumental = sample_lyrics();
+                instrumental.instrumental = true;
+                for (state, messages) in [
+                    (
+                        Loadable::Loading,
+                        vec![gettext(locale, "Loading…").into_owned()],
+                    ),
+                    (
+                        Loadable::Failed("fixture {count} 42".into()),
+                        vec![
+                            gettext(locale, "Couldn't fetch the lyrics: {error}")
+                                .replace("{error}", "fixture {count} 42"),
+                        ],
+                    ),
+                    (
+                        Loadable::Loaded(None),
+                        vec![
+                            gettext(locale, "No lyrics").into_owned(),
+                            gettext(locale, "No lyrics found for this track.").into_owned(),
+                        ],
+                    ),
+                    (
+                        Loadable::Loaded(Some(instrumental)),
+                        vec![
+                            gettext(locale, "Instrumental").into_owned(),
+                            gettext(locale, "No timed lyrics for this track.").into_owned(),
+                        ],
+                    ),
+                    (
+                        Loadable::Loaded(Some(sample_lyrics())),
+                        vec![sample_lyrics().lines[0].text.clone()],
+                    ),
+                ] {
+                    app.lyrics = state;
+                    app.lyrics_following = false;
+                    view_frame(&ctx, &mut app, vec![], view);
+                    let painted = view_frame(&ctx, &mut app, vec![], view);
+                    for message in messages {
+                        assert!(
+                            painted.iter().any(|(text, _)| text == &message),
+                            "{locale:?}: missing {message}"
+                        );
+                    }
+                }
+            }
+            for (state, messages) in [
+                (
+                    Loadable::Loading,
+                    vec![gettext(locale, "Loading…").into_owned()],
+                ),
+                (
+                    Loadable::Failed("fixture {count} 42".into()),
+                    vec![
+                        "fixture {count} 42".into(),
+                        gettext(locale, "Retry").into_owned(),
+                    ],
+                ),
+                (
+                    Loadable::Loaded(Queue::default()),
+                    vec![
+                        gettext(locale, "Nothing queued").into_owned(),
+                        gettext(locale, "Queued songs appear here.").into_owned(),
+                    ],
+                ),
+            ] {
+                app.queue = state;
+                view_frame(&ctx, &mut app, vec![], crate::ui::queue::page);
+                let painted = view_frame(&ctx, &mut app, vec![], crate::ui::queue::page);
+                for message in messages {
+                    assert!(
+                        painted.iter().any(|(text, _)| text == &message),
+                        "{locale:?}: missing {message}"
+                    );
+                }
+            }
+            app.queue_tab = QueueTab::Recents;
+            app.recents.items.clear();
+            app.recents_view.clear();
+            app.recents.loaded_once = true;
+            app.recents.complete = true;
+            for (loading, error, sources) in [
+                (
+                    false,
+                    None,
+                    vec!["No recent plays", "Played songs appear here."],
+                ),
+                (true, None, vec!["Loading…"]),
+                (false, Some("fixture failure".into()), vec!["Retry"]),
+            ] {
+                app.recents.loading = loading;
+                app.recents.error = error;
+                view_frame(&ctx, &mut app, vec![], crate::ui::queue::side_panel);
+                let painted = view_frame(&ctx, &mut app, vec![], crate::ui::queue::side_panel);
+                for source in sources {
+                    assert!(
+                        painted
+                            .iter()
+                            .any(|(text, _)| text == &gettext(locale, source))
+                    );
+                }
+                if app.recents.error.is_some() {
+                    let retry = painted
+                        .iter()
+                        .find(|(text, _)| text == &gettext(locale, "Retry"))
+                        .unwrap()
+                        .1
+                        .center();
+                    app.actions.clear();
+                    view_frame(
+                        &ctx,
+                        &mut app,
+                        pointer_click(retry, egui::PointerButton::Primary),
+                        crate::ui::queue::side_panel,
+                    );
+                    assert!(
+                        app.actions
+                            .iter()
+                            .any(|action| matches!(action, crate::model::Action::ReloadRecents))
+                    );
+                }
             }
             app.backend.shutdown();
         }

@@ -850,7 +850,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                 super::widgets::scroll_during_drag(ui);
             }
             if loading {
-                super::widgets::loading_row(ui, &palette);
+                super::widgets::loading_row(ui, &palette, app.locale);
             }
             if let Some(error) = &error {
                 super::widgets::error_row(ui, app, error, None);

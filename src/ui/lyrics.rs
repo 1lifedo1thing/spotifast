@@ -3,6 +3,7 @@
 use egui::{Align, Color32, Frame, Layout, Margin, Rect, Sense, UiBuilder, pos2, vec2};
 
 use crate::app::App;
+use crate::i18n::{gettext, pgettext};
 use crate::model::{Action, Loadable};
 use crate::theme::{self, Icon};
 
@@ -40,10 +41,22 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
         ui.add_space(window_controls.lyrics_top);
         ui.horizontal(|ui| {
             ui.add_space(4.0);
-            theme::text(ui, "Lyrics", theme::bold(18.0), palette.text);
+            theme::text(
+                ui,
+                gettext(app.locale, "Lyrics"),
+                theme::bold(18.0),
+                palette.text,
+            );
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if theme::icon_button(ui, Icon::X, 18.0, palette.secondary, palette.text, "Close")
-                    .clicked()
+                if theme::icon_button(
+                    ui,
+                    Icon::X,
+                    18.0,
+                    palette.secondary,
+                    palette.text,
+                    &gettext(app.locale, "Close"),
+                )
+                .clicked()
                 {
                     app.actions.push(Action::ToggleLyricsPanel);
                 }
@@ -53,7 +66,7 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
                     18.0,
                     palette.secondary,
                     palette.text,
-                    "Full screen lyrics",
+                    &gettext(app.locale, "Full screen lyrics"),
                 )
                 .clicked()
                 {
@@ -62,7 +75,13 @@ pub fn side_panel(app: &mut App, ui: &mut egui::Ui) {
                 let loaded = matches!(&app.lyrics, Loadable::Loaded(Some(_)));
                 if loaded
                     && !app.lyrics_following
-                    && theme::pill_button(ui, &palette, "Follow", false).clicked()
+                    && theme::pill_button(
+                        ui,
+                        &palette,
+                        &pgettext(app.locale, "lyrics", "Follow"),
+                        false,
+                    )
+                    .clicked()
                 {
                     app.lyrics_following = true;
                     app.lyrics_line_shown = None;
@@ -86,22 +105,25 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
             ui,
             &palette,
             Icon::Mic,
-            "Nothing playing",
-            "Play a song to see its lyrics.",
+            &gettext(app.locale, "Nothing playing"),
+            &gettext(app.locale, "Play a song to see its lyrics."),
         );
         return;
     };
     let lyrics = match &app.lyrics {
         Loadable::NotLoaded | Loadable::Loading => {
-            widgets::loading_row(ui, &palette);
+            widgets::loading_row(ui, &palette, app.locale);
             return;
         }
         Loadable::Failed(error) => {
-            let message = format!("Couldn't fetch the lyrics: {error}");
+            // Translators: Keep {error} unchanged. It is the original failure detail.
+            let message =
+                gettext(app.locale, "Couldn't fetch the lyrics: {error}").replace("{error}", error);
             ui.add_space(8.0);
             theme::text(ui, message, theme::regular(13.0), palette.secondary);
             ui.add_space(8.0);
-            if theme::pill_button(ui, &palette, "Try again", false).clicked() {
+            if theme::pill_button(ui, &palette, &gettext(app.locale, "Try again"), false).clicked()
+            {
                 app.request_lyrics();
             }
             return;
@@ -111,8 +133,8 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                 ui,
                 &palette,
                 Icon::Mic,
-                "No lyrics",
-                "No lyrics found for this track.",
+                &gettext(app.locale, "No lyrics"),
+                &gettext(app.locale, "No lyrics found for this track."),
             );
             return;
         }
@@ -121,8 +143,8 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                 ui,
                 &palette,
                 Icon::Music,
-                "Instrumental",
-                "No timed lyrics for this track.",
+                &gettext(app.locale, "Instrumental"),
+                &gettext(app.locale, "No timed lyrics for this track."),
             );
             return;
         }
@@ -307,7 +329,12 @@ fn cover_uv(view: egui::Vec2, image: egui::Vec2) -> Rect {
 fn fullscreen_header(app: &mut App, ui: &mut egui::Ui) {
     let palette = theme::Palette::dark();
     ui.horizontal(|ui| {
-        theme::text(ui, "Lyrics", theme::bold(18.0), palette.text);
+        theme::text(
+            ui,
+            gettext(app.locale, "Lyrics"),
+            theme::bold(18.0),
+            palette.text,
+        );
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
             if theme::icon_button(
                 ui,
@@ -315,16 +342,16 @@ fn fullscreen_header(app: &mut App, ui: &mut egui::Ui) {
                 18.0,
                 palette.text,
                 palette.text,
-                "Leave full screen (Esc)",
+                &gettext(app.locale, "Leave full screen (Esc)"),
             )
             .clicked()
             {
                 app.actions.push(Action::SetLyricsFullscreen(false));
             }
             let hint = if app.lyrics_reduce_motion {
-                "Enable lyrics motion"
+                gettext(app.locale, "Enable lyrics motion")
             } else {
-                "Reduce lyrics motion"
+                gettext(app.locale, "Reduce lyrics motion")
             };
             if theme::icon_button(
                 ui,
@@ -336,7 +363,7 @@ fn fullscreen_header(app: &mut App, ui: &mut egui::Ui) {
                     palette.text
                 },
                 palette.text,
-                hint,
+                &hint,
             )
             .clicked()
             {
@@ -345,7 +372,13 @@ fn fullscreen_header(app: &mut App, ui: &mut egui::Ui) {
             let loaded = matches!(&app.lyrics, Loadable::Loaded(Some(_)));
             if loaded
                 && !app.lyrics_following
-                && theme::pill_button(ui, &palette, "Follow", false).clicked()
+                && theme::pill_button(
+                    ui,
+                    &palette,
+                    &pgettext(app.locale, "lyrics", "Follow"),
+                    false,
+                )
+                .clicked()
             {
                 app.actions.push(Action::FollowLyrics);
             }
@@ -396,22 +429,25 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
             ui,
             &palette,
             Icon::Mic,
-            "Nothing playing",
-            "Play a song to see its lyrics.",
+            &gettext(app.locale, "Nothing playing"),
+            &gettext(app.locale, "Play a song to see its lyrics."),
         );
         return;
     };
     let lyrics = match &app.lyrics {
         Loadable::NotLoaded | Loadable::Loading => {
-            widgets::loading_row(ui, &palette);
+            widgets::loading_row(ui, &palette, app.locale);
             return;
         }
         Loadable::Failed(error) => {
-            let message = format!("Couldn't fetch the lyrics: {error}");
+            // Translators: Keep {error} unchanged. It is the original failure detail.
+            let message =
+                gettext(app.locale, "Couldn't fetch the lyrics: {error}").replace("{error}", error);
             ui.add_space(8.0);
             theme::text(ui, message, theme::regular(13.0), palette.text);
             ui.add_space(8.0);
-            if theme::pill_button(ui, &palette, "Try again", false).clicked() {
+            if theme::pill_button(ui, &palette, &gettext(app.locale, "Try again"), false).clicked()
+            {
                 app.actions.push(Action::RetryLyrics);
             }
             return;
@@ -421,8 +457,8 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
                 ui,
                 &palette,
                 Icon::Mic,
-                "No lyrics",
-                "No lyrics found for this track.",
+                &gettext(app.locale, "No lyrics"),
+                &gettext(app.locale, "No lyrics found for this track."),
             );
             return;
         }
@@ -431,8 +467,8 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
                 ui,
                 &palette,
                 Icon::Music,
-                "Instrumental",
-                "No timed lyrics for this track.",
+                &gettext(app.locale, "Instrumental"),
+                &gettext(app.locale, "No timed lyrics for this track."),
             );
             return;
         }

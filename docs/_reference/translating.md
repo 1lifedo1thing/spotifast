@@ -33,9 +33,10 @@ languages are available for preview in demo mode:
 
 Current `main` also translates the player bar's empty state, tooltips and
 screen-reader labels for playback, repeat, shuffle, Like, volume, device
-selection, Queue and Lyrics controls. This addition is not in 0.8.0. It keeps
-the same control positions and keyboard actions. The panels and menus opened
-by those controls remain outside this part of the pilot.
+selection, Queue and Lyrics controls. The Queue page and panel, Recent tab,
+Lyrics panel and full-screen view, and shared loading/retry labels are also
+translated on `main`. These additions are not in 0.8.0. They keep the existing
+controls and keyboard actions. Other menus, pages and settings still need coverage.
 
 The production interface remains English while the translation workflow and
 coverage are developed. These are initial pilot translations, not complete
@@ -43,13 +44,16 @@ localized interfaces or a language setting. Corrections from fluent speakers
 are welcome.
 
 Song, album, artist and playlist names come from Spotify or their creators and
-are kept as provided. Interface text outside the pilot remains English.
+are kept as provided, as are lyric lines and failure details. Generated queue
+playlist names translate the surrounding words while retaining the song title
+or the date in `YYYY-MM-DD` form. Interface text outside the pilot remains English.
 
 ## Edit and preview
 
 The repository's `assets/i18n/fastpotify.pot` is the English source template.
 Open the PO for your language, such as `assets/i18n/es.po`, in your translation editor. Edit `msgstr` values;
-keep `msgid`, `msgid_plural`, and placeholders such as `{count}` unchanged.
+keep `msgid`, `msgid_plural`, `msgctxt`, and placeholders such as `{count}`, `{date}`,
+`{track}` and `{error}` unchanged.
 Translator comments explain the placeholders. Clear a fuzzy flag only after
 reviewing the translation against its current English source.
 
@@ -58,6 +62,8 @@ Build and preview your changes with:
 ```sh
 cargo run --features demo -- --demo --demo-language es
 cargo run --features demo -- --demo --demo-language es --demo-show light --demo-size 760x620
+cargo run --features demo -- --demo --demo-language de-DE --demo-show playing-next
+cargo run --features demo -- --demo --demo-language ja --demo-show lyrics-follow
 ```
 
 Check a narrow and a normal window, light and dark themes, keyboard navigation,
@@ -66,10 +72,19 @@ data needs no Spotify account. When automating screenshots, give the process
 its own XDG config, data and state directories on Linux so framework window and
 scroll state do not carry between captures.
 
+Panel fixtures also include `queue-empty`, `queue-loading`, `queue-error`,
+`recents-empty`, `recents-loading`, `recents-error`, `lyrics-empty`,
+`lyrics-loading`, `lyrics-error`, `lyrics-instrumental` and `lyrics-no-playback`.
+Combine a lyrics fixture with `lyrics-fullscreen` first to preview that state
+in full screen, for example `--demo-show lyrics-fullscreen,lyrics-error`.
+
 ## Update the template and check catalogs
 
 Maintainers mark source phrases with `gettext(locale, "English text")` and whole
-counted phrases with `ngettext(locale, "Singular", "Plural", count)`. Add any
+counted phrases with `ngettext(locale, "Singular", "Plural", count)`. Use
+`pgettext(locale, "context", "English text")` when the same English word has
+different meanings. For example, `Follow` in the `lyrics` context follows the
+current lyric line, so its translation can differ from following an artist. Add any
 new source file to `assets/i18n/POTFILES`. With GNU gettext tools that support
 Rust installed, run:
 
@@ -81,7 +96,9 @@ cargo test --locked --test localization
 
 The update command extracts the template with `xgettext` and merges it into
 existing PO files with `msgmerge`. The check command verifies the template and
-uses `msgfmt` to check catalog syntax and format placeholders. Submit changed
+uses `msgfmt` to check catalog syntax and marked format placeholders. The
+localization tests also check that every translated phrase preserves its named
+placeholders, including phrases filled by string replacement. Submit changed
 PO files and the template, together with any required source changes. Generated
 Rust catalogs stay in Cargo's build directory and are not committed.
 

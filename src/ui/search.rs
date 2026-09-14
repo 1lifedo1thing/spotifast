@@ -26,7 +26,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     ui.add_space(12.0);
     let pending = app.search.catalogue_pending || app.search.playlists_pending;
     if pending {
-        widgets::loading_row(ui, &palette);
+        widgets::loading_row(ui, &palette, app.locale);
     }
     if let Some(error) = app.search.error.clone() {
         widgets::error_row(ui, app, &error, None);
@@ -35,7 +35,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         Loadable::Loaded(results) => results.clone(),
         Loadable::Loading | Loadable::NotLoaded => {
             if !pending {
-                widgets::loading_row(ui, &palette);
+                widgets::loading_row(ui, &palette, app.locale);
             }
             return;
         }

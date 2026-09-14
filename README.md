@@ -530,8 +530,9 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull
 request. It covers project scope and required checks.
 
 Translations use standard gettext `.po` files in `assets/i18n/`, with an English
-`.pot` template. The current pilot translates navigation, Library labels and
-player-bar tooltips and accessible controls in 12 languages, including
+`.pot` template. The current pilot translates navigation, Library labels,
+player-bar controls, Queue and Lyrics panels, and shared loading/retry labels
+in 12 languages, including
 Portuguese and Chinese variants, in demo mode; the
 production interface remains English. See
 [Translating Spotifast](docs/_reference/translating.md) for editing with existing
