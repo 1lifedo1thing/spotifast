@@ -313,7 +313,7 @@ fn uri_from_object_path(path: &str) -> Option<String> {
 
 /// The desktop entry's name: inside a Flatpak the entry is exported under
 /// the app id, and a desktop looking it up by the plain name finds nothing.
-fn desktop_entry() -> String {
+pub fn desktop_entry() -> String {
     let app_id = std::env::var("FLATPAK_ID").ok();
     desktop_entry_for(
         app_id.as_deref(),
@@ -328,7 +328,7 @@ fn desktop_entry_for(app_id: Option<&str>, in_flatpak: bool) -> &str {
     } else if in_flatpak {
         "rocks.spotifast.Spotifast"
     } else {
-        "fastpotify"
+        "spotifast"
     }
 }
 
@@ -341,7 +341,7 @@ mod tests {
         for id in ["rocks.spotifast.Spotifast", "rocks.fastpotify.Fastpotify"] {
             assert_eq!(desktop_entry_for(Some(id), true), id);
         }
-        assert_eq!(desktop_entry_for(None, false), "fastpotify");
+        assert_eq!(desktop_entry_for(None, false), "spotifast");
         assert_eq!(desktop_entry_for(None, true), "rocks.spotifast.Spotifast");
         assert_eq!(
             desktop_entry_for(Some(""), true),

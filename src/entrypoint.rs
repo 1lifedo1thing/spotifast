@@ -767,6 +767,16 @@ fn native_options(
     // mini player its own path, and Shell disables its egui-memory saving too,
     // so it neither reads the main window's geometry nor creates a state file.
     let persistence_path = mini.as_ref().map(|mini| mini.storage_path.clone());
+    #[cfg(target_os = "linux")]
+    let persistence_path = persistence_path.or_else(|| {
+        // Window identity now matches spotifast.desktop (or the Flatpak ID),
+        // while the existing geometry and egui state stay at their old path.
+        eframe::storage_dir("fastpotify").map(|dir| dir.join("app.ron"))
+    });
+    #[cfg(target_os = "linux")]
+    let app_id = fastpotify::media_controls::desktop_entry();
+    #[cfg(not(target_os = "linux"))]
+    let app_id = "fastpotify";
     let icon = if cfg!(target_os = "macos") {
         // macOS takes the dock icon from the bundle's .icns, which is the
         // 1024px drawing with the platform's rounding. Setting a window
@@ -777,7 +787,7 @@ fn native_options(
     };
     let viewport = egui::ViewportBuilder::default()
         .with_title("Spotifast")
-        .with_app_id("fastpotify")
+        .with_app_id(app_id)
         .with_taskbar(true)
         .with_icon(icon);
     let viewport = match mini {
@@ -854,6 +864,42 @@ fn demo_native_options(
 #[cfg(test)]
 mod native_window_tests {
     use super::*;
+
+    #[test]
+    fn launcher_identity_preserves_main_and_mini_storage() {
+        let main = native_options(false, None, None);
+        let mini_path = std::path::PathBuf::from("cache/winamp.ron");
+        let mini = native_options(
+            false,
+            Some(MiniWindow {
+                size: egui::vec2(550.0, 232.0),
+                position: None,
+                on_top: false,
+                taskbar: true,
+                storage_path: mini_path.clone(),
+            }),
+            None,
+        );
+        #[cfg(target_os = "linux")]
+        {
+            let id = fastpotify::media_controls::desktop_entry();
+            assert_eq!(main.viewport.app_id.as_deref(), Some(id.as_str()));
+            assert_eq!(mini.viewport.app_id, main.viewport.app_id);
+            assert_eq!(
+                main.persistence_path,
+                eframe::storage_dir("fastpotify").map(|dir| dir.join("app.ron"))
+            );
+        }
+        #[cfg(not(target_os = "linux"))]
+        {
+            assert_eq!(main.viewport.app_id.as_deref(), Some("fastpotify"));
+            assert_eq!(mini.viewport.app_id, main.viewport.app_id);
+            assert_eq!(main.persistence_path, None);
+        }
+        assert_eq!(mini.persistence_path, Some(mini_path));
+        assert!(main.persist_window);
+        assert!(!mini.persist_window);
+    }
 
     #[test]
     fn windows_never_creates_the_mini_player_at_an_unchecked_saved_position() {

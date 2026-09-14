@@ -90,4 +90,11 @@ jobs:
       - name: Install and check runtime libraries in a clean container
         env:
           IMAGE: ${{ matrix.image }}
-        run: bash packaging/test-install.sh "$IMAGE" dist/native-packages dist/legacy
+          PACKAGE_VERSION: ${{ inputs.version || 'v0.8.0' }}
+        run: |
+          # The immutable 0.8.0 fixture still has its original window identity.
+          case "$PACKAGE_VERSION" in
+            v0.8.0|0.8.0) desktop_id=fastpotify ;;
+            *) desktop_id=spotifast ;;
+          esac
+          bash packaging/test-install.sh "$IMAGE" dist/native-packages dist/legacy "$desktop_id"

@@ -133,6 +133,7 @@ Run the same checks CI runs before submitting:
 
 ```sh
 node --test .github/scripts/issue-assessment.test.cjs
+python3 packaging/test-launchers.py
 cargo fmt --all --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo clippy --locked --all-targets --all-features -- -D warnings

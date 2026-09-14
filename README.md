@@ -268,10 +268,12 @@ empty boxes.
 Since 0.8.0, long right-to-left titles in song rows and the player
 bar end with an ellipsis inside their text area, including joined Arabic letters.
 
-A desktop entry is provided in `packaging/applications/fastpotify.desktop`.
-It registers Spotifast for `spotify:` links; `xdg-mime default
-fastpotify.desktop x-scheme-handler/spotify` makes it the one the desktop
-uses when another Spotify client is installed too.
+On `main`, after 0.8.0, the Linux launcher is
+`packaging/applications/spotifast.desktop`. Its icon and window identity also
+use Spotifast, while existing settings and window positions are preserved.
+After installing it, `xdg-mime default spotifast.desktop x-scheme-handler/spotify`
+chooses Spotifast for `spotify:` links. The published 0.8.0 packages still use
+`fastpotify.desktop`; use that name with `xdg-mime` until updating.
 
 ## Sign in
 

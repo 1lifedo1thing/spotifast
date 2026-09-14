@@ -31,7 +31,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libasound2-dev libpulse-dev libxkbcommon-dev \
-            libwayland-dev libgl1-mesa-dev cmake libclang-dev
+            libwayland-dev libgl1-mesa-dev cmake libclang-dev ruby
       # Only main writes the cache. A pull request reads it and builds on
       # top; letting every branch save its own copy filled the repository's
       # ten-gigabyte cache in a few days, and a full cache evicts the entry
@@ -48,6 +48,8 @@ jobs:
         run: node --test .github/scripts/issue-assessment.test.cjs
       - name: Flatpak release metadata regression tests
         run: python3 packaging/flatpak/test-metainfo.py
+      - name: Linux launcher packaging regressions
+        run: python3 packaging/test-launchers.py
       - name: Clippy (default features)
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: Clippy (all features)

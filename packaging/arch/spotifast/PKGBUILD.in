@@ -62,10 +62,15 @@ package() {
   ln -s fastpotify "${pkgdir}/usr/bin/spotifast"
   install -Dm644 "LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
   install -Dm644 "README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-  install -Dm644 "packaging/applications/fastpotify.desktop" \
-    "${pkgdir}/usr/share/applications/fastpotify.desktop"
-  install -Dm644 "packaging/icons/fastpotify.svg" \
-    "${pkgdir}/usr/share/icons/hicolor/scalable/apps/fastpotify.svg"
+  # Historical releases retain their matching launcher/window identity.
+  local desktop=spotifast
+  if [[ ! -f "packaging/applications/spotifast.desktop" ]]; then
+    desktop=fastpotify
+  fi
+  install -Dm644 "packaging/applications/${desktop}.desktop" \
+    "${pkgdir}/usr/share/applications/${desktop}.desktop"
+  install -Dm644 "packaging/icons/${desktop}.svg" \
+    "${pkgdir}/usr/share/icons/hicolor/scalable/apps/${desktop}.svg"
   # Older release fixtures predate the optional integration.
   if [[ -d contrib/omarchy ]]; then
     install -Dm644 contrib/omarchy/spotifast.json.tpl "${pkgdir}/usr/share/spotifast/omarchy/spotifast.json.tpl"

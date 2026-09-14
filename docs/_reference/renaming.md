@@ -18,6 +18,20 @@ The `spotifast` and `fastpotify` commands open and control the same application.
 Linux packages provide `spotifast` as an alias, without installing a second
 copy of the app. Existing `playerctl --player=fastpotify` commands keep working.
 
+On `main`, after 0.8.0, native Linux launchers use `spotifast.desktop`, with
+`Icon=spotifast` and `StartupWMClass=spotifast`. Wayland windows and the desktop
+entry reported through MPRIS use the same identity. Flatpak uses its full
+`rocks.spotifast.Spotifast` ID instead. The main window still reads its existing
+`fastpotify/app.ron` state, so geometry and interface preferences survive.
+The mini player's state remains separate.
+
+After installing the updated launcher, select it again for any pinned desktop
+shortcut or custom launcher command that explicitly names `fastpotify.desktop`.
+Run `xdg-mime default spotifast.desktop x-scheme-handler/spotify` to choose it
+for Spotify links. Published 0.8.0 packages retain their old desktop filename
+and window identity until an application update; their executable bytes are
+unchanged by the package rename.
+
 AUR packages are now `spotifast`, `spotifast-bin` and `spotifast-git`.
 The old packages have a packaging-only update that announces the move.
 Install the matching new package and accept the replacement, for example:

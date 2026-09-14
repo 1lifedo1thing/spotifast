@@ -11,6 +11,17 @@ Homebrew tap contains a `fastpotify` to `spotifast` cask rename mapping. Linux p
 also include the new command. See [rename compatibility](docs/_reference/renaming.md)
 for the macOS bundle and updater requirements.
 
+On main, after 0.8.0, Linux builds provide `spotifast.desktop` and
+`spotifast.svg`, matching the native window and MPRIS desktop-entry ID.
+Flatpak installs those assets under its full application ID and sets the
+window class to match. Main-window state keeps its previous file path.
+Historical release payloads keep their original launcher/icon names and
+window class: the package-only 0.8.0 rename did not rebuild those executables.
+AUR recipes and nFPM take the identity from the input payload; the git recipe
+requires the current Spotifast assets. Existing release files are not rewritten.
+`python3 packaging/test-launchers.py` exercises both input generations through
+the actual AUR and Flatpak installation commands, using Ruby to read YAML.
+
 Linux packages also install the optional Omarchy template and hook under
 `share/spotifast/omarchy` in their installation prefix. The normal application
 launch registers missing per-user files and prepares the current palette on an
@@ -59,6 +70,9 @@ fixture survives installation and removal. The checks run both `spotifast --vers
 and verify the desktop entry and icon. They cover installation and library
 resolution, not a running desktop or Spotify playback. On release runs these
 checks follow artifact attachment; a failure marks the workflow as failed.
+The install script defaults to the new `spotifast` desktop ID; its fourth
+argument is explicitly `fastpotify` only when checking the historical 0.8.0
+fixture. Both cases reject a second launcher and check removal of both names.
 
 To repeat a check locally on the matching architecture, with Docker and a C
 compiler available:

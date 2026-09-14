@@ -45,10 +45,13 @@ measured together so the last visible letter stays whole at the edge.
 
 ![Japanese, Chinese, and Korean titles in a playlist](/assets/images/scripts.png)
 
-A desktop entry ships in `packaging/applications/fastpotify.desktop`. It
-registers Spotifast for `spotify:` links; with another Spotify client
-installed, `xdg-mime default fastpotify.desktop x-scheme-handler/spotify`
-picks Spotifast.
+On `main`, after 0.8.0, the Linux desktop entry is
+`packaging/applications/spotifast.desktop`, with a matching icon and window
+identity. After installing it,
+`xdg-mime default spotifast.desktop x-scheme-handler/spotify` picks Spotifast
+for `spotify:` links. Published 0.8.0 packages still use `fastpotify.desktop`;
+use that name in the command until updating. Existing settings and window
+positions are preserved.
 
 ## Sign in
 

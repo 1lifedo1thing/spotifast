@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Usage: bash packaging/test-install.sh ubuntu:24.04 dist/packages/0.8.0 [legacy-packages]
+# Usage: bash packaging/test-install.sh ubuntu:24.04 dist/packages/0.8.0 [legacy-packages] [desktop-id]
 # Run on the matching architecture, with a C compiler and Docker available.
 set -euo pipefail
 
 image=${1:?Supply a Debian, Ubuntu or Fedora container image}
 packages=$(realpath "${2:?Supply a native-packages output directory}")
 legacy_packages=$(realpath "${3:-$packages/legacy}")
+desktop_id=${4:-spotifast}
+case "$desktop_id" in
+  spotifast|fastpotify) ;;
+  *) echo 'Unsupported desktop fixture identity' >&2; exit 1 ;;
+esac
 case "$(uname -m)" in
   x86_64) target=linux-amd64 ;;
   aarch64) target=linux-arm64 ;;
@@ -32,6 +37,7 @@ docker run --rm \
   --volume "$checks:/checks:ro" \
   "${legacy_mount[@]}" \
   --env "FORMAT=$format" \
+  --env "DESKTOP_ID=$desktop_id" \
   "$image" sh -ec '
     set -- /packages/*."$FORMAT"
     test "$#" -eq 1
@@ -61,8 +67,13 @@ docker run --rm \
     fastpotify --version
     spotifast --version
     /checks/check-runtime-libs
-    test -s /usr/share/applications/fastpotify.desktop
-    test -s /usr/share/icons/hicolor/scalable/apps/fastpotify.svg
+    test -s "/usr/share/applications/$DESKTOP_ID.desktop"
+    test -s "/usr/share/icons/hicolor/scalable/apps/$DESKTOP_ID.svg"
+    grep -qx "Icon=$DESKTOP_ID" "/usr/share/applications/$DESKTOP_ID.desktop"
+    grep -qx "StartupWMClass=$DESKTOP_ID" "/usr/share/applications/$DESKTOP_ID.desktop"
+    if [ "$DESKTOP_ID" = spotifast ]; then other_id=fastpotify; else other_id=spotifast; fi
+    test ! -e "/usr/share/applications/$other_id.desktop"
+    test ! -e "/usr/share/icons/hicolor/scalable/apps/$other_id.svg"
     test -s /usr/share/spotifast/omarchy/spotifast.json.tpl
     test -x /usr/share/spotifast/omarchy/spotifast-theme
     test "$(cat /root/.config/fastpotify/rename-fixture)" = preserve-existing-settings
@@ -74,7 +85,9 @@ docker run --rm \
     test ! -e /usr/bin/fastpotify
     test ! -e /usr/bin/spotifast
     test ! -e /usr/share/applications/fastpotify.desktop
+    test ! -e /usr/share/applications/spotifast.desktop
     test ! -e /usr/share/icons/hicolor/scalable/apps/fastpotify.svg
+    test ! -e /usr/share/icons/hicolor/scalable/apps/spotifast.svg
     test ! -e /usr/share/spotifast/omarchy/spotifast.json.tpl
     test ! -e /usr/share/spotifast/omarchy/spotifast-theme
     test "$(cat /root/.config/fastpotify/rename-fixture)" = preserve-existing-settings
