@@ -711,6 +711,8 @@ pub struct Backend {
     #[cfg(test)]
     playlist_add_requests: std::sync::Mutex<Vec<ApiRequest>>,
     #[cfg(test)]
+    remote_play_requests: std::sync::Mutex<Vec<ApiRequest>>,
+    #[cfg(test)]
     album_type_requests: std::sync::Mutex<Vec<Vec<String>>>,
 }
 
@@ -780,6 +782,8 @@ impl Backend {
             #[cfg(test)]
             playlist_add_requests: std::sync::Mutex::new(Vec::new()),
             #[cfg(test)]
+            remote_play_requests: std::sync::Mutex::new(Vec::new()),
+            #[cfg(test)]
             album_type_requests: std::sync::Mutex::new(Vec::new()),
         }
     }
@@ -814,6 +818,19 @@ impl Backend {
     }
 
     pub fn api(&self, request: ApiRequest) {
+        #[cfg(test)]
+        if matches!(
+            request,
+            ApiRequest::Remote {
+                action: RemoteAction::Play,
+                ..
+            } | ApiRequest::ShufflePlay { .. }
+        ) {
+            self.remote_play_requests
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .push(request.clone());
+        }
         #[cfg(test)]
         if matches!(
             request,
@@ -878,6 +895,16 @@ impl Backend {
         std::mem::take(
             &mut *self
                 .playlist_add_requests
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()),
+        )
+    }
+
+    #[cfg(test)]
+    pub fn take_remote_play_requests(&self) -> Vec<ApiRequest> {
+        std::mem::take(
+            &mut *self
+                .remote_play_requests
                 .lock()
                 .unwrap_or_else(|poisoned| poisoned.into_inner()),
         )

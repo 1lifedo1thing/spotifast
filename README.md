@@ -95,6 +95,8 @@ everyday use, and connection details.
   after those already queued and before the context continues.
   On `main`, after 0.7.1, Recent keeps repeated short-song plays separate,
   including consecutive local repeats of the same song.
+  Each Recent row starts the song it names and shows it in the player bar
+  immediately while playback starts.
 - On `main`, after 0.7.1, a playlist's **Play** button explicitly starts at
   its first available song when Shuffle is off and the original order is
   selected. Double-click a row to start there; use the player bar to resume.
