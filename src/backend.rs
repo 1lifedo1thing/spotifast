@@ -2386,7 +2386,7 @@ impl Worker {
             total: Some(total),
             next_offset,
         };
-        if let Err(error) = write_cached_playlist(&path, &cached).await {
+        if let Err(error) = write_cached_playlist(path.clone(), cached).await {
             log::warn!("unable to store playlist cache {}: {error}", path.display());
         }
     }
@@ -3134,16 +3134,40 @@ struct CachedPlaylist {
 }
 
 async fn write_cached_playlist(
+    path: std::path::PathBuf,
+    cached: CachedPlaylist,
+) -> std::io::Result<()> {
+    // Move the checkpoint into the file worker without another model clone.
+    // Awaiting it preserves checkpoint order, including after playlist edits.
+    tokio::task::spawn_blocking(move || write_cached_playlist_file(&path, &cached))
+        .await
+        .map_err(std::io::Error::other)?
+}
+
+fn write_cached_playlist_file(
     path: &std::path::Path,
     cached: &CachedPlaylist,
 ) -> std::io::Result<()> {
+    use std::io::Write;
+
     if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent).await?;
+        std::fs::create_dir_all(parent)?;
     }
-    let text = serde_json::to_vec(cached).map_err(std::io::Error::other)?;
     let temporary = path.with_extension("json.tmp");
-    tokio::fs::write(&temporary, text).await?;
-    crate::util::replace_file(&temporary, path)
+    let file = std::fs::File::create(&temporary)?;
+    let result = (|| {
+        // Buffer small serializer writes without retaining the whole JSON file.
+        let mut writer = std::io::BufWriter::new(file);
+        serde_json::to_writer(&mut writer, cached).map_err(std::io::Error::other)?;
+        writer.flush()?;
+        // Windows requires the temporary file to be closed before replacement.
+        drop(writer);
+        crate::util::replace_file(&temporary, path)
+    })();
+    if result.is_err() {
+        let _ = std::fs::remove_file(&temporary);
+    }
+    result
 }
 
 #[cfg(test)]
@@ -3264,6 +3288,7 @@ mod album_type_lookup_tests {
 #[cfg(test)]
 mod playlist_cache_tests {
     use super::{CachedPlaylist, write_cached_playlist};
+    use crate::api::models::{PlayableItem, PlaylistItem, Track};
 
     #[test]
     fn the_original_complete_cache_format_remains_readable() {
@@ -3290,10 +3315,10 @@ mod playlist_cache_tests {
             next_offset: Some(500),
         };
 
-        write_cached_playlist(&path, &cached("first"))
+        write_cached_playlist(path.clone(), cached("first"))
             .await
             .unwrap();
-        write_cached_playlist(&path, &cached("second"))
+        write_cached_playlist(path.clone(), cached("second"))
             .await
             .unwrap();
 
@@ -3302,6 +3327,92 @@ mod playlist_cache_tests {
         assert_eq!(stored.snapshot, "second");
         assert!(!path.with_extension("json.tmp").exists());
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn streaming_preserves_the_cache_bytes_and_duplicate_unavailable_rows() {
+        let root = std::env::temp_dir().join(format!(
+            "fastpotify-playlist-cache-stream-test-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let path = root.join("playlist.json");
+        let song = PlayableItem::Track(Track {
+            uri: "spotify:track:duplicate".into(),
+            name: "Song with \"quotes\", newlines\nand 日本語".into(),
+            is_playable: Some(false),
+            ..Track::default()
+        });
+        let rows = [
+            PlaylistItem {
+                item: Some(song.clone()),
+                ..PlaylistItem::default()
+            },
+            PlaylistItem {
+                track: Some(song),
+                ..PlaylistItem::default()
+            },
+            PlaylistItem::default(),
+        ];
+        let cached = CachedPlaylist {
+            snapshot: "unchanged-snapshot".into(),
+            items: (0..500).flat_map(|_| rows.clone()).collect(),
+            total: Some(2_000),
+            next_offset: Some(1_500),
+        };
+        let expected = serde_json::to_vec(&cached).unwrap();
+        assert!(
+            expected.len() > 64 * 1024,
+            "exercise multiple buffer flushes"
+        );
+
+        write_cached_playlist(path.clone(), cached).await.unwrap();
+
+        let bytes = std::fs::read(&path).unwrap();
+        assert_eq!(bytes, expected, "existing readers see the identical format");
+        let restored: CachedPlaylist = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(restored.items.len(), 1_500);
+        for chunk in restored.items.chunks(3) {
+            assert_eq!(chunk, rows);
+        }
+        assert_eq!(restored.total, Some(2_000));
+        assert_eq!(restored.next_offset, Some(1_500));
+        assert!(!path.with_extension("json.tmp").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[tokio::test]
+    async fn failed_checkpoint_keeps_existing_data_and_cleans_only_its_temporary_file() {
+        let root = std::env::temp_dir().join(format!(
+            "fastpotify-playlist-cache-failure-test-{}-{:?}",
+            std::process::id(),
+            std::thread::current().id()
+        ));
+        let path = root.join("playlist.json");
+        let temporary = path.with_extension("json.tmp");
+        let cached = || CachedPlaylist {
+            snapshot: "new".into(),
+            items: Vec::new(),
+            total: Some(0),
+            next_offset: None,
+        };
+        std::fs::create_dir_all(&temporary).unwrap();
+        let previous = br#"{"snapshot":"old","items":[]}"#;
+        std::fs::write(&path, previous).unwrap();
+
+        assert!(write_cached_playlist(path.clone(), cached()).await.is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), previous);
+        assert!(temporary.is_dir(), "a failed create does not own this path");
+
+        // Force final replacement to fail after serialization and flushing.
+        std::fs::remove_dir(&temporary).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        std::fs::write(path.join("preserved"), previous).unwrap();
+        assert!(write_cached_playlist(path.clone(), cached()).await.is_err());
+        assert_eq!(std::fs::read(path.join("preserved")).unwrap(), previous);
+        assert!(!temporary.exists(), "discard the failed checkpoint");
+        std::fs::remove_dir_all(root).unwrap();
     }
 }
 

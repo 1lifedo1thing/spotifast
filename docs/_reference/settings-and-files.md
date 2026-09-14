@@ -84,6 +84,11 @@ new snapshot after all pending writes have succeeded. Pending edits remain
 visible immediately, but are not saved as confirmed playlist rows. A failed
 write reloads the playlist to reconcile the edit.
 
+On `main`, after 0.7.1, playlist checkpoints stream their JSON to a temporary
+file on a background file worker. Saving a large playlist no longer needs a
+second complete JSON buffer in memory. The cache format and checkpoint order
+are unchanged, and a failed write leaves the previous cache in place.
+
 The following Liked Songs caching behavior is on `main`, for the release
 after 0.7.1.
 

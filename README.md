@@ -105,6 +105,8 @@ everyday use, and connection details.
   are saved to that cache only after all writes succeed.
   Refresh waits for pending edits and their Spotify revision to be confirmed;
   a failed refresh keeps the current rows and offers a retry.
+  Large playlist checkpoints write their JSON through a small background
+  buffer, preserving the existing cache format without another full JSON copy.
 - **Resumes the last session.** On startup, the last song is paused where it
   stopped. Play resumes it, and the other playback controls work before it
   starts.
