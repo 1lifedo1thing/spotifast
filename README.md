@@ -269,6 +269,11 @@ device menu (**Set up playback here**) or Settings. It needs Spotify
 Premium. Its reusable credential uses the same protected storage, independently
 of the two Web API grants.
 
+On `main`, after 0.7.1, local playback tries the other available server
+addresses when one cannot connect, including a prompt IPv4/IPv6 fallback.
+Socket and proxy tunnel setup have a five-second limit. See
+[how it connects](docs/_reference/how-it-connects.md#the-engine).
+
 Existing token files migrate after the protected write has been read back
 successfully. A failed migration keeps the original for recovery and reports
 an error. Sign-out removes shared, personal, and playback grants, including

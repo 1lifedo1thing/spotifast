@@ -207,3 +207,15 @@ Each access-point attempt gives socket setup and the handshake a combined
 five seconds. A stalled TCP connection or HTTP proxy tunnel therefore lets
 librespot retry and move on to another endpoint instead of waiting for the
 operating system's longer connection timeout.
+
+On `main`, after 0.7.1, the access-point and Dealer TCP connectors resolve
+names off the playback runtime thread and try all returned addresses. If
+the preferred IPv4 or IPv6 route stalls, the other family starts after
+300 ms. DNS, TCP setup and any HTTP proxy tunnel share a five-second limit.
+The access-point handshake still shares its existing five-second budget;
+the Dealer's WebSocket TLS verification is unchanged.
+
+When a proxy is configured, only its name is resolved locally. The target
+name is sent through CONNECT, and a proxy failure never falls back to a
+direct connection. Proxy URLs and credentials are not logged by this
+connector. The change adds no destination or background polling.
