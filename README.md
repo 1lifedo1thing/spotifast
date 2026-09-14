@@ -463,6 +463,14 @@ installations use the download page. Portable archives identify themselves with
 `fastpotify-portable.txt`; older archives need one manual upgrade to an
 update-enabled build.
 
+On `main`, after 0.8.0, Off and System proxies apply immediately. HTTP and SOCKS5 apply
+when you press **Apply settings**, and can also be set on the sign-in screen.
+A proxy password uses the system credential store, separately from Spotify
+sign-in. Only confirmed proxy settings are saved; editing a form does not
+change the active connection until you apply it.
+Proxy authentication covers Web requests. Local playback can use only an
+unauthenticated HTTP proxy; with proxy login or SOCKS5 it connects directly.
+
 Caches (audio, artwork) live under the cache directory and can be deleted at
 any time without signing you out.
 

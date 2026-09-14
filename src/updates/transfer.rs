@@ -132,16 +132,18 @@ fn checksum(text: &str, name: &str) -> Result<String> {
 pub fn download(
     release: &Release,
     source: &Source,
+    proxy: &crate::settings::ProxyConfig,
     progress: impl Fn(u64, u64),
 ) -> Result<install::Prepared> {
     let installation = install::detect()?;
-    download_for(release, source, installation, progress)
+    download_for(release, source, installation, proxy, progress)
 }
 
 pub fn download_for(
     release: &Release,
     source: &Source,
     installation: install::Installation,
+    proxy: &crate::settings::ProxyConfig,
     progress: impl Fn(u64, u64),
 ) -> Result<install::Prepared> {
     ensure!(
@@ -153,7 +155,8 @@ pub fn download_for(
         "Invalid release version"
     );
     let policy = source.clone();
-    let http = reqwest::blocking::Client::builder()
+    let http = crate::http::blocking_builder(proxy)
+        .map_err(anyhow::Error::msg)?
         .user_agent(concat!("Spotifast/", env!("CARGO_PKG_VERSION")))
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(15 * 60))
@@ -308,11 +311,30 @@ mod tests {
 
     #[cfg(all(feature = "demo", any(target_os = "windows", target_os = "linux")))]
     #[test]
-    fn damaged_and_interrupted_downloads_preserve_the_installation() {
+    fn direct_and_proxied_update_downloads_preserve_integrity_checks() {
         use std::net::TcpListener;
-        for interrupted in [false, true] {
+        for (interrupted, proxied) in [(false, false), (true, false), (false, true), (true, true)] {
             let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-            let base = format!("http://{}", listener.local_addr().unwrap());
+            let proxy_address = listener.local_addr().unwrap();
+            // Port zero has no origin server. A proxied request must reach the
+            // selected proxy, which serves this deterministic release fixture.
+            let base = if proxied {
+                "http://127.0.0.1:0".to_string()
+            } else {
+                format!("http://{proxy_address}")
+            };
+            let proxy = if proxied {
+                crate::settings::Settings {
+                    proxy_mode: crate::settings::ProxyMode::Http,
+                    proxy_host: proxy_address.ip().to_string(),
+                    proxy_port: proxy_address.port().to_string(),
+                    ..Default::default()
+                }
+                .proxy_config()
+                .unwrap()
+            } else {
+                crate::settings::ProxyConfig::Off
+            };
             let platform = if cfg!(windows) {
                 "pc-windows-msvc.zip"
             } else {
@@ -330,15 +352,46 @@ mod tests {
                 {"name":name,"size":payload.len() + usize::from(interrupted),"browser_download_url":format!("{base}/package")},
                 {"name":"checksums.txt","size":checksums.len(),"browser_download_url":format!("{base}/checksums")}
             ]}).to_string();
+            let expected_urls = ["latest.json", "checksums", "package"].map(|path| {
+                if proxied {
+                    format!("GET {base}/{path} HTTP/1.1")
+                } else {
+                    format!("GET /{path} HTTP/1.1")
+                }
+            });
             let server = std::thread::spawn(move || {
+                listener.set_nonblocking(true).unwrap();
                 for body in [
                     metadata.into_bytes(),
                     checksums.into_bytes(),
                     payload.to_vec(),
-                ] {
-                    let (mut stream, _) = listener.accept().unwrap();
+                ]
+                .into_iter()
+                .zip(expected_urls)
+                {
+                    let (body, expected_request) = body;
+                    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+                    let mut stream = loop {
+                        match listener.accept() {
+                            Ok((stream, _)) => break stream,
+                            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                                assert!(
+                                    std::time::Instant::now() < deadline,
+                                    "update did not reach its configured route"
+                                );
+                                std::thread::sleep(Duration::from_millis(5));
+                            }
+                            Err(error) => panic!("fixture listener: {error}"),
+                        }
+                    };
+                    stream
+                        .set_read_timeout(Some(Duration::from_secs(2)))
+                        .unwrap();
                     let mut request = [0; 4096];
-                    assert!(stream.read(&mut request).unwrap() > 0);
+                    let size = stream.read(&mut request).unwrap();
+                    assert!(
+                        String::from_utf8_lossy(&request[..size]).starts_with(&expected_request)
+                    );
                     write!(
                         stream,
                         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
@@ -367,6 +420,7 @@ mod tests {
                 &release,
                 &Source::local(&base).unwrap(),
                 installation,
+                &proxy,
                 |_, _| {},
             )
             .unwrap_err();

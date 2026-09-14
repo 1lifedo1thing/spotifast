@@ -22,11 +22,13 @@ use crate::credentials::{
     Grant as StoredGrant, Lease as CredentialLease, Slot as CredentialSlot,
     Store as CredentialStore,
 };
+use crate::http::Http;
 use crate::images::{ArtLoader, accent_color};
 use crate::model::PlaylistCache;
 use crate::paths::AppDirs;
 use crate::player::{Engine, EngineConfig, EngineEvent, LoadSpec, LocalState, PlayerCommand};
 use crate::session_reads;
+use crate::settings::ProxyConfig;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
@@ -35,6 +37,26 @@ const ALBUM_TYPE_TIMEOUT: Duration = Duration::from_secs(30);
 // Keep at most one full Web API album page outstanding for a playback engine.
 const MAX_PENDING_ALBUM_TYPES: usize = 50;
 pub const PLAYLIST_PAGE_SIZE: u32 = 50;
+const RECONNECT_WINDOW: Duration = Duration::from_secs(600);
+const RECONNECT_LIMIT: usize = 6;
+
+/// True when the session has already dropped this many times in the window,
+/// so another reconnect would only flap. Callers that still reconnect must
+/// push `now` themselves.
+fn session_drops_exhausted(reconnects: &mut Vec<Instant>, now: Instant) -> bool {
+    reconnects.retain(|attempt| now.duration_since(*attempt) < RECONNECT_WINDOW);
+    reconnects.len() >= RECONNECT_LIMIT
+}
+
+/// Record a replacement requested while a connection attempt is still in
+/// flight. The finished attempt must be discarded and immediately retried
+/// with the newest config instead of installing stale state.
+fn defer_engine_replace(engine_busy: bool, restart_pending: &mut bool) -> bool {
+    if engine_busy {
+        *restart_pending = true;
+    }
+    engine_busy
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum AuthStatus {
@@ -472,6 +494,10 @@ pub enum ApiResponse {
 
 pub enum Command {
     OpenThemesFolder,
+    ProxyRestored {
+        lease: CredentialLease,
+        result: Result<crate::credentials::Loaded, crate::credentials::Error>,
+    },
     CredentialsRestored {
         slot: CredentialSlot,
         lease: CredentialLease,
@@ -490,13 +516,22 @@ pub enum Command {
             std::pin::Pin<Box<dyn std::future::Future<Output = Option<rfd::FileHandle>> + Send>>,
     },
     /// Start (or restart) the Web API sign-in in the browser.
-    SignIn,
+    SignIn {
+        request: u64,
+        config: ProxyConfig,
+    },
     CancelSignIn,
     SignOut,
     /// Authorize local playback on this computer (a separate browser grant).
     AuthorizePlayback,
     /// Reload the engine config (audio settings changed).
     RestartEngine(EngineConfig),
+    /// Rebuild the HTTP client. Restart local playback only when its HTTP
+    /// proxy changed; Off, System, and SOCKS5 share a direct engine connection.
+    ApplyProxy {
+        request: u64,
+        config: ProxyConfig,
+    },
     Player(PlayerCommand),
     Api(ApiRequest),
     ApiFinished {
@@ -618,6 +653,17 @@ pub struct LyricsRequest {
 }
 
 pub enum Event {
+    ProxyRestored {
+        config: ProxyConfig,
+        password: Option<crate::credentials::ProxyPassword>,
+    },
+    ProxyPasswordStored,
+    ProxyStorageFailed(crate::credentials::Error),
+    ProxyApplied {
+        request: u64,
+        config: ProxyConfig,
+        result: Result<bool, String>,
+    },
     UpdateSupport(Result<crate::updates::install::Installation, String>),
     UpdateProgress {
         received: u64,
@@ -771,11 +817,16 @@ impl Backend {
             .enable_all()
             .build()
             .expect("unable to start the async runtime");
-        let http = reqwest::Client::builder()
-            .user_agent(concat!("fastpotify/", env!("CARGO_PKG_VERSION")))
-            .timeout(Duration::from_secs(30))
-            .build()
-            .expect("unable to build the HTTP client");
+        let http = if restore_sign_in {
+            Http::unavailable("Restoring proxy settings".into())
+        } else {
+            Http::from_proxy(&engine_config.proxy).unwrap_or_else(|error| {
+                let _ = event_tx.send(Event::Error(format!(
+                    "Network configuration failed: {error}"
+                )));
+                Http::unavailable(error)
+            })
+        };
         let art = ArtLoader::new(http.clone(), runtime.handle().clone(), dirs.art_cache_dir());
         let activity = Arc::new(NetActivity::default());
 
@@ -1087,11 +1138,15 @@ struct Worker {
     web_tokens: [Option<Arc<WebTokens>>; 2],
     playback_grant: Option<Credentials>,
     restore_pending: [bool; 3],
+    restoring_proxy: bool,
+    waiting_for_proxy: VecDeque<Command>,
+    spotify_restore_started: bool,
+    proxy_revision: u64,
     authorization_attempt: u64,
     session: watch::Sender<u64>,
     engine_config: EngineConfig,
     web_client_id: Option<String>,
-    http: reqwest::Client,
+    http: Http,
     api: Arc<ApiGateway>,
     background_api: Arc<tokio::sync::Semaphore>,
     art: ArtLoader,
@@ -1104,6 +1159,9 @@ struct Worker {
     /// second attempt does not pile up.
     engine_busy: bool,
     search_tasks: Vec<tokio::task::AbortHandle>,
+    /// A user changed engine-affecting settings while the current connection
+    /// attempt was in flight. Its result is stale and must not be installed.
+    engine_restart_pending: bool,
     signed_in: bool,
     /// The plan, once the Web API has answered.
     premium: Option<bool>,
@@ -1124,7 +1182,7 @@ impl Worker {
         dirs: AppDirs,
         engine_config: EngineConfig,
         web_client_id: Option<String>,
-        http: reqwest::Client,
+        http: Http,
         art: ArtLoader,
         activity: Arc<NetActivity>,
         events: std::sync::mpsc::Sender<Event>,
@@ -1139,6 +1197,10 @@ impl Worker {
             web_tokens: [None, None],
             playback_grant: None,
             restore_pending: [false; 3],
+            restoring_proxy: false,
+            waiting_for_proxy: VecDeque::new(),
+            spotify_restore_started: false,
+            proxy_revision: 0,
             authorization_attempt: 0,
             session: watch::channel(0).0,
             dirs,
@@ -1155,6 +1217,7 @@ impl Worker {
             album_type_lookup: AlbumTypeLookup::default(),
             engine_busy: false,
             search_tasks: Vec::new(),
+            engine_restart_pending: false,
             signed_in: false,
             premium: None,
             cancel_signin: None,
@@ -1171,8 +1234,154 @@ impl Worker {
         self.waker.wake();
     }
 
+    /// Build before replacing either transport configuration. A rejected
+    /// change leaves the existing connection in place and is reported to the UI.
+    fn apply_proxy(&mut self, proxy: ProxyConfig) -> Result<bool, String> {
+        let client = crate::http::build_client(&proxy)?;
+        let restart = self.engine_config.proxy.restarts_local_playback(&proxy);
+        self.http.replace(client);
+        self.engine_config.proxy = proxy;
+        Ok(restart)
+    }
+
+    fn change_proxy(&mut self, request: u64, proxy: ProxyConfig, sign_in: bool) {
+        let result = self.apply_proxy(proxy.clone());
+        if result.as_ref().is_ok_and(|restart| *restart) {
+            self.replace_engine();
+        }
+        let applied = result.is_ok();
+        if applied {
+            self.proxy_revision = request;
+        }
+        self.emit(Event::ProxyApplied {
+            request,
+            config: proxy.clone(),
+            result,
+        });
+        if applied {
+            self.persist_proxy_password(&proxy);
+            self.finish_proxy_restore();
+            if sign_in {
+                self.sign_in();
+            }
+        }
+    }
+
+    fn persist_proxy_password(&mut self, proxy: &ProxyConfig) {
+        if !matches!(proxy, ProxyConfig::Http(_) | ProxyConfig::Socks(_)) {
+            // Off/System retain the saved manual password for later use.
+            return;
+        }
+        let events = self.events.clone();
+        let waker = self.waker.clone();
+        let pending = if let Some(password) = proxy.password_record() {
+            self.credentials.invalidate(CredentialSlot::Proxy);
+            let lease = self.credentials.lease(CredentialSlot::Proxy);
+            let saving = lease.save(StoredGrant::Proxy(password));
+            (lease, saving, true)
+        } else {
+            if let Err(error) = self.credentials.revoke(CredentialSlot::Proxy) {
+                self.emit(Event::ProxyStorageFailed(error));
+                return;
+            }
+            // The durable revocation marker already prevents a failed delete
+            // from restoring an old password. The UI can now scrub legacy JSON.
+            self.emit(Event::ProxyPasswordStored);
+            let lease = self.credentials.lease(CredentialSlot::Proxy);
+            let deleting = lease.delete();
+            (lease, deleting, false)
+        };
+        tokio::spawn(async move {
+            let (lease, operation, saving) = pending;
+            let result = operation.await;
+            if !lease.current() {
+                return;
+            }
+            match result {
+                Ok(()) if saving => {
+                    let _ = events.send(Event::ProxyPasswordStored);
+                }
+                Ok(()) => {}
+                Err(error) if error != crate::credentials::Error::Stale => {
+                    let _ = events.send(Event::ProxyStorageFailed(error));
+                }
+                Err(_) => {}
+            }
+            waker.wake();
+        });
+    }
+
+    fn on_proxy_restored(
+        &mut self,
+        lease: CredentialLease,
+        result: Result<crate::credentials::Loaded, crate::credentials::Error>,
+    ) {
+        if !lease.current() {
+            return;
+        }
+        let (password, protected) = match result {
+            Ok(loaded) => {
+                if let Some(error) = loaded.warning {
+                    self.emit(Event::ProxyStorageFailed(error));
+                }
+                let password = match loaded.grant {
+                    Some(StoredGrant::Proxy(password)) => Some(password),
+                    _ => None,
+                };
+                (password, loaded.warning.is_none())
+            }
+            Err(error) => {
+                self.emit(Event::ProxyStorageFailed(error));
+                (None, false)
+            }
+        };
+        if self.proxy_revision == 0 {
+            let mut config = self.engine_config.proxy.clone();
+            if let Some(password) = &password {
+                config.restore_password(password);
+            }
+            if let Err(error) = self.apply_proxy(config.clone()) {
+                self.http.block(error.clone());
+                config = ProxyConfig::Invalid(error.clone());
+                self.engine_config.proxy = config.clone();
+                self.emit(Event::Error(format!(
+                    "Network configuration failed: {error}"
+                )));
+            }
+            self.emit(Event::ProxyRestored { config, password });
+        }
+        if protected {
+            self.emit(Event::ProxyPasswordStored);
+        }
+        self.finish_proxy_restore();
+    }
+
+    fn finish_proxy_restore(&mut self) {
+        if !std::mem::take(&mut self.restoring_proxy) {
+            return;
+        }
+        self.restore_spotify_grants();
+        for command in self.waiting_for_proxy.drain(..) {
+            let _ = self.commands.send(command);
+        }
+    }
+
     async fn run(&mut self, mut commands: mpsc::UnboundedReceiver<Command>) {
         while let Some(command) = commands.recv().await {
+            if self.restoring_proxy
+                && !matches!(
+                    &command,
+                    Command::ProxyRestored { .. }
+                        | Command::ApplyProxy { .. }
+                        | Command::SignIn { .. }
+                        | Command::SignOut
+                        | Command::CancelSignIn
+                        | Command::Shutdown
+                )
+            {
+                self.waiting_for_proxy.push_back(command);
+                continue;
+            }
             match command {
                 Command::OpenThemesFolder => {
                     let directory = self.dirs.config.join("themes");
@@ -1189,6 +1398,7 @@ impl Worker {
                         }
                     });
                 }
+                Command::ProxyRestored { lease, result } => self.on_proxy_restored(lease, result),
                 Command::CredentialsRestored {
                     slot,
                     lease,
@@ -1252,7 +1462,7 @@ impl Worker {
                     });
                 }
                 Command::Shutdown => break,
-                Command::SignIn => self.sign_in(),
+                Command::SignIn { request, config } => self.change_proxy(request, config, true),
                 Command::CancelSignIn => {
                     self.authorization_attempt += 1;
                     if let Some(cancel) = self.cancel_signin.take() {
@@ -1271,9 +1481,15 @@ impl Worker {
                 }
                 Command::SignOut => self.sign_out(),
                 Command::AuthorizePlayback => self.authorize_playback(),
-                Command::RestartEngine(config) => {
+                Command::RestartEngine(mut config) => {
+                    // Audio settings must not revert a proxy change whose UI
+                    // acknowledgement was still in flight when this was clicked.
+                    config.proxy = self.engine_config.proxy.clone();
                     self.engine_config = config;
-                    self.reconnect_engine();
+                    self.replace_engine();
+                }
+                Command::ApplyProxy { request, config } => {
+                    self.change_proxy(request, config, false)
                 }
                 Command::Player(command) => match &self.engine {
                     Some(engine) => {
@@ -1428,16 +1644,21 @@ impl Worker {
                     });
                 }
                 Command::DownloadUpdate { release, source } => {
+                    let proxy = self.engine_config.proxy.clone();
                     let events = self.events.clone();
                     let waker = self.waker.clone();
                     tokio::task::spawn_blocking(move || {
-                        let result =
-                            crate::updates::download(&release, &source, |received, total| {
+                        let result = crate::updates::download(
+                            &release,
+                            &source,
+                            &proxy,
+                            |received, total| {
                                 let _ = events.send(Event::UpdateProgress { received, total });
                                 waker.wake();
-                            })
-                            .map(Box::new)
-                            .map_err(|error| format!("{error:#}"));
+                            },
+                        )
+                        .map(Box::new)
+                        .map_err(|error| format!("{error:#}"));
                         let _ = events.send(Event::UpdateDownloaded(result));
                         waker.wake();
                     });
@@ -1528,6 +1749,19 @@ impl Worker {
     // ---- Web API sign-in --------------------------------------------------
 
     fn restore_session(&mut self) {
+        self.restoring_proxy = true;
+        let lease = self.credentials.lease(CredentialSlot::Proxy);
+        let commands = self.commands.clone();
+        tokio::spawn(async move {
+            let result = lease.load().await;
+            let _ = commands.send(Command::ProxyRestored { lease, result });
+        });
+    }
+
+    fn restore_spotify_grants(&mut self) {
+        if std::mem::replace(&mut self.spotify_restore_started, true) {
+            return;
+        }
         self.restore_pending = [true; 3];
         self.api
             .set_state(ApiSource::Shared, SessionState::Authorizing);
@@ -1535,7 +1769,7 @@ impl Worker {
             self.api
                 .set_state(ApiSource::Personal, SessionState::Authorizing);
         }
-        for slot in CredentialSlot::ALL {
+        for slot in CredentialSlot::SPOTIFY {
             let lease = self.credentials.lease(slot);
             let commands = self.commands.clone();
             tokio::spawn(async move {
@@ -1555,6 +1789,9 @@ impl Worker {
         lease: CredentialLease,
         result: Result<crate::credentials::Loaded, crate::credentials::Error>,
     ) {
+        if slot == CredentialSlot::Proxy {
+            return;
+        }
         if !lease.current() {
             return;
         }
@@ -1597,7 +1834,7 @@ impl Worker {
                     }
                 }
             }
-            None => {}
+            None | Some(StoredGrant::Proxy(_)) => {}
         }
         if slot != CredentialSlot::Playback && self.web_tokens[slot.index()].is_none() {
             self.api.clear(if slot == CredentialSlot::Shared {
@@ -1804,6 +2041,13 @@ impl Worker {
     }
 
     fn sign_in_source(&mut self, source: ApiSource) {
+        let http = match self.http.client() {
+            Ok(http) => http,
+            Err(error) => {
+                self.emit(Event::Error(error));
+                return;
+            }
+        };
         if self.cancel_signin.is_some() {
             return;
         }
@@ -1843,7 +2087,6 @@ impl Worker {
                 log::warn!("unable to open a browser: {error}");
             }
         });
-        let http = self.http.clone();
         let events = self.events.clone();
         let waker = self.waker.clone();
         let commands = self.commands.clone();
@@ -1923,11 +2166,12 @@ impl Worker {
     }
 
     fn sign_out(&mut self) {
+        self.spotify_restore_started = true;
         self.cancel_search();
         self.signed_in = false;
         self.session.send_modify(|generation| *generation += 1);
         self.authorization_attempt += 1;
-        if let Err(error) = self.credentials.revoke_all() {
+        if let Err(error) = self.credentials.revoke_spotify() {
             self.emit(Event::Error(error.to_string()));
         }
         self.restore_pending = [false; 3];
@@ -1947,7 +2191,7 @@ impl Worker {
         self.authorizing_source = None;
         self.pending_authorization = None;
         self.api.clear_all();
-        for slot in CredentialSlot::ALL {
+        for slot in CredentialSlot::SPOTIFY {
             self.delete_stored_grant(slot);
         }
         self.emit(Event::Playback(LocalPlayback::Unavailable));
@@ -2012,14 +2256,50 @@ impl Worker {
         }
     }
 
-    /// Reconnect the engine after its session dropped or audio settings
-    /// changed. Whatever was playing comes back at the same spot on the new
-    /// session, so a dropped connection is a pause of a few seconds rather
-    /// than silence.
+    /// Replace the engine after a user-initiated change (audio settings or
+    /// an HTTP proxy). Does not count toward the drop limiter: flipping a
+    /// setting is not the session falling over.
+    fn replace_engine(&mut self) {
+        if !self.signed_in {
+            return;
+        }
+        if defer_engine_replace(self.engine_busy, &mut self.engine_restart_pending) {
+            return;
+        }
+        self.take_engine_for_resume();
+        self.resume_engine();
+    }
+
+    /// Reconnect the engine after its session dropped on its own. Whatever
+    /// was playing comes back at the same spot on the new session, so a
+    /// dropped connection is a pause of a few seconds rather than silence.
+    /// Six drops in ten minutes stop the loop so a flapping session cannot
+    /// sit there reconnecting forever.
     fn reconnect_engine(&mut self) {
         if !self.signed_in {
             return;
         }
+        if self.engine_busy {
+            return;
+        }
+        let now = Instant::now();
+        if session_drops_exhausted(&mut self.reconnects, now) {
+            self.take_engine_for_resume();
+            self.resume = None;
+            self.emit(Event::Playback(LocalPlayback::Failed(
+                "Local playback keeps dropping. Re-enable it from Settings.".into(),
+            )));
+            return;
+        }
+        self.reconnects.push(now);
+        log::info!(
+            "local playback session ended; reconnecting ({} of {RECONNECT_LIMIT} in ten minutes)",
+            self.reconnects.len()
+        );
+        self.replace_engine();
+    }
+
+    fn take_engine_for_resume(&mut self) {
         self.resume_verify = None;
         self.album_type_lookup.requeue_active_for_new_engine();
         if let Some(engine) = self.engine.take() {
@@ -2031,28 +2311,19 @@ impl Worker {
             });
             engine.shutdown();
         }
-        let now = Instant::now();
-        self.reconnects
-            .retain(|attempt| now.duration_since(*attempt) < Duration::from_secs(600));
-        if self.reconnects.len() >= 6 {
-            self.resume = None;
-            self.emit(Event::Playback(LocalPlayback::Failed(
-                "Local playback keeps dropping. Re-enable it from Settings.".into(),
-            )));
-            return;
-        }
-        self.reconnects.push(now);
-        log::info!(
-            "local playback session ended; reconnecting ({} of 6 in ten minutes)",
-            self.reconnects.len()
-        );
-        self.resume_engine();
     }
 
     /// Start (or re-enter) the playback authorization in the browser. This is
     /// a distinct grant from the Web API sign-in: it uses Spotify's streaming
     /// client identity, the one librespot can play with.
     fn authorize_playback(&mut self) {
+        let http = match self.http.client() {
+            Ok(http) => http,
+            Err(error) => {
+                self.emit(Event::Error(error));
+                return;
+            }
+        };
         if self.engine_busy || self.cancel_signin.is_some() {
             return;
         }
@@ -2077,7 +2348,7 @@ impl Worker {
                 log::warn!("unable to open a browser: {error}");
             }
         });
-        let http = self.http.clone();
+
         let events = self.events.clone();
         let waker = self.waker.clone();
         let commands = self.commands.clone();
@@ -2119,6 +2390,10 @@ impl Worker {
     /// on "Connecting to Spotify"). Reusable credentials stay in memory until
     /// this worker receives the connected engine and persists them securely.
     fn connect_engine(&mut self, credentials: Credentials) {
+        if let Err(error) = self.http.client() {
+            self.emit(Event::Playback(LocalPlayback::Failed(error)));
+            return;
+        }
         if self.engine_busy {
             return;
         }
@@ -2198,6 +2473,15 @@ impl Worker {
             return;
         }
         self.engine_busy = false;
+        if std::mem::take(&mut self.engine_restart_pending) {
+            if let Some(engine) = engine {
+                engine.shutdown();
+            }
+            // Keep `resume`: it belongs to the engine which was replaced,
+            // not to this stale attempt. The newest config is already stored.
+            self.resume_engine();
+            return;
+        }
         match engine {
             Some(engine) => {
                 if let Some(grant) = engine.credentials() {
@@ -2300,6 +2584,10 @@ impl Worker {
                 }
                 let credentials = credentials.ok_or_else(|| "Enable playback on this computer first, so there is an account to hand over".to_string())?;
                 let http = reqwest::blocking::Client::builder()
+                    // Receiver endpoints are private LAN addresses. Keep
+                    // them off environment and OS proxies even when System
+                    // mode is active.
+                    .no_proxy()
                     .timeout(std::time::Duration::from_secs(8))
                     .build()
                     .map_err(|error| error.to_string())?;
@@ -2317,13 +2605,16 @@ impl Worker {
     }
 
     fn check_for_updates(&self, manual: bool, source: crate::updates::Source) {
-        let http = self.http.clone();
+        let http = self.http.client();
         let events = self.events.clone();
         let waker = self.waker.clone();
         tokio::spawn(async move {
-            let result = crate::updates::newer_release_from(&http, &source)
-                .await
-                .map_err(|error| format!("{error:#}"));
+            let result = match http {
+                Ok(http) => crate::updates::newer_release_from(&http, &source)
+                    .await
+                    .map_err(|error| format!("{error:#}")),
+                Err(error) => Err(error),
+            };
             let _ = events.send(Event::UpdateChecked { manual, result });
             waker.wake();
         });
@@ -2426,7 +2717,7 @@ impl Worker {
     }
 
     fn fetch_lyrics(&self, request: LyricsRequest) {
-        let http = self.http.clone();
+        let http = self.http.client();
         let events = self.events.clone();
         let waker = self.waker.clone();
         let cache_dir = self.dirs.lyrics_cache_dir();
@@ -2437,9 +2728,12 @@ impl Worker {
             // falls back to LRCLIB.
             let result = match spotify_lyrics(engine, &request.uri, &cache_dir).await {
                 Some(found) => Ok(Some(found)),
-                None => crate::lyrics::fetch(&http, &cache_dir, &request.query)
-                    .await
-                    .map_err(|error| format!("{error:#}")),
+                None => match http {
+                    Ok(http) => crate::lyrics::fetch(&http, &cache_dir, &request.query)
+                        .await
+                        .map_err(|error| format!("{error:#}")),
+                    Err(error) => Err(error),
+                },
             };
             let _ = events.send(Event::Lyrics {
                 uri: request.uri,
@@ -3580,6 +3874,110 @@ mod authorization_tests {
     use super::*;
 
     #[test]
+    fn proxy_restoration_defers_work_without_blocking_shutdown() {
+        let (runtime, mut worker, _) = worker("proxy-restore-barrier");
+        worker.restoring_proxy = true;
+        let mut audio = worker.engine_config.clone();
+        audio.proxy = ProxyConfig::System;
+        let (commands, receiver) = mpsc::unbounded_channel();
+        commands.send(Command::RestartEngine(audio)).unwrap();
+        commands.send(Command::Shutdown).unwrap();
+        runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(1), worker.run(receiver))
+                .await
+                .unwrap();
+        });
+        assert_eq!(worker.waiting_for_proxy.len(), 1);
+        assert_eq!(worker.engine_config.proxy, ProxyConfig::Off);
+    }
+
+    #[test]
+    fn an_invalid_saved_proxy_keeps_restored_network_work_blocked() {
+        let (runtime, mut worker, events) = worker("proxy-restore-invalid");
+        let _entered = runtime.enter();
+        let invalid = ProxyConfig::Invalid("Proxy port must be a number".into());
+        worker.engine_config.proxy = invalid.clone();
+        worker.restoring_proxy = true;
+        worker.on_proxy_restored(
+            worker.credentials.lease(CredentialSlot::Proxy),
+            Ok(crate::credentials::Loaded {
+                grant: None,
+                warning: None,
+            }),
+        );
+        assert!(worker.http.client().is_err());
+        assert!(!worker.restoring_proxy);
+        assert!(events.try_iter().any(
+            |event| matches!(event, Event::ProxyRestored { config, .. } if config == invalid)
+        ));
+    }
+
+    #[test]
+    fn explicit_proxy_apply_can_complete_before_native_restoration() {
+        let (runtime, mut worker, events) = worker("proxy-restore-apply");
+        let _entered = runtime.enter();
+        worker.restoring_proxy = true;
+        let old = worker.credentials.lease(CredentialSlot::Proxy);
+        worker.change_proxy(1, ProxyConfig::System, false);
+        assert!(!worker.restoring_proxy);
+        assert!(worker.http.client().is_ok());
+        worker.on_proxy_restored(
+            old,
+            Ok(crate::credentials::Loaded {
+                grant: None,
+                warning: None,
+            }),
+        );
+        assert_eq!(worker.engine_config.proxy, ProxyConfig::System);
+        assert!(
+            events
+                .try_iter()
+                .all(|event| !matches!(event, Event::ProxyRestored { .. }))
+        );
+    }
+
+    #[test]
+    fn audio_settings_cannot_revert_a_proxy_waiting_for_its_ui_acknowledgement() {
+        let (runtime, mut worker, _) = worker("proxy-audio-restart");
+        let old_audio = worker.engine_config.clone();
+        let settings = crate::settings::Settings {
+            proxy_mode: crate::settings::ProxyMode::Http,
+            proxy_host: "127.0.0.1".into(),
+            proxy_port: "8080".into(),
+            ..Default::default()
+        };
+        let proxy = settings.proxy_config().unwrap();
+        let (commands, receiver) = mpsc::unbounded_channel();
+        commands
+            .send(Command::ApplyProxy {
+                request: 1,
+                config: proxy.clone(),
+            })
+            .unwrap();
+        commands.send(Command::RestartEngine(old_audio)).unwrap();
+        commands.send(Command::Shutdown).unwrap();
+        runtime.block_on(worker.run(receiver));
+        assert_eq!(worker.engine_config.proxy, proxy);
+    }
+
+    #[test]
+    fn a_rejected_proxy_change_does_not_replace_the_live_configuration() {
+        let (runtime, mut worker, events) = worker("rejected-proxy");
+        let _entered = runtime.enter();
+        let original = worker.engine_config.proxy.clone();
+        let bad = ProxyConfig::Invalid("Proxy port must be a number".into());
+        worker.change_proxy(1, bad.clone(), false);
+        assert_eq!(worker.engine_config.proxy, original);
+        assert!(!worker.engine_restart_pending);
+        assert!(worker.http.client().is_ok());
+        let answers: Vec<_> = events.try_iter().collect();
+        assert_eq!(answers.len(), 1);
+        assert!(
+            matches!(&answers[0], Event::ProxyApplied { config, result: Err(_), .. } if config == &bad)
+        );
+    }
+
+    #[test]
     fn expired_grants_are_forgotten_and_a_new_sign_in_completes_without_restart() {
         let (runtime, mut worker, events) = worker("expired-then-sign-in");
         runtime.block_on(async {
@@ -3684,10 +4082,11 @@ mod authorization_tests {
         let config = crate::app::engine_config(
             &dirs,
             &settings,
+            ProxyConfig::Off,
             crate::vis::AudioTap::new(),
             crate::eq::shared(),
         );
-        let http = reqwest::Client::new();
+        let http = Http::new(reqwest::Client::new());
         let art = ArtLoader::new(http.clone(), runtime.handle().clone(), dirs.art_cache_dir());
         let (sender, events) = std::sync::mpsc::channel();
         let (commands, _) = mpsc::unbounded_channel();
@@ -4334,5 +4733,48 @@ mod cover_routing_tests {
             operation_for(&api, &request),
             Operation::PlaylistMutation(PlaylistAccess::Collaborative)
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn six_session_drops_in_ten_minutes_give_up() {
+        let start = Instant::now();
+        let mut reconnects = Vec::new();
+        for i in 0..RECONNECT_LIMIT {
+            let at = start + Duration::from_secs(i as u64);
+            assert!(
+                !session_drops_exhausted(&mut reconnects, at),
+                "attempt {i} should still reconnect"
+            );
+            reconnects.push(at);
+        }
+        assert!(session_drops_exhausted(
+            &mut reconnects,
+            start + Duration::from_secs(30)
+        ));
+    }
+
+    #[test]
+    fn session_drops_outside_the_window_do_not_count() {
+        let start = Instant::now();
+        let mut reconnects = vec![start; RECONNECT_LIMIT];
+        assert!(!session_drops_exhausted(
+            &mut reconnects,
+            start + RECONNECT_WINDOW + Duration::from_secs(1)
+        ));
+        assert!(reconnects.is_empty());
+    }
+
+    #[test]
+    fn an_engine_change_during_connect_is_deferred() {
+        let mut pending = false;
+        assert!(defer_engine_replace(true, &mut pending));
+        assert!(pending);
+        assert!(!defer_engine_replace(false, &mut pending));
+        assert!(pending, "finishing the attempt owns clearing the request");
     }
 }

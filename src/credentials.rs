@@ -1,4 +1,4 @@
-//! Durable Spotify grants in the platform credential store.
+//! Durable Spotify grants and proxy passwords in the platform credential store.
 //!
 //! All native calls run on one dedicated thread. A locked store cannot hold
 //! the UI, command loop, or runtime shutdown hostage. Generation checks reject
@@ -29,10 +29,12 @@ pub enum Slot {
     Shared,
     Personal,
     Playback,
+    Proxy,
 }
 
 impl Slot {
-    pub const ALL: [Self; 3] = [Self::Shared, Self::Personal, Self::Playback];
+    pub const SPOTIFY: [Self; 3] = [Self::Shared, Self::Personal, Self::Playback];
+    pub const ALL: [Self; 4] = [Self::Shared, Self::Personal, Self::Playback, Self::Proxy];
     pub(crate) fn index(self) -> usize {
         self as usize
     }
@@ -41,6 +43,7 @@ impl Slot {
             Self::Shared => "shared-web",
             Self::Personal => "personal-web",
             Self::Playback => "playback",
+            Self::Proxy => "proxy-password",
         }
     }
 }
@@ -50,6 +53,30 @@ impl Slot {
 pub enum Grant {
     Web(StoredToken),
     Playback(Credentials),
+    Proxy(ProxyPassword),
+}
+
+/// No Debug implementation: the password is usable, and the username is private.
+/// A saved password belongs to one network endpoint and username.
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProxyPassword {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+}
+
+impl ProxyPassword {
+    fn valid(&self) -> bool {
+        let settings = crate::settings::Settings {
+            proxy_host: self.host.clone(),
+            proxy_port: self.port.to_string(),
+            proxy_username: self.username.clone(),
+            proxy_password: self.password.clone(),
+            ..Default::default()
+        };
+        settings.proxy_password_record().ok().flatten().as_ref() == Some(self)
+    }
 }
 
 impl Grant {
@@ -69,6 +96,7 @@ impl Grant {
                     .is_some_and(|name| !name.is_empty())
                     && !credentials.auth_data.is_empty()
             }
+            (Slot::Proxy, Self::Proxy(password)) => password.valid(),
             _ => false,
         }
     }
@@ -105,6 +133,29 @@ pub enum Error {
     Verification,
     #[error("The sign-in changed while credential storage was in progress.")]
     Stale,
+}
+
+impl Error {
+    pub(crate) fn proxy_message(self) -> &'static str {
+        match self {
+            Self::Unavailable | Self::Locked => {
+                "Unlock or enable the system credential store to remember the proxy password."
+            }
+            Self::Timeout => {
+                "The credential store did not respond. The proxy password is available only for this session."
+            }
+            Self::Invalid => {
+                "The stored proxy password or its endpoint is invalid. Enter the proxy settings again."
+            }
+            Self::Filesystem => {
+                "Unable to update proxy-password storage. Check the application state directory permissions."
+            }
+            Self::Verification => {
+                "The credential store did not retain the proxy password. It is available only for this session."
+            }
+            Self::Stale => "The proxy settings changed while the password was being stored.",
+        }
+    }
 }
 
 fn native_error(error: keyring_core::Error) -> Error {
@@ -170,7 +221,7 @@ type Job = Box<dyn FnOnce(&mut dyn ProtectedStore) + Send>;
 struct Inner {
     dirs: AppDirs,
     profile: String,
-    generations: [AtomicU64; 3],
+    generations: [AtomicU64; 4],
     // Held only around the tiny local marker files, never a native store call.
     markers: Mutex<()>,
     jobs: mpsc::SyncSender<Job>,
@@ -259,9 +310,9 @@ impl Store {
         marker.and(legacy)
     }
 
-    pub fn revoke_all(&self) -> Result<(), Error> {
+    pub fn revoke_spotify(&self) -> Result<(), Error> {
         let mut error = None;
-        for slot in Slot::ALL {
+        for slot in Slot::SPOTIFY {
             if let Err(failure) = self.revoke(slot) {
                 error = Some(failure);
             }
@@ -314,11 +365,16 @@ impl Store {
     }
 
     fn legacy_paths(&self, slot: Slot) -> Vec<PathBuf> {
+        if slot == Slot::Proxy {
+            let path = self.inner.dirs.proxy_secret_file();
+            return vec![path.clone(), path.with_extension("tmp")];
+        }
         let dirs = &self.inner.dirs;
         let path = match slot {
             Slot::Shared => dirs.shared_web_token_file(),
             Slot::Personal => dirs.personal_web_token_file(),
             Slot::Playback => dirs.credentials_dir().join("credentials.json"),
+            Slot::Proxy => unreachable!("proxy legacy paths handled above"),
         };
         let mut paths = vec![path.clone(), path.with_extension("json.tmp")];
         if slot != Slot::Playback {
@@ -344,7 +400,36 @@ impl Store {
         result
     }
 
+    fn legacy_proxy(&self) -> Result<Option<Grant>, Error> {
+        let text = match std::fs::read_to_string(self.inner.dirs.settings_file()) {
+            Ok(text) => text,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                return match self.inner.dirs.proxy_secret_file().try_exists() {
+                    Ok(false) => Ok(None),
+                    Ok(true) => Err(Error::Invalid),
+                    Err(_) => Err(Error::Filesystem),
+                };
+            }
+            Err(_) => return Err(Error::Filesystem),
+        };
+        let mut settings: crate::settings::Settings =
+            serde_json::from_str(&text).map_err(|_| Error::Invalid)?;
+        settings.migrate_proxy(&text);
+        match std::fs::read_to_string(self.inner.dirs.proxy_secret_file()) {
+            Ok(password) => settings.proxy_password = password,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(_) => return Err(Error::Filesystem),
+        }
+        settings
+            .proxy_password_record()
+            .map(|password| password.map(Grant::Proxy))
+            .map_err(|_| Error::Invalid)
+    }
+
     fn legacy(&self, slot: Slot) -> Result<Option<Grant>, Error> {
+        if slot == Slot::Proxy {
+            return self.legacy_proxy();
+        }
         for path in self
             .legacy_paths(slot)
             .into_iter()
@@ -650,13 +735,141 @@ mod tests {
     fn playback() -> Grant {
         Grant::Playback(Credentials { username: Some("dummy-account".into()), auth_data: b"dummy-reusable-grant".to_vec(), auth_type: librespot_protocol::authentication::AuthenticationType::AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS })
     }
+    fn proxy_password() -> Grant {
+        Grant::Proxy(ProxyPassword {
+            host: "127.0.0.1".into(),
+            port: 8080,
+            username: "dummy-user".into(),
+            password: " dummy-private-password\n".into(),
+        })
+    }
+
     fn write_legacy(path: &Path, grant: &Grant) {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         let bytes = match grant {
             Grant::Web(token) => serde_json::to_vec(token).unwrap(),
             Grant::Playback(credentials) => serde_json::to_vec(credentials).unwrap(),
+            Grant::Proxy(password) => password.password.as_bytes().to_vec(),
         };
         std::fs::write(path, bytes).unwrap();
+    }
+
+    fn write_proxy_legacy(f: &Fixture, combined: bool) -> Grant {
+        let Grant::Proxy(password) = proxy_password() else {
+            unreachable!()
+        };
+        let settings = crate::settings::Settings {
+            proxy_mode: crate::settings::ProxyMode::Http,
+            proxy_host: password.host.clone(),
+            proxy_port: password.port.to_string(),
+            proxy_username: password.username.clone(),
+            ..Default::default()
+        };
+        let mut json = serde_json::to_value(settings).unwrap();
+        if combined {
+            json["proxy_password"] = password.password.clone().into();
+        }
+        std::fs::write(f.dirs.settings_file(), serde_json::to_vec(&json).unwrap()).unwrap();
+        if !combined {
+            std::fs::write(f.dirs.proxy_secret_file(), password.password.as_bytes()).unwrap();
+        }
+        Grant::Proxy(password)
+    }
+
+    #[tokio::test]
+    async fn proxy_password_migration_verifies_before_removing_legacy_data() {
+        for combined in [false, true] {
+            let f = Fixture::new();
+            let expected = write_proxy_legacy(&f, combined);
+            let settings_before = std::fs::read(f.dirs.settings_file()).unwrap();
+            let loaded = f.store.lease(Slot::Proxy).load().await.unwrap();
+            assert!(loaded.grant == Some(expected.clone()));
+            assert_eq!(loaded.warning, None);
+            assert!(!f.dirs.proxy_secret_file().exists());
+            // Settings belong to the UI thread. A verified event permits its
+            // next atomic save to remove the legacy JSON password.
+            assert_eq!(
+                std::fs::read(f.dirs.settings_file()).unwrap(),
+                settings_before
+            );
+            assert!(f.restart().lease(Slot::Proxy).load().await.unwrap().grant == Some(expected));
+        }
+    }
+
+    #[tokio::test]
+    async fn a_failed_proxy_migration_retains_the_exact_original_and_can_retry() {
+        for combined in [false, true] {
+            let f = Fixture::new();
+            let expected = write_proxy_legacy(&f, combined);
+            let path = if combined {
+                f.dirs.settings_file()
+            } else {
+                f.dirs.proxy_secret_file()
+            };
+            let before = std::fs::read(&path).unwrap();
+            f.fake.lock().unwrap().write_error = Some(Error::Locked);
+            let loaded = f.store.lease(Slot::Proxy).load().await.unwrap();
+            assert!(
+                loaded.grant == Some(expected.clone()),
+                "legacy password still serves this session"
+            );
+            assert_eq!(loaded.warning, Some(Error::Locked));
+            assert_eq!(std::fs::read(&path).unwrap(), before);
+            f.fake.lock().unwrap().write_error = None;
+            let loaded = f.restart().lease(Slot::Proxy).load().await.unwrap();
+            assert!(loaded.grant == Some(expected));
+            assert_eq!(loaded.warning, None);
+        }
+    }
+
+    #[tokio::test]
+    async fn spotify_sign_out_retains_the_network_password() {
+        let f = Fixture::new();
+        let password = proxy_password();
+        f.store
+            .lease(Slot::Proxy)
+            .save(password.clone())
+            .await
+            .unwrap();
+        f.store
+            .lease(Slot::Shared)
+            .save(web(crate::auth::DEFAULT_WEB_CLIENT_ID))
+            .await
+            .unwrap();
+        f.store.revoke_spotify().unwrap();
+        let restarted = f.restart();
+        assert!(restarted.lease(Slot::Proxy).load().await.unwrap().grant == Some(password));
+        assert!(
+            restarted
+                .lease(Slot::Shared)
+                .load()
+                .await
+                .unwrap()
+                .grant
+                .is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn a_failed_proxy_delete_cannot_restore_the_forgotten_password() {
+        let f = Fixture::new();
+        let password = write_proxy_legacy(&f, true);
+        f.store.lease(Slot::Proxy).save(password).await.unwrap();
+        f.fake.lock().unwrap().delete_error = Some(Error::Locked);
+        f.store.revoke(Slot::Proxy).unwrap();
+        assert_eq!(
+            f.store.lease(Slot::Proxy).delete().await,
+            Err(Error::Locked)
+        );
+        assert!(
+            f.restart()
+                .lease(Slot::Proxy)
+                .load()
+                .await
+                .unwrap()
+                .grant
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -668,6 +881,7 @@ mod tests {
             web(crate::auth::DEFAULT_WEB_CLIENT_ID),
             web("dummy-personal-client"),
             playback(),
+            proxy_password(),
         ];
         for (slot, grant) in Slot::ALL.into_iter().zip(grants.iter()) {
             store.lease(slot).save(grant.clone()).await.unwrap();
@@ -676,7 +890,8 @@ mod tests {
         for (slot, grant) in Slot::ALL.into_iter().zip(grants) {
             assert!(restarted.lease(slot).load().await.unwrap().grant == Some(grant));
         }
-        store.revoke_all().unwrap();
+        store.revoke_spotify().unwrap();
+        store.revoke(Slot::Proxy).unwrap();
         for slot in Slot::ALL {
             let lease = store.lease(slot);
             lease.delete().await.unwrap();
@@ -736,7 +951,11 @@ mod tests {
             f.dirs.personal_web_token_file(),
             f.dirs.credentials_dir().join("credentials.json"),
         ];
-        for ((slot, grant), path) in Slot::ALL.into_iter().zip(grants.iter()).zip(paths.iter()) {
+        for ((slot, grant), path) in Slot::SPOTIFY
+            .into_iter()
+            .zip(grants.iter())
+            .zip(paths.iter())
+        {
             write_legacy(path, grant);
             let loaded = f.store.lease(slot).load().await.unwrap();
             assert!(loaded.grant.as_ref() == Some(grant));
@@ -746,7 +965,7 @@ mod tests {
             assert!(!marker.contains("dummy"));
         }
         let restarted = f.restart();
-        for (slot, grant) in Slot::ALL.into_iter().zip(grants) {
+        for (slot, grant) in Slot::SPOTIFY.into_iter().zip(grants) {
             assert!(restarted.lease(slot).load().await.unwrap().grant == Some(grant));
         }
         assert_eq!(f.fake.lock().unwrap().values.len(), 3);
@@ -817,7 +1036,7 @@ mod tests {
                 .await
         });
         entered_rx.await.unwrap();
-        f.store.revoke_all().unwrap();
+        f.store.revoke_spotify().unwrap();
         assert!(!lease.current());
         release_tx.send(()).unwrap();
         assert_eq!(pending.await.unwrap(), Err(Error::Stale));
@@ -842,7 +1061,7 @@ mod tests {
             .await
             .unwrap();
         f.fake.lock().unwrap().delete_error = Some(Error::Locked);
-        f.store.revoke_all().unwrap();
+        f.store.revoke_spotify().unwrap();
         assert_eq!(
             f.store.lease(Slot::Shared).delete().await,
             Err(Error::Locked)
@@ -881,7 +1100,7 @@ mod tests {
                 .grant
                 .is_none()
         );
-        f.store.revoke_all().unwrap();
+        f.store.revoke_spotify().unwrap();
         write_legacy(&f.dirs.shared_web_token_file(), &grant);
         assert!(
             f.restart()
@@ -908,8 +1127,8 @@ mod tests {
             std::fs::write(path, b"corrupt-dummy-grant").unwrap();
             std::fs::write(path.with_extension("json.tmp"), b"partial-dummy-grant").unwrap();
         }
-        f.store.revoke_all().unwrap();
-        f.store.revoke_all().unwrap();
+        f.store.revoke_spotify().unwrap();
+        f.store.revoke_spotify().unwrap();
         for path in paths {
             assert!(!path.exists());
             assert!(!path.with_extension("json.tmp").exists());

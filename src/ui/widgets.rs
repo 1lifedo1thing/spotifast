@@ -1,7 +1,8 @@
 //! Widgets shared by every view: covers, cards, track rows, menus, sliders.
 
 use egui::{
-    Align, Color32, CornerRadius, Layout, Rect, Sense, Stroke, Ui, UiBuilder, Vec2, pos2, vec2,
+    Align, Color32, CornerRadius, Frame, Layout, Margin, Rect, Sense, Stroke, Ui, UiBuilder, Vec2,
+    pos2, vec2,
 };
 
 use crate::api::models::*;
@@ -2427,6 +2428,115 @@ pub fn setting_row(
     ui.add_space(10.0);
 }
 
+/// A labelled text field: the caption sits above the box.
+pub fn labeled_field(
+    ui: &mut Ui,
+    palette: &Palette,
+    label: &str,
+    value: &mut String,
+    hint: &str,
+    password: bool,
+) -> egui::Response {
+    let response = ui
+        .vertical(|ui| {
+            theme::text(ui, label, theme::medium(13.0), palette.text);
+            ui.add_space(6.0);
+            Frame::new()
+                .fill(palette.surface)
+                .corner_radius(CornerRadius::same(8))
+                .inner_margin(Margin::symmetric(12, 10))
+                .show(ui, |ui| {
+                    text_edit(
+                        ui,
+                        egui::TextEdit::singleline(value)
+                            .hint_text(egui::RichText::new(hint).color(palette.dim))
+                            .font(theme::regular(14.0))
+                            .password(password)
+                            .frame(egui::Frame::NONE)
+                            .desired_width(ui.available_width()),
+                    )
+                })
+                .inner
+        })
+        .inner;
+    ui.ctx()
+        .accesskit_node_builder(response.id, |node| node.set_label(label));
+    response
+}
+
+/// Host, port, username, and password in two columns.
+pub fn proxy_manual_form(
+    ui: &mut Ui,
+    palette: &Palette,
+    host: &mut String,
+    port: &mut String,
+    username: &mut String,
+    password: &mut String,
+) -> bool {
+    let mut changed = false;
+    let mut address_changed = false;
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 12.0;
+        let half = ((ui.available_width() - 12.0) / 2.0).max(80.0);
+        ui.vertical(|ui| {
+            ui.set_width(half);
+            if labeled_field(ui, palette, "Host", host, "127.0.0.1", false).changed() {
+                changed = true;
+                address_changed = true;
+            }
+        });
+        ui.vertical(|ui| {
+            ui.set_width(half);
+            if labeled_field(ui, palette, "Port", port, "1080", false).changed() {
+                changed = true;
+                address_changed = true;
+            }
+        });
+    });
+    ui.add_space(10.0);
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 12.0;
+        let half = ((ui.available_width() - 12.0) / 2.0).max(80.0);
+        ui.vertical(|ui| {
+            ui.set_width(half);
+            if labeled_field(ui, palette, "Username", username, "Username", false).changed() {
+                changed = true;
+                address_changed = true;
+            }
+        });
+        ui.vertical(|ui| {
+            ui.set_width(half);
+            if address_changed {
+                password.clear();
+            }
+            if labeled_field(ui, palette, "Password", password, "Password", true).changed() {
+                changed = true;
+            }
+        });
+    });
+    changed
+}
+
+pub fn proxy_scope_note(ui: &mut Ui, palette: &Palette, mode: crate::settings::ProxyMode) {
+    let note = match mode {
+        crate::settings::ProxyMode::Http => {
+            "Proxy login applies to Web requests. Local playback uses this proxy only without a login."
+        }
+        crate::settings::ProxyMode::Socks => {
+            "Spotify hostnames are resolved by the proxy. Local playback connects directly."
+        }
+        crate::settings::ProxyMode::Off | crate::settings::ProxyMode::System => return,
+    };
+    ui.add(
+        egui::Label::new(
+            egui::RichText::new(note)
+                .font(theme::regular(13.0))
+                .color(palette.secondary),
+        )
+        .wrap(),
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2434,6 +2544,70 @@ mod tests {
     use crate::model::{Action, Page};
     use crate::paths::AppDirs;
     use crate::settings::Settings;
+
+    #[test]
+    fn editing_a_proxy_endpoint_clears_its_password_but_password_entry_is_preserved() {
+        for label in ["Host", "Port", "Username", "Password"] {
+            let ctx = egui::Context::default();
+            ctx.enable_accesskit();
+            theme::install(&ctx);
+            let mut fields = [
+                "127.0.0.1".to_string(),
+                "8080".into(),
+                "dummy-user".into(),
+                "dummy-password".into(),
+            ];
+            let mut frame = |events| {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            vec2(600.0, 400.0),
+                        )),
+                        events,
+                        ..Default::default()
+                    },
+                    |ui| {
+                        let [host, port, username, password] = &mut fields;
+                        proxy_manual_form(ui, &Palette::dark(), host, port, username, password);
+                    },
+                );
+                output.textures_delta.clear();
+                output
+            };
+            let tree = frame(vec![]).platform_output.accesskit_update.unwrap();
+            let target = tree
+                .nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.label() == Some(label)
+                        && matches!(
+                            node.role(),
+                            egui::accesskit::Role::TextInput | egui::accesskit::Role::PasswordInput
+                        )
+                })
+                .expect("labeled proxy field")
+                .0;
+            frame(vec![egui::Event::AccessKitActionRequest(
+                egui::accesskit::ActionRequest {
+                    target_tree: egui::accesskit::TreeId::ROOT,
+                    target_node: target,
+                    action: egui::accesskit::Action::Focus,
+                    data: None,
+                },
+            )]);
+            frame(vec![egui::Event::Text("x".into())]);
+            if label == "Password" {
+                assert!(fields[3].contains("dummy-password"));
+                assert!(fields[3].contains('x'));
+            } else {
+                assert!(
+                    fields[3].is_empty(),
+                    "{label} must clear the previous endpoint's password"
+                );
+            }
+        }
+    }
 
     struct TextMenu {
         ctx: egui::Context,

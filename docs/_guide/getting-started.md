@@ -56,9 +56,21 @@ Start the app and press **Sign in with Spotify**. Your browser opens Spotify's
 consent page, so Spotifast never sees your password. When the browser returns
 to the app, your library loads.
 
-Spotifast stores a refresh token in your platform's state directory
-(`~/.local/state/fastpotify` on Linux). You normally need the browser only
-once per machine.
+Spotifast stores the grant in your system credential store. You normally
+need the browser only once per machine.
+
+On `main`, after 0.8.0, if Spotify is only reachable through a proxy, set it on the sign-in screen
+before you grant access: Off, System, HTTP, or SOCKS5. A manual HTTP or
+SOCKS5 proxy needs a host and a port; username and password are optional.
+The password uses your system credential store and stays out of
+`settings.json`. If the store is unavailable, a newly entered password works
+for this session and Spotifast reports that it could not remember it.
+Authentication applies to Web requests; local playback
+uses only an unauthenticated HTTP proxy and otherwise connects directly.
+SOCKS5 resolves Spotify hostnames at the proxy. After sign-in, the same choice
+lives in Settings → Proxy.
+The browser used for approval keeps its own proxy settings; configure it
+separately if it also needs a proxy to reach Spotify.
 
 ## Enable playback on this computer
 

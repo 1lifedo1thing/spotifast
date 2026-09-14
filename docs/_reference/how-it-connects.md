@@ -254,3 +254,44 @@ When a proxy is configured, only its name is resolved locally. The target
 name is sent through CONNECT, and a proxy failure never falls back to a
 direct connection. Proxy URLs and credentials are not logged by this
 connector. The change adds no destination or background polling.
+
+## Proxy
+
+On `main`, after 0.8.0, Settings → Proxy has four modes:
+
+- **Off**: a direct connection. Environment proxy variables are ignored.
+- **System**: `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY`, and on macOS and
+  Windows the OS proxy. This is the default.
+- **HTTP**: a configured HTTP proxy: host, port, and optional login.
+- **SOCKS5**: a configured SOCKS5 proxy: host, port, and optional login.
+  Spotify hostnames are resolved by that proxy.
+
+The mode selects the protocol. Host and port are separate fields.
+These settings apply to Spotifast's requests. The external browser used
+for Spotify approval keeps its own network and proxy settings.
+
+The Web API, artwork, lyrics, update checks and downloads, and MilkDrop preset
+downloads follow that mode. Update downloads retain their release-host redirect
+restrictions and checksum verification. Local receivers on the LAN are never sent through a proxy.
+
+Local playback can only use an unauthenticated, plaintext HTTP proxy: that is
+what librespot's CONNECT client supports. Proxy login still covers catalogue
+and control, but the engine then connects to Spotify directly. SOCKS5 behaves
+the same way for local playback. System uses the same proxy reqwest would
+(environment variables, and the OS proxy on macOS and Windows) only when it
+is an unauthenticated `http://` endpoint; authenticated, `https://`, and SOCKS
+system proxies are ignored by the engine. Changing the HTTP proxy the engine
+would actually use restarts local playback.
+
+Off and System apply immediately. HTTP and SOCKS5 apply when you press
+**Apply settings**. The same choice is on the sign-in screen, so it can be
+set before the first grant. The expanded sign-in form scrolls in short windows.
+Manual edits remain drafts until the backend
+accepts Apply or Sign in. Saving another preference does not save those drafts.
+A configuration that cannot be built produces an error without silently
+switching to a direct connection. Applying a valid configuration repairs it.
+
+On startup, network work waits for the protected proxy password to be restored.
+That lookup runs on the credential worker and does not block the interface or
+shutdown. The password belongs to its host, port, and username; editing any of
+these fields clears it. See [password storage and migration](/settings-and-files/).

@@ -17,6 +17,7 @@ use tokio::sync::Semaphore;
 
 use super::ApiSource;
 use super::models::*;
+use crate::http::Http;
 
 const BASE_URL: &str = "https://api.spotify.com/v1";
 const MAX_IN_FLIGHT: usize = 6;
@@ -95,7 +96,7 @@ impl TokenProvider {
 
 /// The Web API grant, refreshed and persisted as it ages.
 pub struct WebTokens {
-    http: reqwest::Client,
+    http: Http,
     token: tokio::sync::Mutex<crate::auth::StoredToken>,
     lease: crate::credentials::Lease,
     remember: std::sync::atomic::AtomicBool,
@@ -105,14 +106,14 @@ pub struct WebTokens {
 
 impl WebTokens {
     pub fn new(
-        http: reqwest::Client,
+        http: impl Into<Http>,
         token: crate::auth::StoredToken,
         lease: crate::credentials::Lease,
         source: ApiSource,
         storage_error: std::sync::Arc<dyn Fn(crate::credentials::Error) + Send + Sync>,
     ) -> std::sync::Arc<Self> {
         std::sync::Arc::new(Self {
-            http,
+            http: http.into(),
             token: tokio::sync::Mutex::new(token),
             lease,
             remember: std::sync::atomic::AtomicBool::new(false),
@@ -145,7 +146,13 @@ impl WebTokens {
         if force || guard.needs_refresh() {
             let client_id = guard.client_id.clone();
             let refresh_token = guard.refresh_token.clone();
-            match crate::auth::refresh(&self.http, &client_id, &refresh_token).await {
+            match crate::auth::refresh(
+                &self.http.client().map_err(ApiError::Network)?,
+                &client_id,
+                &refresh_token,
+            )
+            .await
+            {
                 Ok(response) => match crate::auth::StoredToken::from_response(
                     &client_id,
                     response,
@@ -304,7 +311,7 @@ impl Drop for ActivityGuard<'_> {
 pub struct ApiClient {
     #[cfg(test)]
     base_url: Option<String>,
-    http: reqwest::Client,
+    http: Http,
     tokens: Mutex<Option<TokenProvider>>,
     limiter: Semaphore,
     cooldown_until: tokio::sync::Mutex<Instant>,
@@ -316,7 +323,7 @@ pub struct ApiClient {
 
 impl ApiClient {
     pub fn new(
-        http: reqwest::Client,
+        http: impl Into<Http>,
         activity: Arc<NetActivity>,
         search_limit: u32,
         artist_albums_limit: u32,
@@ -325,7 +332,7 @@ impl ApiClient {
         Self {
             #[cfg(test)]
             base_url: None,
-            http,
+            http: http.into(),
             tokens: Mutex::new(None),
             limiter: Semaphore::new(MAX_IN_FLIGHT),
             cooldown_until: tokio::sync::Mutex::new(Instant::now()),
@@ -426,6 +433,8 @@ impl ApiClient {
             let token = provider.access_token().await?;
             let mut request = self
                 .http
+                .client()
+                .map_err(ApiError::Network)?
                 .request(method.clone(), &url)
                 .bearer_auth(&token)
                 .query(query);
@@ -1151,7 +1160,7 @@ mod tests {
         assert!(store.lease(slot).load().await.unwrap().grant.is_none());
         tokens.remember().await.unwrap();
         assert!(store.lease(slot).load().await.unwrap().grant.is_some());
-        store.revoke_all().unwrap();
+        store.revoke_spotify().unwrap();
         store.lease(slot).delete().await.unwrap();
         assert!(matches!(
             tokens.access_token(false).await,

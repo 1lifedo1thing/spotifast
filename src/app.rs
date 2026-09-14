@@ -171,6 +171,15 @@ struct Listening {
 pub struct App {
     pub dirs: AppDirs,
     pub settings: Settings,
+    /// Proxy policy actually handed to network workers. Manual form edits are
+    /// drafts until Apply (or Sign in), so unrelated downloads and engine
+    /// restarts must not observe them early.
+    applied_proxy: crate::settings::ProxyConfig,
+    applied_proxy_preferences: crate::settings::ProxyPreferences,
+    pending_proxy_preferences: HashMap<u64, crate::settings::ProxyPreferences>,
+    proxy_request: u64,
+    last_proxy_applied: u64,
+    proxy_form_edited: bool,
     settings_dirty: bool,
     last_settings_save: Instant,
     pub backend: Backend,
@@ -492,16 +501,25 @@ const GLIDE_START: f32 = 120.0;
 const GLIDE_STOP: f32 = 40.0;
 
 impl App {
-    pub fn new(waker: &Waker, dirs: AppDirs, settings: Settings, options: AppOptions) -> Self {
+    pub fn new(waker: &Waker, dirs: AppDirs, mut settings: Settings, options: AppOptions) -> Self {
+        // The legacy password file has no endpoint of its own. Keep the old
+        // settings beside it until migration binds that password in the store.
+        settings.proxy_password_legacy |= dirs.proxy_secret_file().try_exists().unwrap_or(true);
         let plays = crate::history::History::load(&dirs.history_file());
         let tap = crate::vis::AudioTap::new();
         let eq = crate::eq::shared();
         if let Ok(mut shared) = eq.lock() {
             *shared = eq_settings(&settings);
         }
+        let applied_proxy_preferences = settings.proxy_preferences();
+        let applied_proxy = match settings.proxy_config() {
+            Ok(proxy) => proxy,
+            Err(error) => crate::settings::ProxyConfig::Invalid(error),
+        };
         let engine_config = engine_config(
             &dirs,
             &settings,
+            applied_proxy.clone(),
             std::sync::Arc::clone(&tap),
             std::sync::Arc::clone(&eq),
         );
@@ -512,6 +530,11 @@ impl App {
             waker.clone(),
             options.restore_sign_in,
         );
+        let applied_proxy = if options.restore_sign_in {
+            crate::settings::ProxyConfig::Invalid("Restoring proxy settings".into())
+        } else {
+            applied_proxy
+        };
         let session = SessionState::load(&dirs.session_file());
         let wake = waker.clone();
         let media_controls = options
@@ -545,6 +568,12 @@ impl App {
             custom_themes: theme::custom::Catalog::default(),
             dirs,
             settings,
+            applied_proxy,
+            applied_proxy_preferences,
+            pending_proxy_preferences: HashMap::new(),
+            proxy_request: 0,
+            last_proxy_applied: 0,
+            proxy_form_edited: false,
             settings_dirty: false,
             last_settings_save: Instant::now(),
             backend,
@@ -1453,6 +1482,26 @@ impl App {
                     let tint = self.palette.tint_from_art(color);
                     self.accents.insert(url, tint);
                 }
+                Event::ProxyRestored { config, password } => {
+                    self.handle_proxy_restored(config, password)
+                }
+                Event::ProxyPasswordStored => self.handle_proxy_password_stored(),
+                Event::ProxyStorageFailed(error) => {
+                    let message = if self.settings.proxy_password_legacy {
+                        format!(
+                            "{} The original settings file is kept intact; changed preferences are not saved yet.",
+                            error.proxy_message()
+                        )
+                    } else {
+                        error.proxy_message().to_string()
+                    };
+                    self.toast_error(message);
+                }
+                Event::ProxyApplied {
+                    request,
+                    config,
+                    result,
+                } => self.handle_proxy_applied(request, config, result),
                 Event::Error(message) => self.toast_error(message),
                 Event::Rootlist { result } => match result {
                     Ok(rootlist) => {
@@ -2508,14 +2557,93 @@ impl App {
         self.session_dirty = true;
     }
 
+    fn handle_proxy_restored(
+        &mut self,
+        config: crate::settings::ProxyConfig,
+        password: Option<crate::credentials::ProxyPassword>,
+    ) {
+        if self.last_proxy_applied == 0 {
+            self.applied_proxy = config;
+        }
+        if !self.proxy_form_edited
+            && self.proxy_request == 0
+            && let Some(password) = password
+        {
+            self.settings.restore_proxy_password(&password);
+        }
+    }
+
+    fn handle_proxy_password_stored(&mut self) {
+        if self.settings.proxy_password_legacy {
+            self.settings.proxy_password_legacy = false;
+            self.save_settings();
+        }
+    }
+
+    fn request_proxy(&mut self, sign_in: bool) {
+        let config = match self.settings.proxy_config() {
+            Ok(config) => config,
+            Err(error) => {
+                self.toast_error(error);
+                return;
+            }
+        };
+        self.proxy_request = self.proxy_request.wrapping_add(1);
+        let request = self.proxy_request;
+        self.pending_proxy_preferences
+            .insert(request, self.settings.proxy_preferences());
+        self.backend.send(if sign_in {
+            Command::SignIn { request, config }
+        } else {
+            Command::ApplyProxy { request, config }
+        });
+    }
+
+    fn handle_proxy_applied(
+        &mut self,
+        request: u64,
+        config: crate::settings::ProxyConfig,
+        result: Result<bool, String>,
+    ) {
+        let Some(preferences) = self.pending_proxy_preferences.remove(&request) else {
+            return;
+        };
+        if request < self.last_proxy_applied {
+            return;
+        }
+        match result {
+            Ok(restarted) => {
+                self.last_proxy_applied = request;
+                self.applied_proxy = config;
+                self.applied_proxy_preferences = preferences;
+                self.save_settings();
+                if restarted && self.local_ready {
+                    self.toast("Proxy applied. Restarting local playback.");
+                } else {
+                    self.toast("Proxy settings applied");
+                }
+            }
+            Err(error) => self.toast_error(format!("Proxy could not be applied: {error}. Previous connection settings are still in use.")),
+        }
+    }
+
     fn save_settings(&mut self) {
+        if self.settings.proxy_password_legacy {
+            self.settings_dirty = false;
+            self.last_settings_save = Instant::now();
+            // Do not erase the sole surviving legacy password when the native
+            // store is locked. Its successful callback owns retrying this save.
+            return;
+        }
         self.settings_dirty = false;
         self.last_settings_save = Instant::now();
         if self.offline {
             // Demo data must never overwrite the person's real preferences.
             return;
         }
-        self.settings.save(&self.dirs.settings_file());
+        let mut saved = self.settings.clone();
+        self.applied_proxy_preferences.apply_to(&mut saved);
+        saved.save(&self.dirs.settings_file());
     }
 
     /// Called at launch or by the local reload command. Construction and window
@@ -7178,7 +7306,9 @@ impl App {
                 }
             }
             Action::Reload(page) => self.reload(page),
-            Action::SignIn => self.backend.send(Command::SignIn),
+            Action::SignIn => self.request_proxy(true),
+            Action::ApplyProxy => self.request_proxy(false),
+            Action::ProxyEdited => self.proxy_form_edited = true,
             Action::CancelSignIn => {
                 self.backend.send(Command::CancelSignIn);
                 self.sign_in_url = None;
@@ -7380,6 +7510,7 @@ impl App {
                 let config = engine_config(
                     &self.dirs,
                     &self.settings,
+                    self.applied_proxy.clone(),
                     std::sync::Arc::clone(&self.winamp.tap),
                     std::sync::Arc::clone(&self.winamp.eq),
                 );
@@ -7590,7 +7721,11 @@ impl App {
                     if self.winamp.presets.count() == 0
                         && self.winamp.presets.downloading().is_none()
                     {
-                        self.winamp.presets.download_missing(folder, ctx.clone());
+                        self.winamp.presets.download_missing(
+                            folder,
+                            ctx.clone(),
+                            self.applied_proxy.clone(),
+                        );
                         self.toast("Downloading MilkDrop preset packs");
                     }
                 }
@@ -7617,9 +7752,12 @@ impl App {
             Action::OpenMilkdropFolder => self.open_folder(self.dirs.milkdrop_dir()),
             Action::DownloadMilkdropPack(index) => {
                 if let Some(pack) = crate::milkdrop::PACKS.get(index) {
-                    self.winamp
-                        .presets
-                        .download(pack, self.dirs.milkdrop_dir(), ctx.clone());
+                    self.winamp.presets.download(
+                        pack,
+                        self.dirs.milkdrop_dir(),
+                        ctx.clone(),
+                        self.applied_proxy.clone(),
+                    );
                     self.toast(format!("Downloading {} presets", pack.name));
                 }
             }
@@ -8332,6 +8470,7 @@ fn increase_playlist_total(playlist: &mut Playlist, added: u32) {
 pub fn engine_config(
     dirs: &AppDirs,
     settings: &Settings,
+    proxy: crate::settings::ProxyConfig,
     tap: std::sync::Arc<crate::vis::AudioTap>,
     eq: crate::eq::SharedEq,
 ) -> EngineConfig {
@@ -8353,6 +8492,7 @@ pub fn engine_config(
         volume_dir: dirs.volume_dir(),
         audio_cache_dir: settings.audio_cache.then(|| dirs.audio_cache_dir()),
         audio_cache_limit: Some(settings.audio_cache_mb.max(64) * 1024 * 1024),
+        proxy,
     }
 }
 
@@ -16159,6 +16299,225 @@ mod tests {
         let request = app.queued_play.as_ref().unwrap();
         assert_eq!(request.offset_uri, None);
         assert_eq!(request.offset_position, None);
+    }
+
+    #[test]
+    fn failed_proxy_migration_preserves_the_original_until_storage_is_confirmed() {
+        let mut app = test_app("proxy-migration-settings");
+        app.offline = false;
+        std::fs::create_dir_all(&app.dirs.config).unwrap();
+        let original = r#"{"proxy_mode":"http","proxy_host":"127.0.0.1","proxy_port":"8080","proxy_password":"dummy-legacy-secret"}"#;
+        std::fs::write(app.dirs.settings_file(), original).unwrap();
+        app.settings = Settings::load(&app.dirs.settings_file());
+        app.applied_proxy_preferences = app.settings.proxy_preferences();
+        app.settings.theme = crate::settings::ThemeChoice::Light;
+        app.settings.proxy_host = "other.example".into();
+        app.save_settings();
+        assert_eq!(
+            std::fs::read_to_string(app.dirs.settings_file()).unwrap(),
+            original
+        );
+        assert!(
+            !app.settings_dirty,
+            "do not retry every frame while storage is pending"
+        );
+        app.handle_proxy_password_stored();
+        let saved = Settings::load(&app.dirs.settings_file());
+        assert_eq!(saved.theme, crate::settings::ThemeChoice::Light);
+        assert_eq!(
+            saved.proxy_host, "127.0.0.1",
+            "unapplied draft is not saved"
+        );
+        assert!(saved.proxy_password.is_empty());
+        assert!(!saved.proxy_password_legacy);
+        assert!(
+            !std::fs::read_to_string(app.dirs.settings_file())
+                .unwrap()
+                .contains("dummy-legacy-secret")
+        );
+    }
+
+    #[test]
+    fn a_separate_legacy_password_cannot_be_rebound_by_saving_a_new_address() {
+        let seed = test_app("proxy-migration-separate");
+        let dirs = seed.dirs.clone();
+        drop(seed);
+        std::fs::create_dir_all(&dirs.state).unwrap();
+        let settings = Settings {
+            proxy_mode: crate::settings::ProxyMode::Http,
+            proxy_host: "127.0.0.1".into(),
+            proxy_port: "8080".into(),
+            ..Default::default()
+        };
+        settings.save(&dirs.settings_file());
+        std::fs::write(dirs.proxy_secret_file(), "dummy-legacy-secret").unwrap();
+        let original = std::fs::read(dirs.settings_file()).unwrap();
+        let mut app = App::new(
+            &Waker::default(),
+            dirs,
+            settings,
+            AppOptions {
+                media_controls: false,
+                restore_sign_in: false,
+                tray: false,
+            },
+        );
+        assert!(app.settings.proxy_password_legacy);
+        app.settings.proxy_host = "other.example".into();
+        app.request_proxy(false);
+        app.handle_proxy_applied(
+            app.proxy_request,
+            app.settings.proxy_config().unwrap(),
+            Ok(false),
+        );
+        assert_eq!(std::fs::read(app.dirs.settings_file()).unwrap(), original);
+        assert_eq!(
+            std::fs::read_to_string(app.dirs.proxy_secret_file()).unwrap(),
+            "dummy-legacy-secret"
+        );
+    }
+
+    #[test]
+    fn late_proxy_password_restore_respects_form_edits_and_applied_settings() {
+        for edited in [false, true] {
+            let mut app = test_app(if edited {
+                "proxy-restored-edit"
+            } else {
+                "proxy-restored-initial"
+            });
+            app.settings.proxy_mode = crate::settings::ProxyMode::Http;
+            app.settings.proxy_host = "127.0.0.1".into();
+            app.settings.proxy_port = "8080".into();
+            let mut stored = app.settings.clone();
+            stored.proxy_password = "dummy-saved-password".into();
+            app.proxy_form_edited = edited;
+            app.handle_proxy_restored(
+                stored.proxy_config().unwrap(),
+                stored.proxy_password_record().unwrap(),
+            );
+            assert_eq!(app.settings.proxy_password.is_empty(), edited);
+            app.settings.proxy_mode = crate::settings::ProxyMode::Off;
+            app.request_proxy(false);
+            app.handle_proxy_applied(
+                app.proxy_request,
+                crate::settings::ProxyConfig::Off,
+                Ok(false),
+            );
+            app.settings.proxy_password.clear();
+            app.handle_proxy_restored(
+                stored.proxy_config().unwrap(),
+                stored.proxy_password_record().unwrap(),
+            );
+            assert_eq!(app.applied_proxy, crate::settings::ProxyConfig::Off);
+            assert!(app.settings.proxy_password.is_empty());
+        }
+    }
+
+    #[test]
+    fn a_rejected_proxy_change_does_not_announce_success() {
+        let mut app = test_app("proxy-rejected");
+        app.backend.set_offline(true);
+        let original = app.applied_proxy.clone();
+        let failed = crate::settings::ProxyConfig::Invalid("Proxy port must be a number".into());
+        app.request_proxy(false);
+        app.handle_proxy_applied(
+            app.proxy_request,
+            failed,
+            Err("Unable to build the configured client".into()),
+        );
+        assert_eq!(app.applied_proxy, original);
+        assert!(
+            app.toasts
+                .iter()
+                .any(|toast| toast.message.contains("could not be applied"))
+        );
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn saving_other_settings_keeps_proxy_drafts_out_of_the_next_launch() {
+        let mut app = test_app("proxy-persisted-draft");
+        app.backend.set_offline(true);
+        app.settings.proxy_mode = crate::settings::ProxyMode::Http;
+        app.settings.proxy_host = "127.0.0.1".into();
+        app.settings.proxy_port = "8080".into();
+        app.settings.proxy_password = "dummy-private-password".into();
+        app.settings.theme = ThemeChoice::Light;
+        app.save_settings();
+        let saved = Settings::load(&app.dirs.settings_file());
+        assert_eq!(saved.proxy_mode, crate::settings::ProxyMode::System);
+        assert_eq!(saved.theme, ThemeChoice::Light);
+        assert!(
+            !std::fs::read_to_string(app.dirs.settings_file())
+                .unwrap()
+                .contains("dummy-private-password")
+        );
+        assert!(
+            !app.dirs.proxy_secret_file().exists(),
+            "never write a plaintext password beside settings"
+        );
+        app.request_proxy(false);
+        let request = app.proxy_request;
+        let accepted = app.settings.proxy_config().unwrap();
+        // An acknowledgement for port 8080 arrives after another form edit.
+        app.settings.proxy_port = "8090".into();
+        app.handle_proxy_applied(request, accepted, Ok(false));
+        assert_eq!(
+            app.settings.proxy_port, "8090",
+            "keep the draft being edited"
+        );
+        assert_eq!(Settings::load(&app.dirs.settings_file()).proxy_port, "8080");
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn an_old_proxy_acknowledgement_cannot_replace_a_newer_applied_policy() {
+        let mut app = test_app("proxy-stale-ack");
+        app.backend.set_offline(true);
+        app.settings.proxy_mode = crate::settings::ProxyMode::Http;
+        app.settings.proxy_host = "127.0.0.1".into();
+        app.settings.proxy_port = "8080".into();
+        app.request_proxy(false);
+        let first = app.proxy_request;
+        let old = app.settings.proxy_config().unwrap();
+        app.settings.proxy_port = "8090".into();
+        app.request_proxy(false);
+        let newest = app.settings.proxy_config().unwrap();
+        app.handle_proxy_applied(app.proxy_request, newest.clone(), Ok(false));
+        app.handle_proxy_applied(first, old, Ok(false));
+        assert_eq!(app.applied_proxy, newest);
+        assert_eq!(Settings::load(&app.dirs.settings_file()).proxy_port, "8090");
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn manual_proxy_edits_remain_drafts_until_apply() {
+        let mut app = test_app("proxy-draft");
+        app.backend.set_offline(true);
+        let original = app.applied_proxy.clone();
+        app.settings.proxy_mode = crate::settings::ProxyMode::Http;
+        app.settings.proxy_host = "127.0.0.1".into();
+        app.settings.proxy_port = "8080".into();
+
+        app.actions.push(Action::RestartEngine);
+        app.apply_actions(&egui::Context::default());
+        assert_eq!(app.applied_proxy, original);
+
+        app.actions.push(Action::ApplyProxy);
+        app.apply_actions(&egui::Context::default());
+        assert_eq!(
+            app.applied_proxy, original,
+            "wait for the transport to build"
+        );
+        app.handle_proxy_applied(
+            app.proxy_request,
+            app.settings.proxy_config().unwrap(),
+            Ok(true),
+        );
+        assert!(matches!(
+            app.applied_proxy,
+            crate::settings::ProxyConfig::Http(_)
+        ));
     }
 
     /// Shuffle picks a random loaded track or Web API offset. Local librespot

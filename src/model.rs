@@ -1013,6 +1013,10 @@ pub enum Action {
         playlist_order: Option<Vec<String>>,
     },
     RestartEngine,
+    /// Rebuild the HTTP client with the proxy in settings. Local playback
+    /// restarts only when its HTTP proxy changed.
+    ApplyProxy,
+    ProxyEdited,
     EnablePlayback,
     ShowWindow,
     HideWindow,

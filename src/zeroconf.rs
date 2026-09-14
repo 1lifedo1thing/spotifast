@@ -198,7 +198,7 @@ fn get_info_with_timeout(
 /// only reads device information; account credentials are sent on selection.
 /// Four probes run at a time, with two seconds per probe and six overall.
 pub fn resolve_receivers(receivers: Vec<Receiver>) -> Result<Vec<Receiver>> {
-    let http = reqwest::blocking::Client::builder().build()?;
+    let http = reqwest::blocking::Client::builder().no_proxy().build()?;
     let pending = std::sync::Mutex::new(receivers.into_iter());
     let found = std::sync::Mutex::new(HashMap::new());
     let deadline = std::time::Instant::now() + Duration::from_secs(6);
@@ -509,13 +509,64 @@ mod tests {
         assert_eq!(receiver.url(""), "http://[fe80::1]:5907/zc");
     }
     #[test]
+    fn receiver_probes_bypass_an_environment_proxy() {
+        // Give only a subprocess the proxy environment. Other tests and the
+        // user's environment remain untouched, including when tests run in parallel.
+        let proxy = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        proxy.set_nonblocking(true).unwrap();
+        let address = format!("http://{}", proxy.local_addr().unwrap());
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap());
+        child.args([
+            "--exact",
+            "zeroconf::tests::discovery_uses_receiver_names_and_ids_and_omits_dead_advertisements",
+        ]);
+        for name in [
+            "HTTP_PROXY",
+            "HTTPS_PROXY",
+            "ALL_PROXY",
+            "http_proxy",
+            "https_proxy",
+            "all_proxy",
+        ] {
+            child.env(name, &address);
+        }
+        child
+            .env("NO_PROXY", "")
+            .env("no_proxy", "")
+            .env_remove("REQUEST_METHOD");
+        let output = child.output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        assert!(
+            matches!(proxy.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock),
+            "LAN discovery must send no request to the proxy"
+        );
+    }
+
+    #[test]
     fn discovery_uses_receiver_names_and_ids_and_omits_dead_advertisements() {
         use std::io::{BufRead, Write};
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let port = listener.local_addr().unwrap().port();
+        listener.set_nonblocking(true).unwrap();
         let server = std::thread::spawn(move || {
             for _ in 0..4 {
-                let (mut stream, _) = listener.accept().unwrap();
+                let deadline = std::time::Instant::now() + Duration::from_secs(3);
+                let (mut stream, _) = loop {
+                    match listener.accept() {
+                        Ok(connection) => break connection,
+                        Err(error)
+                            if error.kind() == std::io::ErrorKind::WouldBlock
+                                && std::time::Instant::now() < deadline =>
+                        {
+                            std::thread::sleep(Duration::from_millis(5));
+                        }
+                        Err(error) => panic!("receiver did not get its direct probe: {error}"),
+                    }
+                };
                 stream
                     .set_read_timeout(Some(Duration::from_secs(2)))
                     .unwrap();

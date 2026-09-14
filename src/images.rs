@@ -8,6 +8,8 @@ use std::time::Instant;
 use egui::load::{Bytes, BytesLoadResult, BytesLoader, BytesPoll, LoadError};
 use sha1::{Digest, Sha1};
 
+use crate::http::Http;
+
 /// Maximum artwork bytes held in memory.
 ///
 /// Time-based eviction does not work here: after creating a texture, egui no
@@ -42,7 +44,7 @@ enum Entry {
 
 struct Inner {
     entries: Mutex<HashMap<String, Entry>>,
-    http: reqwest::Client,
+    http: Http,
     runtime: tokio::runtime::Handle,
     cache_dir: PathBuf,
 }
@@ -53,12 +55,12 @@ pub struct ArtLoader {
 }
 
 impl ArtLoader {
-    pub fn new(http: reqwest::Client, runtime: tokio::runtime::Handle, cache_dir: PathBuf) -> Self {
+    pub fn new(http: impl Into<Http>, runtime: tokio::runtime::Handle, cache_dir: PathBuf) -> Self {
         let _ = std::fs::create_dir_all(&cache_dir);
         Self {
             inner: Arc::new(Inner {
                 entries: Mutex::new(HashMap::new()),
-                http,
+                http: http.into(),
                 runtime,
                 cache_dir,
             }),
@@ -242,6 +244,7 @@ impl Inner {
             _ => {
                 let response = self
                     .http
+                    .client()?
                     .get(url)
                     .send()
                     .await

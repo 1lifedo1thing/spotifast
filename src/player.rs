@@ -60,6 +60,8 @@ pub struct EngineConfig {
     pub tap: Arc<AudioTap>,
     /// The equalizer's settings, shared with the window that sets them.
     pub eq: crate::eq::SharedEq,
+    /// Proxy used by the Web API client. Librespot only uses the HTTP form.
+    pub proxy: crate::settings::ProxyConfig,
 }
 
 impl EngineConfig {
@@ -297,6 +299,7 @@ impl Engine {
         let session_config = SessionConfig {
             device_id: device_id.clone(),
             autoplay: Some(config.autoplay),
+            proxy: config.proxy.librespot_url(),
             ..SessionConfig::default()
         };
         let normalisation_factor = Arc::new(std::sync::atomic::AtomicU64::new(1.0f64.to_bits()));
@@ -1306,6 +1309,7 @@ mod tests {
             volume_dir: PathBuf::new(),
             audio_cache_dir: None,
             audio_cache_limit: None,
+            proxy: crate::settings::ProxyConfig::Off,
         };
         let id = config.device_id();
         assert_eq!(id.len(), 40);

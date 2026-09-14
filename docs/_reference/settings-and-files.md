@@ -24,6 +24,8 @@ Spotifast follows each platform's conventions. On Linux:
 | Legacy shared Web API grant | `~/.local/state/fastpotify/shared_web_api_token.json` | Removed after migration or sign-out |
 | Legacy personal Web API grant | `~/.local/state/fastpotify/personal_web_api_token.json` | Removed after migration or sign-out |
 | Legacy playback credential | `~/.local/state/fastpotify/credentials/` | Removed after migration or sign-out |
+| Proxy password | System credential store | Clear the password and apply the manual proxy settings |
+| Legacy proxy password | `~/.local/state/fastpotify/proxy_password` | Removed after protected migration |
 | Last session | `~/.local/state/fastpotify/session.json` | Yes |
 | Play history | `~/.local/state/fastpotify/history.json` | Yes |
 | Audio cache | `~/.cache/fastpotify/audio/` | Always |
@@ -78,6 +80,21 @@ Windows uses inherited permissions. Librespot's old writer uses the system's
 file defaults. Keep these legacy files, their temporary copies, the
 `credentials/` directory, and credential-store exports out of issue attachments
 and diagnostic uploads.
+
+On `main`, after 0.8.0, proxy passwords use a separate protected entry under the same service name.
+They belong to the configured host, port, and username. Editing any of these
+fields clears the old password; changing only HTTP/SOCKS5 mode keeps it. Off,
+System, and Spotify sign-out retain the saved manual proxy password. Clear the
+password and apply the manual settings to forget it. A revocation marker keeps
+a failed protected deletion from restoring that password.
+
+Older proxy passwords, whether in `settings.json` or the separate state file,
+are migrated and read back before their plaintext copies are removed. If that
+fails, the originals remain available for retry. Settings changes stay in
+memory until migration succeeds, so a save cannot erase the only password or
+associate it with a different proxy address. Spotifast reports this condition.
+Newly entered passwords have no plaintext fallback. Settings store the confirmed
+proxy mode, host, port, and username, never an unapplied draft or password.
 
 Progress through a playlist is periodically cached as a contiguous prefix.
 When the playlist has not changed on Spotify, reopening it resumes from that
@@ -216,6 +233,10 @@ main fields are:
 | `web_client_id` | none | Optional personal Spotify app id used alongside shared coverage |
 | `personal_app_nudge_at` | none | Legacy daily-reminder timestamp, retained for older releases |
 | `personal_app_intro_seen` | `false` | Whether the Premium personal-app introduction was dismissed or followed (available since 0.8.0) |
+| `proxy_mode` | `system` | `off`, `system`, `http`, or `socks`. Older files without this field stay on `system` |
+| `proxy_host` | none | Host of a manual HTTP or SOCKS5 proxy. Ignored when the mode is `off` or `system` |
+| `proxy_port` | none | Port of a manual HTTP or SOCKS5 proxy |
+| `proxy_username` | none | Optional proxy login for Web requests; authenticated local playback proxying is not supported |
 
 ## Command line
 
