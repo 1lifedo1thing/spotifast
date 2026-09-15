@@ -41,6 +41,23 @@ cannot play music through Spotifast on this computer or another device.
   can follow your desktop theme automatically. Pages can also take a colour
   from album art.
 
+<a id="account-safety"></a>
+
+## Will my Spotify account get banned?
+
+**We're not aware of any confirmed account bans caused by normal Premium
+listening through Spotifast or other players using the same playback
+software, [librespot](https://github.com/librespot-org/librespot).**
+
+Spotifast plays music using your Spotify Premium subscription. It does not
+unlock Premium for Free accounts, remove ads, export songs, or bypass
+Spotify's copy protection. You sign in on Spotify's own website, and
+Spotifast never receives your Spotify password.
+
+Spotifast is independent of Spotify, so we cannot guarantee Spotify's future
+decisions. Changes at Spotify can also temporarily interrupt playback until
+the app is updated.
+
 ## What it does not do
 
 Spotifast has a limited scope:
@@ -64,17 +81,6 @@ steps to reproduce the problem. See the
 Development builds after 0.8.0 also record the app version, operating system,
 and graphics details in the log. If the window fails to open, the log can
 help explain why, even when you started the app from your desktop.
-
-## Account safety
-
-We are not aware of a Spotify account being suspended for using Spotifast
-or another librespot player with Premium. Sign-in happens on Spotify's own
-pages, audio uses the quality included with Premium, Spotify's copy protection
-stays intact, and Spotifast does not extract songs as audio files or block ads.
-
-Reported suspensions usually involve modded apps that remove ads from free
-accounts, track ripping, or stream manipulation. Spotifast does none of
-those things, and its contribution rules prohibit them.
 
 ## Prior art
 
