@@ -2,7 +2,8 @@
 
 Previously **Fastpotify**. Same native Spotify client, now at
 [spotifast.rocks](https://spotifast.rocks/). The new name starts with version 0.8.0;
-your existing settings and sign-ins carry over.
+your existing settings and sign-ins carry over, except when
+[switching the Flatpak installation](docs/_reference/renaming.md#flatpak).
 
 **Spotify, native and fast.** Spotifast is a Spotify client written in
 Rust with [egui](https://github.com/emilk/egui). It plays music through
@@ -186,6 +187,12 @@ On macOS, with [Homebrew](https://brew.sh):
 brew install --cask crmne/tap/spotifast
 ```
 
+Or [download the Mac app](https://spotifast.rocks/download/#macos), open the
+downloaded file, and drag **Spotifast** to **Applications**. Starting with 0.8.0,
+the Mac download passes Apple's security checks. Open it from Applications
+and confirm the normal downloaded-app prompt. No Terminal commands or changes
+to security settings are needed.
+
 On Gentoo, [niko-overlays](https://github.com/NikoMalik/niko-overlays) offers
 an optional **community-maintained** package. Its current `0.7.1` ebuild
 builds post-release snapshot `67b8dfb`, rather than the `v0.7.1` release, and
@@ -245,9 +252,9 @@ An official public binary cache is not active yet. CI can publish its Linux
 Nix builds once a maintainer configures Cachix; see
 [Nix binary cache setup](docs/_reference/nix-cache.md).
 
-On macOS, the flake also exposes `packages.<system>.spotifast-app`, an
-ad-hoc signed `Spotifast.app` bundle for the Dock, Launch Services, and
-`spotify:` links. With nix-darwin, add it to `environment.systemPackages`
+On macOS, the flake also exposes `packages.<system>.spotifast-app`, a
+Mac app you can open from the Dock and use for Spotify links.
+With nix-darwin, add it to `environment.systemPackages`
 and link `"/Applications"` through `environment.pathsToLink`; with Home
 Manager, `home.packages` is enough, as its darwin support links the bundle
 into `~/Applications`.
@@ -459,20 +466,18 @@ rows, clear the field to see everything again.
 You can also check for a new release from Settings. On macOS, the same command
 is in the application menu.
 
-On Windows and Linux, update-enabled portable downloads can download a release
-in the app, verify its published SHA-256 checksum, and restart to install it.
-Windows installer builds use their installer for the replacement. Settings can
-enable automatic background downloads; restarting always requires a click.
-The update popup opens only when you click the green update pill. Update checks
-and automatic downloads leave it closed, and closing it keeps downloads running.
-A failed startup restores the previous installation. An interrupted or damaged
-download leaves the running app alone. Updates keep your settings and sign-in
-files. On macOS, a writable app bundle downloaded from the release page can
-update its whole app bundle from the universal DMG. Move the app out of the disk
-image before updating. The updater verifies the app signature and version;
-Developer ID builds also require the same signing team and macOS approval.
-Keep the app in Applications; macOS can require folder access when it is run
-from Documents.
+The Windows installer, Mac app, and portable Windows and Linux downloads
+support updates from inside Spotifast. Click the green update button to
+download a release, then choose when to restart and install it. Settings can
+enable automatic background downloads; restarting always waits for your click.
+Closing the update window keeps a download running.
+
+Spotifast checks each download before installing it. An interrupted or damaged
+download leaves the running app alone, and a failed startup restores the
+previous installation. Updates keep your settings and sign-ins. On macOS,
+move Spotifast to Applications before updating it. See
+[how updates are checked and installed](docs/_reference/how-it-connects.md#what-the-client-stores)
+for the technical details.
 
 Package-managed installations continue to update through their package manager,
 including Homebrew, Flatpak, apt, dnf, pacman, Nix, and Cargo. Unrecognized

@@ -1,6 +1,6 @@
 title: Spotifast
 fastpotify_version: "0.8.0"
-description: A fast, native Spotify client for Linux, macOS, and Windows, written in Rust.
+description: A fast, lightweight Spotify app for Linux, macOS, and Windows.
 lang: en-US
 timezone: Europe/Berlin
 url: https://spotifast.rocks
