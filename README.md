@@ -543,9 +543,9 @@ production interface remains English. See
 [Translating Spotifast](docs/_reference/translating.md) for editing with existing
 translation tools, previewing, and reporting translation problems.
 
-Issues and discussions receive automated triage, including reassessment after
-new or edited comments. A rocket on the report or comment means its assessment
-completed successfully; it does not promise a reply or a fix. See
+New and reopened issues and new discussions receive automated triage through
+[Copilot Triage](https://github.com/crmne/copilot-triage). A party-popper reaction
+marks a completed assessment; it does not promise a reply or a fix. See
 [automated triage](CONTRIBUTING.md#automated-triage) for details.
 
 ## Acknowledgements
