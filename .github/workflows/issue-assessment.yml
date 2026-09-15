@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: crmne/copilot-triage@3cf06180261649d3a5ad5941abc6f0fb64d36f69 # v0.4.0
+      - uses: crmne/copilot-triage@b8eafdb245aac87431c7cf9333af9ca8dc9a4737 # v0.4.0
         with:
           copilot-token: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           kind: ${{ github.event.discussion && 'discussion' || inputs.kind || 'issue' }}
