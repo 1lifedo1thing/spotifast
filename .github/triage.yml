@@ -1,3 +1,5 @@
+duplicates: close
+
 report_bots:
   - honeybadger[bot]
 
@@ -37,8 +39,9 @@ instructions: |
   present. Ask for one missing non-sensitive fact only when it prevents useful
   investigation, never for information already supplied. Choose source files
   for a useful technical answer and cite only what those files establish;
-  otherwise leave reply null. Leave uncertain diagnoses, product decisions,
-  duplicate detection, and closure to the maintainer. Do not promise
+  otherwise leave reply null. Leave uncertain diagnoses and product decisions to the maintainer.
+  Compare possible duplicate reports with the supplied open issues. Link
+  related reports; close only clear duplicates under the configured rules. Do not promise
   implementation, releases, or tests. Never repeat secrets or private data.
   Keep replies short, direct, and free of status chatter, implementation
   plans, headings, and em dashes.
@@ -67,3 +70,7 @@ instructions: |
   For opening Spotify links, login setup, and proxies, select
   docs/_guide/getting-started.md. Distinguish released features from support
   documented only on main; do not imply development features are in 0.8.0.
+
+  Address the latest human update and account for checks already tried. Do not
+  repeat an answered question or a completed diagnostic step. After a bot
+  reply, only a useful new related-issue link warrants another comment.
