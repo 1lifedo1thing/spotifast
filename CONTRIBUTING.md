@@ -40,16 +40,22 @@ but is not required for closure. Reopen the issue if it persists after updating.
 
 [Copilot Triage](https://github.com/crmne/copilot-triage) assesses new and
 reopened issues and new discussions. It uses the report and latest five
-comments, adds up to two labels, and may ask for one missing fact or give a
-short answer grounded in the configured documentation and source files.
-Maintainers handle duplicate detection, closure, and removing obsolete labels.
+comments plus remembered questions, adds up to two labels, and may condense a
+long new issue into one concise recap. Follow-up replies must add help: a
+necessary question, supported answer, applicable policy, released fix, or useful
+issue link. Clear duplicates can be closed after comparison; related reports
+stay open. Maintainers handle uncertain decisions and removing obsolete labels.
 
-Comments do not trigger another assessment. To reassess after new information,
-run **Issue assessment** from Actions with the report kind and number. Preview
-is enabled by default; turn it off to apply the result. Unchanged model prompts
+New questions, answers to pending clarifications, and substantive new evidence
+can trigger reassessment. Repeated updates and thanks do not. Use `/triage` to
+request reassessment, `/triage mute` to stop automatic replies, or maintainer-only
+`/triage unmute` to resume them. You can also run **Issue assessment** from Actions
+with the report kind and number. Preview is enabled by default; turn it off to
+apply the result. Unchanged model prompts
 reuse cached answers. A party-popper reaction marks a completed assessment,
 including one that needed no reply; it does not promise acceptance or a fix.
-Bot-authored reports are skipped, and model failures stay in the job summary.
+Bot comments are skipped; configured error-monitoring bots can open reports.
+Model failures stay in the job summary.
 
 The `COPILOT_ISSUE_ASSESSMENT_ENABLED` repository variable controls the workflow.
 Edit `.github/triage.yml` for labels, replies, source files, and response policy.
