@@ -60,7 +60,7 @@ Model failures stay in the job summary.
 
 The `COPILOT_ISSUE_ASSESSMENT_ENABLED` repository variable controls the workflow.
 Edit `.github/triage.yml` for labels, replies, source files, and response policy.
-The shared action is pinned in `.github/workflows/issue-assessment.yml`; its
+The shared action follows tested `v0` releases in `.github/workflows/issue-assessment.yml`; its
 implementation and regression tests live in the Copilot Triage repository.
 
 ## Design principles
