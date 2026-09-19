@@ -392,7 +392,11 @@ fn process_identity(stat: &str) -> Option<&str> {
     stat.rsplit_once(')')?.1.split_whitespace().nth(19)
 }
 
-pub fn replace(prepared: &Prepared) -> Result<()> {
+/// Replaces the installed app and returns the executable to relaunch. That
+/// is `prepared.installation.executable` on every platform except macOS,
+/// where the download can rename the executable inside the bundle; see
+/// `macos::replace`.
+pub fn replace(prepared: &Prepared) -> Result<PathBuf> {
     ensure!(
         hash(&prepared.payload)? == prepared.sha256,
         "The staged update checksum changed"
@@ -401,7 +405,7 @@ pub fn replace(prepared: &Prepared) -> Result<()> {
     let backup = prepared.directory.join("previous");
     match prepared.installation.kind {
         #[cfg(target_os = "macos")]
-        Kind::MacBundle => super::macos::replace(prepared)?,
+        Kind::MacBundle => return super::macos::replace(prepared),
         Kind::Portable => {
             ensure!(!backup.exists(), "This update was already applied");
             backup_current(target, &backup).context("Cannot back up the current app")?;
@@ -439,7 +443,7 @@ pub fn replace(prepared: &Prepared) -> Result<()> {
             );
         }
     }
-    Ok(())
+    Ok(target.clone())
 }
 
 fn backup_current(target: &Path, backup: &Path) -> Result<()> {
@@ -489,36 +493,62 @@ fn installer_path(path: &Path) -> String {
     }
 }
 
+/// Overwrites the job file `run_helper` and `acknowledge` both read, so a
+/// renamed executable is reflected before the new process reads it back.
+fn write_receipt(job: &Path, handoff: &Handoff) -> Result<()> {
+    fs::write(job, serde_json::to_vec(handoff)?)?;
+    Ok(())
+}
+
 pub fn run_helper(job: &Path) -> Result<()> {
-    let handoff: Handoff = serde_json::from_reader(File::open(job)?)?;
-    let prepared = &handoff.prepared;
+    let mut handoff: Handoff = serde_json::from_reader(File::open(job)?)?;
+    // Kept aside, untouched, for the rollback paths below: replace() can
+    // rename the executable inside a macOS bundle, and a rollback restores
+    // the previous bundle, which still has the old one.
+    let original = handoff.prepared.clone();
     ensure!(
-        job.parent() == Some(prepared.directory.as_path()),
+        job.parent() == Some(original.directory.as_path()),
         "Invalid update job directory"
     );
     ensure!(
-        prepared.payload.parent() == Some(prepared.directory.as_path()),
+        original.payload.parent() == Some(original.directory.as_path()),
         "Invalid staged payload"
     );
     ensure!(
-        prepared.directory.parent() == prepared.installation.root()?.parent(),
+        original.directory.parent() == original.installation.root()?.parent(),
         "Invalid installation directory"
     );
     ensure!(
-        hash(&prepared.payload)? == prepared.sha256,
+        hash(&original.payload)? == original.sha256,
         "The staged update checksum changed"
     );
-    wait_for_parent(handoff.parent, &prepared.directory.join("ready"))?;
-    let result = replace(prepared);
-    if let Err(error) = result {
-        restore_and_restart(prepared, &handoff.arguments)?;
+    wait_for_parent(handoff.parent, &original.directory.join("ready"))?;
+    // Every failure from here on has already changed something on disk (the
+    // bundle itself, or the receipt below), so all of them roll back to
+    // `original` and restart the previous app the same way, rather than
+    // leaving a new install sitting there unlaunched and unrestored.
+    let fail = |error: anyhow::Error, message: &str, arguments: &[String]| -> Result<()> {
+        restore_and_restart(&original, arguments)?;
         fs::write(
-            prepared.directory.join("result.txt"),
-            format!("Update failed: {error:#}"),
+            original.directory.join("result.txt"),
+            format!("{message}: {error:#}"),
         )?;
-        return Err(error);
+        Err(error)
+    };
+    let launch_executable = match replace(&original) {
+        Ok(executable) => executable,
+        Err(error) => return fail(error, "Update failed", &handoff.arguments),
+    };
+    if launch_executable != original.installation.executable {
+        // The receipt this launch takes below is the same job file
+        // `acknowledge` re-reads from the new process, so its recorded
+        // executable has to match what actually got installed.
+        handoff.prepared.installation.executable = launch_executable.clone();
+        if let Err(error) = write_receipt(job, &handoff) {
+            return fail(error, "Update failed", &handoff.arguments);
+        }
     }
-    let mut command = Command::new(&prepared.installation.executable);
+    let mut command = Command::new(&launch_executable);
     command
         .args(&handoff.arguments)
         .arg("--update-receipt")
@@ -530,7 +560,7 @@ pub fn run_helper(job: &Path) -> Result<()> {
             .context("Could not launch the updated app")?;
         let start = Instant::now();
         loop {
-            if prepared.directory.join("started").is_file() {
+            if original.directory.join("started").is_file() {
                 return Ok(());
             }
             ensure!(
@@ -546,16 +576,15 @@ pub fn run_helper(job: &Path) -> Result<()> {
         }
     })();
     if let Err(error) = launch {
-        restore_and_restart(prepared, &handoff.arguments)?;
-        fs::write(
-            prepared.directory.join("result.txt"),
-            format!("Update failed; restored the previous app: {error:#}"),
-        )?;
-        return Err(error);
+        return fail(
+            error,
+            "Update failed; restored the previous app",
+            &handoff.arguments,
+        );
     }
     fs::write(
-        prepared.directory.join("result.txt"),
-        format!("Updated to {}", prepared.version),
+        original.directory.join("result.txt"),
+        format!("Updated to {}", original.version),
     )?;
     Ok(())
 }
@@ -711,6 +740,36 @@ mod tests {
         replace(&prepared).unwrap();
         assert_eq!(fs::read(&target).unwrap(), b"new");
         assert_eq!(fs::read(stage.join("previous")).unwrap(), b"old");
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn the_receipt_records_a_renamed_executable_and_reads_back() {
+        let directory =
+            std::env::temp_dir().join(format!("fastpotify-receipt-test-{}", rand::random::<u64>()));
+        fs::create_dir(&directory).unwrap();
+        let job = directory.join("handoff.json");
+        let mut handoff = Handoff {
+            prepared: Prepared {
+                installation: Installation {
+                    executable: directory.join("Spotifast.app/Contents/MacOS/fastpotify"),
+                    kind: Kind::MacBundle,
+                },
+                directory: directory.clone(),
+                payload: directory.join("update.dmg"),
+                sha256: String::new(),
+                version: "1.0.0".into(),
+            },
+            parent: std::process::id(),
+            arguments: vec!["--minimized".into()],
+        };
+        let renamed = directory.join("Spotifast.app/Contents/MacOS/Spotifast");
+        handoff.prepared.installation.executable = renamed.clone();
+        write_receipt(&job, &handoff).unwrap();
+        let read_back: Handoff = serde_json::from_reader(File::open(&job).unwrap()).unwrap();
+        assert_eq!(read_back.prepared.installation.executable, renamed);
+        assert_eq!(read_back.arguments, vec!["--minimized".to_string()]);
         fs::remove_dir_all(directory).unwrap();
     }
 }

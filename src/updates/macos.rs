@@ -8,6 +8,14 @@ use super::install::{self, Installation, Prepared};
 
 const IDENTIFIER: &str = "me.paolino.fastpotify";
 
+// The bundled executable is still "fastpotify", left over from before the
+// app itself was renamed to Spotifast. A future release means to rename it
+// to "Spotifast" too; this lands first so every current install already
+// accepts that name (as opposed to the app bundle, already handled by
+// `image_bundle`) once it does, rather than rejecting the download that
+// renames it.
+const EXECUTABLE_NAMES: [&str; 2] = ["fastpotify", "Spotifast"];
+
 pub(super) fn bundle_root(executable: &Path) -> Result<&Path> {
     let root = executable
         .ancestors()
@@ -15,10 +23,19 @@ pub(super) fn bundle_root(executable: &Path) -> Result<&Path> {
         .context("Missing app bundle")?;
     ensure!(
         root.extension().is_some_and(|extension| extension == "app")
-            && root.join("Contents/MacOS/fastpotify") == executable,
+            && EXECUTABLE_NAMES
+                .iter()
+                .any(|name| root.join("Contents/MacOS").join(name) == executable),
         "Move the app to Applications, then open it to update."
     );
     Ok(root)
+}
+
+/// Where a bundle's own `CFBundleExecutable` says its executable lives.
+/// Never a literal name: a download can rename it (see `EXECUTABLE_NAMES`).
+fn executable_path(bundle: &Path) -> Result<PathBuf> {
+    let executable = plist(bundle, "CFBundleExecutable")?;
+    Ok(bundle.join("Contents/MacOS").join(executable))
 }
 
 fn plist(bundle: &Path, key: &str) -> Result<String> {
@@ -33,7 +50,7 @@ fn plist(bundle: &Path, key: &str) -> Result<String> {
 fn identity(bundle: &Path) -> Result<()> {
     ensure!(
         plist(bundle, "CFBundleIdentifier")? == IDENTIFIER
-            && plist(bundle, "CFBundleExecutable")? == "fastpotify"
+            && EXECUTABLE_NAMES.contains(&plist(bundle, "CFBundleExecutable")?.as_str())
             && plist(bundle, "CFBundlePackageType")? == "APPL",
         "The download is not a Spotifast app bundle"
     );
@@ -127,7 +144,7 @@ fn validate(bundle: &Path, installation: &Installation, version: &str) -> Result
             "macOS could not approve this update for launch"
         );
     }
-    install::verify_version(&bundle.join("Contents/MacOS/fastpotify"), version)
+    install::verify_version(&executable_path(bundle)?, version)
 }
 
 struct Mounted(PathBuf);
@@ -203,7 +220,12 @@ pub(super) fn validate_download(
     validate(&mounted.bundle()?, installation, version)
 }
 
-pub(super) fn replace(prepared: &Prepared) -> Result<()> {
+/// Replaces the app bundle and returns the path of the executable now
+/// installed there. The download's `CFBundleExecutable` decides that name,
+/// which won't always match `prepared.installation.executable`: that field
+/// is the pre-update process's own path, and stays the right one to use
+/// for a rollback, but the wrong one to relaunch after a rename.
+pub(super) fn replace(prepared: &Prepared) -> Result<PathBuf> {
     let target = bundle_root(&prepared.installation.executable)?;
     let backup = prepared.directory.join("previous");
     let candidate = prepared.directory.join("Spotifast.app");
@@ -229,7 +251,7 @@ pub(super) fn replace(prepared: &Prepared) -> Result<()> {
         fs::rename(&backup, target).context("Could not restore the previous app bundle")?;
         return Err(error).context("Could not replace the app bundle");
     }
-    Ok(())
+    executable_path(target)
 }
 
 pub(super) fn restore(prepared: &Prepared) -> Result<()> {
@@ -385,5 +407,95 @@ mod tests {
             .is_err()
         );
         assert!(detect(Path::new("/private/var/folders/test/AppTranslocation/test/Fastpotify.app/Contents/MacOS/fastpotify")).is_err());
+    }
+
+    #[test]
+    fn the_renamed_executable_updates_alongside_the_old_one() {
+        // Today's installs run "fastpotify"; a later release means to
+        // rename it to "Spotifast". Both must resolve to their bundle so
+        // today's installs keep auto-updating once that happens.
+        assert_eq!(
+            bundle_root(Path::new(
+                "/Applications/Spotifast.app/Contents/MacOS/Spotifast"
+            ))
+            .unwrap(),
+            Path::new("/Applications/Spotifast.app")
+        );
+        assert_eq!(
+            bundle_root(Path::new(
+                "/Applications/Spotifast.app/Contents/MacOS/fastpotify"
+            ))
+            .unwrap(),
+            Path::new("/Applications/Spotifast.app")
+        );
+        assert!(
+            bundle_root(Path::new(
+                "/Applications/Spotifast.app/Contents/MacOS/spotifast"
+            ))
+            .is_err(),
+            "the Linux/Windows binary name is not the macOS bundle's executable name"
+        );
+    }
+
+    fn write_info_plist(bundle: &Path, executable: &str) {
+        fs::create_dir_all(bundle.join("Contents")).unwrap();
+        fs::write(
+            bundle.join("Contents/Info.plist"),
+            format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key><string>{IDENTIFIER}</string>
+    <key>CFBundleExecutable</key><string>{executable}</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+</dict>
+</plist>
+"#
+            ),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn identity_accepts_either_executable_name_but_nothing_else() {
+        let bundle = std::env::temp_dir()
+            .join(format!(
+                "fastpotify-identity-test-{}",
+                rand::random::<u64>()
+            ))
+            .join("Spotifast.app");
+        for executable in ["fastpotify", "Spotifast"] {
+            write_info_plist(&bundle, executable);
+            identity(&bundle)
+                .unwrap_or_else(|error| panic!("{executable} should be accepted: {error}"));
+        }
+        write_info_plist(&bundle, "SomeOtherName");
+        assert!(identity(&bundle).is_err());
+        fs::remove_dir_all(bundle.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn executable_path_resolves_a_renamed_bundle() {
+        // `validate` and `replace` both used to hardcode "fastpotify" here;
+        // they now resolve whichever name the bundle actually declares, so
+        // a download that renames the executable still gets found.
+        let bundle = std::env::temp_dir()
+            .join(format!(
+                "fastpotify-executable-path-test-{}",
+                rand::random::<u64>()
+            ))
+            .join("Spotifast.app");
+        write_info_plist(&bundle, "Spotifast");
+        assert_eq!(
+            executable_path(&bundle).unwrap(),
+            bundle.join("Contents/MacOS/Spotifast")
+        );
+        write_info_plist(&bundle, "fastpotify");
+        assert_eq!(
+            executable_path(&bundle).unwrap(),
+            bundle.join("Contents/MacOS/fastpotify")
+        );
+        fs::remove_dir_all(bundle.parent().unwrap()).unwrap();
     }
 }
