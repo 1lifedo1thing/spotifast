@@ -715,6 +715,15 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.settings.theme = crate::settings::ThemeChoice::Light;
                 app.actions.push(Action::SettingsChanged);
             }
+            "dark" => {
+                app.settings.theme = crate::settings::ThemeChoice::Dark;
+                app.actions.push(Action::SettingsChanged);
+            }
+            "song-top-result" => {
+                if let Loadable::Loaded(results) = &mut app.search.results {
+                    results.artists = None;
+                }
+            }
             "finite-playlist" => {
                 if let Some(page) = app.playlist_pages.get_mut("pl1") {
                     let seed = page.items.items.clone();
@@ -3248,6 +3257,56 @@ mod tests {
             assert!(
                 matches!(app.actions.as_slice(), [crate::model::Action::CopyLink(link)] if link == &uri)
             );
+            app.backend.shutdown();
+        }
+    }
+
+    #[test]
+    fn song_top_result_artist_name_opens_the_available_profile_or_the_album() {
+        for artist_id in [Some("ween"), None] {
+            let (ctx, mut app) = accessible_app("top-result-song-artist");
+            let mut item = track(0);
+            let album_id = item.album.as_ref().unwrap().id.clone();
+            item.artists = vec![ArtistRef {
+                id: artist_id.map(str::to_string),
+                name: "Ween".into(),
+                uri: artist_id.map(|id| format!("spotify:artist:{id}")),
+            }];
+            app.search.results = Loadable::Loaded(SearchResults {
+                tracks: Some(page(vec![item])),
+                ..Default::default()
+            });
+            search_frame(&ctx, &mut app, vec![]);
+            let text = search_frame(&ctx, &mut app, vec![]);
+            let songs_left = text
+                .iter()
+                .filter(|(text, _)| text == "Songs")
+                .max_by(|(_, left), (_, right)| left.left().total_cmp(&right.left()))
+                .expect("songs heading")
+                .1
+                .left();
+            let artist = text
+                .iter()
+                .find(|(text, rect)| text == "Ween" && rect.left() < songs_left)
+                .expect("top result artist name");
+            app.actions.clear();
+            search_frame(
+                &ctx,
+                &mut app,
+                pointer_click(
+                    egui::pos2(artist.1.right() - 4.0, artist.1.center().y),
+                    egui::PointerButton::Primary,
+                ),
+            );
+            if artist_id.is_some() {
+                assert!(
+                    matches!(app.actions.as_slice(), [Action::Open(Page::Artist(id))] if id == "ween")
+                );
+            } else {
+                assert!(
+                    matches!(app.actions.as_slice(), [Action::Open(Page::Album(id))] if id == &album_id)
+                );
+            }
             app.backend.shutdown();
         }
     }
