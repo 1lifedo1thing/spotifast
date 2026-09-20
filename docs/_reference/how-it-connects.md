@@ -81,6 +81,15 @@ On `main`, after 0.8.0, a playlist-folder and invitation-permission read request
 before local playback connects waits for that connection instead of being lost.
 Sign-out discards the waiting read and any result from the previous session.
 
+On `main`, after 0.8.0, a dropped active playback session retains its resolved
+contexts and queue in memory. The replacement session restores them after
+Connect registration instead of loading only the interrupted song. Unresolved
+context pages continue through the new session. The snapshot contains no login
+credentials, is never written to disk, and cannot be restored by another
+account. Reconnecting can still briefly interrupt audio. This recovery applies
+to unexpected disconnects; changing audio settings still restarts the engine
+with its current-track pickup.
+
 ## What the client stores
 
 - Since 0.8.0, shared and personal Web API grants

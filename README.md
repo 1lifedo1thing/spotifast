@@ -136,6 +136,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
 - **Light and dark**, or follow the system.
 - **Repeat stays selected.** On `main`, after 0.8.0, starting another song
   locally preserves Repeat, with Shuffle on or off.
+- **Reconnects keep the queue.** On `main`, after 0.8.0, recovering an
+  interrupted local playback session restores its playlist position,
+  queued songs, shuffle order, and Repeat mode.
 - **Light and dark**, or follow the system.
 - **Winamp mini player.** `Ctrl+M` opens a small player for classic `.wsz`
   skins, drawn at 1x to 4x scale. It includes a spectrum analyser, playlist,

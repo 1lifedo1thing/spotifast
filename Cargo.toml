@@ -215,13 +215,15 @@ hyper-proxy2 = { git = "https://github.com/crmne/hyper-proxy2", rev = "efca48113
 # librespot 0.8.0 plus the small patches Spotifast needs: queue controls,
 # normalisation-factor reporting for the visualisers, and a distinct event
 # when Spotify refuses an audio key, bounded socket setup with DNS address
-# fallback, plus an in-memory credential cache for platform storage.
+# fallback, an in-memory credential cache for platform storage, and full
+# playback-state recovery after a session disconnect.
+# Recovery is proposed upstream in librespot-org/librespot#1765.
 # Every librespot crate comes from the
 # fork so one copy exists. Drop patches as upstream takes them.
-librespot-audio = { git = "https://github.com/crmne/librespot", branch = "fastpotify-0.8" }
-librespot-connect = { git = "https://github.com/crmne/librespot", branch = "fastpotify-0.8" }
-librespot-core = { git = "https://github.com/crmne/librespot", branch = "fastpotify-0.8" }
-librespot-metadata = { git = "https://github.com/crmne/librespot", branch = "fastpotify-0.8" }
-librespot-oauth = { git = "https://github.com/crmne/librespot", branch = "fastpotify-0.8" }
-librespot-playback = { git = "https://github.com/crmne/librespot", branch = "fastpotify-0.8" }
-librespot-protocol = { git = "https://github.com/crmne/librespot", branch = "fastpotify-0.8" }
+librespot-audio = { git = "https://github.com/crmne/librespot", rev = "669e004ec7a79e6eea0f87779efc69680793d3b7" }
+librespot-connect = { git = "https://github.com/crmne/librespot", rev = "669e004ec7a79e6eea0f87779efc69680793d3b7" }
+librespot-core = { git = "https://github.com/crmne/librespot", rev = "669e004ec7a79e6eea0f87779efc69680793d3b7" }
+librespot-metadata = { git = "https://github.com/crmne/librespot", rev = "669e004ec7a79e6eea0f87779efc69680793d3b7" }
+librespot-oauth = { git = "https://github.com/crmne/librespot", rev = "669e004ec7a79e6eea0f87779efc69680793d3b7" }
+librespot-playback = { git = "https://github.com/crmne/librespot", rev = "669e004ec7a79e6eea0f87779efc69680793d3b7" }
+librespot-protocol = { git = "https://github.com/crmne/librespot", rev = "669e004ec7a79e6eea0f87779efc69680793d3b7" }

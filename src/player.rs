@@ -244,6 +244,14 @@ pub struct LoadSpec {
     pub autoplay: bool,
 }
 
+/// A dropped Connect session retains its complete playback state. Live
+/// replacement for an audio-settings change still uses a track pickup.
+#[derive(Clone, Debug)]
+pub enum PlaybackResume {
+    Session(Arc<librespot_connect::PlaybackSnapshot>),
+    Track(LoadSpec),
+}
+
 impl LoadSpec {
     fn context_options(&self, current_repeat: RepeatMode) -> LoadContextOptions {
         if self.autoplay {
@@ -523,6 +531,29 @@ impl Engine {
             .store(true, std::sync::atomic::Ordering::SeqCst);
         let _ = self.spirc.shutdown();
         self.player.stop();
+    }
+
+    pub fn resume_point(&self) -> Option<PlaybackResume> {
+        if let Some(snapshot) = self.spirc.disconnected_playback() {
+            return Some(PlaybackResume::Session(snapshot));
+        }
+        self.interrupted().map(|interrupted| {
+            PlaybackResume::Track(LoadSpec {
+                uris: vec![interrupted.uri],
+                position_ms: interrupted.position_ms,
+                play: interrupted.playing,
+                ..LoadSpec::default()
+            })
+        })
+    }
+
+    pub fn resume(&self, resume: PlaybackResume) -> Result<()> {
+        match resume {
+            PlaybackResume::Session(snapshot) => {
+                self.spirc.restore_playback(snapshot).map_err(Into::into)
+            }
+            PlaybackResume::Track(spec) => self.command(PlayerCommand::Load(spec)),
+        }
     }
 
     pub fn command(&self, command: PlayerCommand) -> Result<()> {

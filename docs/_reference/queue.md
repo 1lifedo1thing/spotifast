@@ -40,6 +40,14 @@ On `main`, after 0.8.0, starting another song on this computer keeps the
 selected Repeat mode, with Shuffle on or off. Loading a playlist no longer
 silently disables repeat in the playback engine.
 
+On `main`, after 0.8.0, an unexpected local playback disconnect retains the
+engine's in-memory playback state before closing the session. Reconnection
+restores the same song and position, paused or playing, with its playlist
+context, exact shuffle order, manually queued songs (including duplicates),
+repeat settings, and pending context pages. This also works when the current
+song came from the manual queue rather than the playlist. Playback started
+on the replacement engine takes precedence over recovery.
+
 1. **The list shows the play order.** The top row plays next, followed by the
    rows below it.
 

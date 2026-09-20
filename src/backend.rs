@@ -26,7 +26,7 @@ use crate::http::Http;
 use crate::images::{ArtLoader, accent_color};
 use crate::model::PlaylistCache;
 use crate::paths::AppDirs;
-use crate::player::{Engine, EngineConfig, EngineEvent, LoadSpec, LocalState, PlayerCommand};
+use crate::player::{Engine, EngineConfig, EngineEvent, LocalState, PlaybackResume, PlayerCommand};
 use crate::session_reads;
 use crate::settings::ProxyConfig;
 
@@ -1182,9 +1182,9 @@ struct Worker {
     reconnects: Vec<Instant>,
     /// What the engine was playing when it went down, to load again once
     /// the next one is up.
-    resume: Option<LoadSpec>,
+    resume: Option<PlaybackResume>,
     /// A pickup in flight: the load to repeat and how often it was tried.
-    resume_verify: Option<(LoadSpec, u8)>,
+    resume_verify: Option<(PlaybackResume, u8)>,
 }
 
 impl Worker {
@@ -2320,12 +2320,7 @@ impl Worker {
         self.resume_verify = None;
         self.album_type_lookup.requeue_active_for_new_engine();
         if let Some(engine) = self.engine.take() {
-            self.resume = engine.interrupted().map(|interrupted| LoadSpec {
-                uris: vec![interrupted.uri],
-                position_ms: interrupted.position_ms,
-                play: interrupted.playing,
-                ..LoadSpec::default()
-            });
+            self.resume = engine.resume_point();
             engine.shutdown();
         }
     }
@@ -2658,12 +2653,10 @@ impl Worker {
             return;
         }
         log::info!(
-            "picking {} up again at {} ms on the new session (try {})",
-            spec.uris.join(" "),
-            spec.position_ms,
+            "restoring playback on the new session (try {})",
             attempts + 1
         );
-        if let Err(error) = engine.command(PlayerCommand::Load(spec.clone())) {
+        if let Err(error) = engine.resume(spec.clone()) {
             log::warn!("unable to pick playback up again: {error}");
         }
         self.resume_verify = Some((spec, attempts + 1));
