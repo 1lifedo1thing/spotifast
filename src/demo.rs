@@ -1886,13 +1886,44 @@ mod tests {
         );
         // Clearing the field brings every row back.
         let tree = accessible_frame(&ctx, &mut app, vec![]);
-        let clear = accessible_node(&tree, "Clear", Role::Button);
+        // The populated demo also has a global search, with its own Clear
+        // button. Accessibility tree order does not identify which field a
+        // button belongs to. Click the one beside the Settings input.
+        let field = accessible_node(&tree, "Search settings", Role::TextInput);
+        let field_bounds = tree
+            .nodes
+            .iter()
+            .find(|(id, _)| *id == field)
+            .unwrap()
+            .1
+            .bounds()
+            .unwrap();
+        let field_y = (field_bounds.y0 + field_bounds.y1) / 2.0;
+        let clear_buttons: Vec<_> = tree
+            .nodes
+            .iter()
+            .filter(|(_, node)| node.label() == Some("Clear") && node.role() == Role::Button)
+            .collect();
+        assert_eq!(clear_buttons.len(), 2, "both searches have a Clear button");
+        let clear = clear_buttons
+            .iter()
+            .find(|(_, node)| {
+                node.bounds()
+                    .is_some_and(|bounds| bounds.y0 <= field_y && field_y <= bounds.y1)
+            })
+            .expect("Clear beside Search settings")
+            .0;
+        let global_search = app.search.query.clone();
         let tree = accessible_frame(
             &ctx,
             &mut app,
             vec![accessible_action(clear, AccessibleAction::Click, None)],
         );
         assert!(settings_filter(&ctx).is_empty());
+        assert_eq!(
+            app.search.query, global_search,
+            "global search stays intact"
+        );
         accessible_node(&tree, "Compact track list", Role::CheckBox);
         // Gibberish matches nothing: every section's controls disappear
         // and the empty state takes the page. (Plain labels expose no
