@@ -612,6 +612,11 @@ pub enum Command {
     Lyrics(Box<LyricsRequest>),
     /// The account's playlist tree, folders and all, from the session.
     Rootlist,
+    /// Internal: a rootlist read completed for this signed-in session.
+    RootlistFinished {
+        generation: u64,
+        result: Result<crate::player::Rootlist, String>,
+    },
     /// Check that a reconnect's pickup really started, and try again if not.
     VerifyResume,
     /// Add, replace, or remove the optional personal Web API application.
@@ -1156,6 +1161,10 @@ struct Worker {
     commands: mpsc::UnboundedSender<Command>,
     waker: Waker,
     engine: Option<Arc<Engine>>,
+    /// A rootlist fetch asked for before the engine existed, to run once it
+    /// does. The rootlist carries invitation edit permissions, which no
+    /// other request reports.
+    rootlist_pending: bool,
     album_type_lookup: AlbumTypeLookup,
     /// True while a playback grant or engine connection is in flight, so a
     /// second attempt does not pile up.
@@ -1217,6 +1226,7 @@ impl Worker {
             commands,
             waker,
             engine: None,
+            rootlist_pending: false,
             album_type_lookup: AlbumTypeLookup::default(),
             engine_busy: false,
             search_tasks: Vec::new(),
@@ -1681,6 +1691,9 @@ impl Worker {
                 }
                 Command::Lyrics(request) => self.fetch_lyrics(*request),
                 Command::Rootlist => self.fetch_rootlist(),
+                Command::RootlistFinished { generation, result } => {
+                    self.on_rootlist_finished(generation, result);
+                }
                 Command::VerifyResume => self.verify_resume(),
                 Command::LoadPlaylistCache { id, generation } => {
                     self.load_playlist_cache(id, generation)
@@ -2172,6 +2185,7 @@ impl Worker {
         self.spotify_restore_started = true;
         self.cancel_search();
         self.signed_in = false;
+        self.rootlist_pending = false;
         self.session.send_modify(|generation| *generation += 1);
         self.authorization_attempt += 1;
         if let Err(error) = self.credentials.revoke_spotify() {
@@ -2515,6 +2529,7 @@ impl Worker {
                     self.schedule_resume_check(1_500);
                 }
                 self.engine = Some(engine);
+                self.start_rootlist();
                 self.reconnects.clear();
                 self.emit(Event::Playback(LocalPlayback::Ready { device_id }));
                 self.start_album_type_lookup();
@@ -2663,20 +2678,59 @@ impl Worker {
         });
     }
 
-    fn fetch_rootlist(&self) {
-        let Some(engine) = self.engine.clone() else {
+    fn fetch_rootlist(&mut self) {
+        if !self.signed_in {
             return;
-        };
-        let events = self.events.clone();
-        let waker = self.waker.clone();
-        tokio::spawn(async move {
-            let result = engine
+        }
+        self.rootlist_pending = true;
+        self.start_rootlist();
+    }
+
+    fn start_rootlist(&mut self) {
+        let fetch = self.engine.clone().map(|engine| async move {
+            engine
                 .rootlist()
                 .await
-                .map_err(|error| format!("{error:#}"));
-            let _ = events.send(Event::Rootlist { result });
-            waker.wake();
+                .map_err(|error| format!("{error:#}"))
         });
+        self.start_pending_rootlist(fetch);
+    }
+
+    // Keep the read injectable so startup ordering can be tested without
+    // authenticating a real playback engine or using an account's folders.
+    fn start_pending_rootlist(
+        &mut self,
+        fetch: Option<
+            impl std::future::Future<Output = Result<crate::player::Rootlist, String>> + Send + 'static,
+        >,
+    ) {
+        if !self.signed_in || !self.rootlist_pending {
+            return;
+        }
+        let Some(fetch) = fetch else {
+            return;
+        };
+        self.rootlist_pending = false;
+        let commands = self.commands.clone();
+        let mut session = self.session.subscribe();
+        let generation = *session.borrow_and_update();
+        tokio::spawn(async move {
+            let result = tokio::select! {
+                _ = session.changed() => return,
+                result = fetch => result,
+            };
+            let _ = commands.send(Command::RootlistFinished { generation, result });
+        });
+    }
+
+    fn on_rootlist_finished(
+        &self,
+        generation: u64,
+        result: Result<crate::player::Rootlist, String>,
+    ) {
+        if self.signed_in && generation == *self.session.borrow() {
+            self.emit(Event::Rootlist { result });
+        }
     }
 
     fn fetch_album_types(&mut self, uris: Vec<String>) {
@@ -4629,6 +4683,83 @@ mod authorization_tests {
                 .try_iter()
                 .any(|event| matches!(event, Event::Auth(AuthStatus::Connected { .. })))
         );
+    }
+
+    /// The rootlist carries the edit permission for a playlist shared by
+    /// invitation, and its request is sent once, when the playlist library
+    /// finishes. A cached web token can finish that before the engine
+    /// connects, so the request has to wait rather than be dropped.
+    #[test]
+    fn a_rootlist_request_before_the_engine_waits_for_it() {
+        let (runtime, mut worker, events) = worker("rootlist-before-engine");
+        let _entered = runtime.enter();
+        assert!(worker.engine.is_none());
+
+        worker.signed_in = true;
+        worker.fetch_rootlist();
+        worker.fetch_rootlist();
+        assert!(worker.rootlist_pending);
+
+        let (commands, mut results) = mpsc::unbounded_channel();
+        worker.commands = commands;
+        runtime.block_on(async {
+            let fetched = || async {
+                Ok(crate::player::Rootlist {
+                    entries: vec![crate::player::RootlistEntry::Playlist(
+                        "spotify:playlist:shared".into(),
+                    )],
+                    editable: ["spotify:playlist:shared".into()].into(),
+                })
+            };
+            worker.start_pending_rootlist(Some(fetched()));
+            worker.start_pending_rootlist(Some(fetched()));
+            let Command::RootlistFinished { generation, result } = results.recv().await.unwrap()
+            else {
+                panic!("expected the deferred rootlist");
+            };
+            assert!(
+                result
+                    .as_ref()
+                    .unwrap()
+                    .editable
+                    .contains("spotify:playlist:shared")
+            );
+            worker.on_rootlist_finished(generation, result);
+            tokio::task::yield_now().await;
+            assert!(
+                results.try_recv().is_err(),
+                "engine readiness fetches only once"
+            );
+            assert!(!worker.rootlist_pending);
+        });
+        assert!(matches!(
+            events.try_recv(),
+            Ok(Event::Rootlist { result: Ok(_) })
+        ));
+    }
+
+    #[test]
+    fn signout_cancels_pending_and_completed_rootlist_work() {
+        let (runtime, mut worker, events) = worker("rootlist-signout");
+        let _entered = runtime.enter();
+        worker.signed_in = true;
+        worker.fetch_rootlist();
+        let generation = *worker.session.borrow();
+        worker.sign_out();
+        assert!(!worker.rootlist_pending);
+        worker.fetch_rootlist();
+        assert!(
+            !worker.rootlist_pending,
+            "signed-out work must not be deferred"
+        );
+        events.try_iter().for_each(drop);
+        worker.signed_in = true;
+        worker.on_rootlist_finished(generation, Err("previous account".into()));
+        assert!(
+            events.try_recv().is_err(),
+            "late results cannot reach a new account"
+        );
+        assert!(!worker.rootlist_pending);
     }
 
     #[test]

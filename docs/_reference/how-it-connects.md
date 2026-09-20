@@ -77,6 +77,10 @@ stay visible. A failed page stops automatic loading. Spotify custom playlist
 order uses the existing account-scoped rootlist from local playback; sorting
 and dragging never write that order back to Spotify.
 
+On `main`, after 0.8.0, a playlist-folder and invitation-permission read requested
+before local playback connects waits for that connection instead of being lost.
+Sign-out discards the waiting read and any result from the previous session.
+
 ## What the client stores
 
 - Since 0.8.0, shared and personal Web API grants

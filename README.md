@@ -98,7 +98,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   Drop it on an empty playlist to add its first song.
   A playlist a friend shared with you takes songs too,
   as Spotify's own apps allow. Filter the **Add to playlist** menu by name to
-  find the destination quickly.
+  find the destination quickly. On `main`, after 0.8.0, playlist folders and
+  invitation permissions also load when the library finishes before local
+  playback connects.
 - **Opens Spotify links.** Spotifast registers for `spotify:` links, so a
   song, album, artist, playlist, or podcast shared from another app opens
   in it, whether it is running or not. `open.spotify.com` addresses go
