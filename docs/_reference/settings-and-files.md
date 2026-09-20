@@ -159,6 +159,10 @@ remembered size and position describe an ordinary window and are not applied
 to one that already fills the screen, because sizing or moving such a window
 restores it down.
 
+On `main`, after 0.8.0, a closing main window keeps its own geometry until
+the native window closes. An extra closing frame cannot resize it to the
+mini player and overwrite its saved size or maximized state.
+
 Since 0.8.0, album and playlist scrollbars reserve the full track count
 as soon as Spotify reports it. Dragging to an unloaded section shows placeholders and requests
 that section directly. Loaded windows stay in memory while the page is retained;

@@ -139,6 +139,8 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   and equalizer. It keeps its shade mode and, where the desktop permits,
   its own position when switching views. Drop a skin from the
   [Winamp Skin Museum](https://skins.webamp.org) on either window to add it.
+  On `main`, after 0.8.0, switching to the mini player preserves the main
+  window's size even if its native close takes another frame.
   On Windows, since 0.8.0, a mini player saved on a disconnected monitor
   starts at a default position on the current desktop.
   Clicking or double-clicking the Windows tray icon brings the window forward;
