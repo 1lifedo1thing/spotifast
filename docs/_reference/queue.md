@@ -36,6 +36,10 @@ repeated song starts that occurrence. A filtered playlist or Liked Songs view
 plays its matching songs in displayed order, including duplicates. An empty or entirely
 unplayable view disables Play instead of starting the unfiltered context.
 
+On `main`, after 0.8.0, starting another song on this computer keeps the
+selected Repeat mode, with Shuffle on or off. Loading a playlist no longer
+silently disables repeat in the playback engine.
+
 1. **The list shows the play order.** The top row plays next, followed by the
    rows below it.
 

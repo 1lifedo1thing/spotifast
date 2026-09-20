@@ -5921,7 +5921,8 @@ impl App {
             }
             Target::Local => {
                 self.queued_play = None;
-                let load = local_load(&request, shuffle);
+                let mut load = local_load(&request, shuffle);
+                load.repeat = Some(self.local.repeat);
                 self.local_list = load.context_uri.is_none().then(|| load.uris.clone());
                 let shuffle_after = shuffle && load.shuffle.is_none() && !load.uris.is_empty();
                 self.backend.player(PlayerCommand::Load(load));
@@ -6434,6 +6435,7 @@ impl App {
                     position_ms: request.position_ms,
                     play: was_playing,
                     shuffle: None,
+                    repeat: Some(RepeatMode::from_api(&remote.state.repeat_state)),
                     autoplay: false,
                 }));
             }
@@ -8691,6 +8693,7 @@ fn local_load(request: &PlayRequest, shuffle: bool) -> LoadSpec {
         position_ms: request.position_ms,
         play: true,
         shuffle: (shuffle && !(list && chosen)).then_some(true),
+        repeat: None,
         autoplay: false,
     }
 }

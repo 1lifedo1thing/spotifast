@@ -236,9 +236,27 @@ pub struct LoadSpec {
     pub position_ms: u32,
     pub play: bool,
     pub shuffle: Option<bool>,
+    /// Explicit repeat preference for a new load. Otherwise retain the
+    /// engine's current preference instead of librespot's default (off).
+    pub repeat: Option<RepeatMode>,
     /// Play what Spotify would follow `context_uri` with, its autoplay
     /// station, rather than the context itself.
     pub autoplay: bool,
+}
+
+impl LoadSpec {
+    fn context_options(&self, current_repeat: RepeatMode) -> LoadContextOptions {
+        if self.autoplay {
+            LoadContextOptions::Autoplay
+        } else {
+            let repeat = self.repeat.unwrap_or(current_repeat);
+            LoadContextOptions::Options(Options {
+                shuffle: self.shuffle.unwrap_or(false),
+                repeat: repeat == RepeatMode::Context,
+                repeat_track: repeat == RepeatMode::Track,
+            })
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -558,16 +576,10 @@ impl Engine {
                     .clone()
                     .map(PlayingTrack::Uri)
                     .or_else(|| spec.offset_index.map(PlayingTrack::Index));
-                let context_options = if spec.autoplay {
-                    Some(LoadContextOptions::Autoplay)
-                } else {
-                    spec.shuffle.map(|shuffle| {
-                        LoadContextOptions::Options(Options {
-                            shuffle,
-                            ..Options::default()
-                        })
-                    })
-                };
+                // A load resets librespot's options, including repeat. Pass
+                // the user's preference even when shuffle is off.
+                let repeat = self.state.lock().unwrap_or_else(|p| p.into_inner()).repeat;
+                let context_options = Some(spec.context_options(repeat));
                 let options = LoadRequestOptions {
                     start_playing: spec.play,
                     seek_to: spec.position_ms,
@@ -975,6 +987,41 @@ fn decode_folder_name(encoded: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn loading_another_song_keeps_repeat_with_or_without_shuffle() {
+        for shuffle in [None, Some(false), Some(true)] {
+            for mode in [RepeatMode::Off, RepeatMode::Context, RepeatMode::Track] {
+                let mut spec = LoadSpec {
+                    shuffle,
+                    ..LoadSpec::default()
+                };
+                let LoadContextOptions::Options(options) = spec.context_options(mode) else {
+                    panic!("ordinary playback must supply repeat options");
+                };
+                assert_eq!(options.shuffle, shuffle.unwrap_or(false));
+                assert_eq!(options.repeat, mode == RepeatMode::Context);
+                assert_eq!(options.repeat_track, mode == RepeatMode::Track);
+
+                // A user's new preference wins over an older player event,
+                // including turning repeat off immediately before a load.
+                spec.repeat = Some(mode);
+                let LoadContextOptions::Options(options) = spec.context_options(mode.next()) else {
+                    panic!("ordinary playback must supply repeat options");
+                };
+                assert_eq!(options.repeat, mode == RepeatMode::Context);
+                assert_eq!(options.repeat_track, mode == RepeatMode::Track);
+            }
+        }
+        assert!(matches!(
+            LoadSpec {
+                autoplay: true,
+                ..LoadSpec::default()
+            }
+            .context_options(RepeatMode::Context),
+            LoadContextOptions::Autoplay
+        ));
+    }
+
     #[test]
     fn playback_metadata_preserves_each_artist_id_and_name() {
         use librespot_metadata::artist::{ArtistWithRole, ArtistsWithRole};
