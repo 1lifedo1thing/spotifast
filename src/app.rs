@@ -243,6 +243,8 @@ pub struct App {
     pub auth: AuthStatus,
     pub user: Option<User>,
     pub local_device_id: Option<String>,
+    /// Ignore the previous local song until a Connect transfer reports its track.
+    local_transfer_sequence: Option<u64>,
     /// Local playback is authorized and the engine is connected.
     pub local_ready: bool,
     pub local_playback: LocalPlayback,
@@ -624,6 +626,7 @@ impl App {
             auth: AuthStatus::Starting,
             user: None,
             local_device_id: None,
+            local_transfer_sequence: None,
             local_ready: false,
             local_playback: LocalPlayback::Unavailable,
             local: LocalState::default(),
@@ -1219,7 +1222,8 @@ impl App {
 
     /// What a device is actually playing, here or elsewhere.
     fn now_playing_live(&self) -> Option<NowPlaying> {
-        if self.local.is_active() {
+        if self.local.is_active() && self.local_transfer_sequence != Some(self.local.track_sequence)
+        {
             let track = self.local.track.as_ref()?;
             let cached = track
                 .uri
@@ -1873,6 +1877,7 @@ impl App {
     }
 
     fn reset_data(&mut self) {
+        self.local_transfer_sequence = None;
         self.queue_start_pending = None;
         self.pending_album_queues.clear();
         self.pending_queue_batches.clear();
@@ -1960,6 +1965,12 @@ impl App {
     }
 
     fn handle_local(&mut self, state: LocalState) {
+        if self
+            .local_transfer_sequence
+            .is_some_and(|sequence| sequence != state.track_sequence)
+        {
+            self.local_transfer_sequence = None;
+        }
         if state.track_sequence != self.local.track_sequence
             && matches!(self.target(), Target::Local)
         {
@@ -6672,38 +6683,19 @@ impl App {
         if Some(device_id.as_str()) == self.local_device_id.as_deref() {
             self.selected_device = None;
             self.show_devices = false;
-            let was_playing = self.now_playing().is_some_and(|now| now.playing);
-            self.backend.player(PlayerCommand::Activate);
-            if let Some(remote) = self.remote_fresh()
-                && let Some(item) = &remote.state.item
-            {
-                let uri = item.uri().to_string();
-                let position = {
-                    let base = remote.state.progress_ms.unwrap_or(0);
-                    if remote.state.is_playing {
-                        base + remote.received_at.elapsed().as_millis() as u32
-                    } else {
-                        base
-                    }
-                };
-                let mut request = match &remote.state.context {
-                    Some(context) if !context.uri.is_empty() => {
-                        PlayRequest::context(context.uri.clone()).starting_at_uri(uri)
-                    }
-                    _ => PlayRequest::tracks(vec![uri]),
-                };
-                request.position_ms = position;
-                self.backend.player(PlayerCommand::Load(LoadSpec {
-                    context_uri: request.context_uri,
-                    uris: request.uris,
-                    offset_uri: request.offset_uri,
-                    offset_index: None,
-                    position_ms: request.position_ms,
-                    play: was_playing,
-                    shuffle: None,
-                    repeat: Some(RepeatMode::from_api(&remote.state.repeat_state)),
-                    autoplay: false,
-                }));
+            if !self.local.is_active() {
+                // Connect transfers the active device's full playback state.
+                // A Web API snapshot may be stale and cannot recreate its queue.
+                self.queue_start_pending = Some(Target::Local);
+                self.local_transfer_sequence = Some(self.local.track_sequence);
+                self.local_list = None;
+                self.resume_queue.clear();
+                self.queued_play = None;
+                self.intent_track = None;
+                self.assumed_context = None;
+                self.optimistic_playing = None;
+                self.clear_play_pending();
+                self.backend.player(PlayerCommand::Transfer);
             }
             self.poll_remote_soon();
             return;
@@ -14930,6 +14922,122 @@ mod tests {
             "confirmed edits stop protecting an old page"
         );
         assert!(app.playlist_pages.len() <= 12);
+    }
+
+    #[test]
+    fn transferring_back_takes_the_connect_session_without_replaying_a_snapshot() {
+        for playing in [false, true] {
+            for snapshot in ["fresh", "stale", "missing"] {
+                let mut app = test_app(&format!("transfer-back-{playing}-{snapshot}"));
+                app.local_ready = true;
+                app.local_device_id = Some("this-computer".into());
+                app.local = LocalState {
+                    connected: true,
+                    playback: Playback::Stopped,
+                    track: Some(crate::player::LocalTrack {
+                        uri: "spotify:track:bellaire".into(),
+                        ..Default::default()
+                    }),
+                    track_sequence: 3,
+                    ..Default::default()
+                };
+                app.selected_device = Some("phone".into());
+                app.remote = Some(RemoteSnapshot {
+                    state: PlaybackState {
+                        is_playing: playing,
+                        progress_ms: Some(65_000),
+                        item: Some(queued_song("spotify:track:metallica")),
+                        device: Some(crate::api::models::Device {
+                            id: Some("phone".into()),
+                            is_active: true,
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                    received_at: Instant::now(),
+                });
+                app.on_now_playing_changed();
+                let upcoming = [
+                    "spotify:track:metallica",
+                    "spotify:track:extra",
+                    "spotify:track:context",
+                ];
+                app.queue = loaded_queue("spotify:track:metallica", &upcoming);
+                app.manual_queue = upcoming[..2].iter().map(|uri| uri.to_string()).collect();
+                // Old local restoration data must not be appended to the transfer.
+                app.resume_track = Some("spotify:track:metallica".into());
+                app.resume_queue = vec!["spotify:track:old-queue".into()];
+                app.local_list = Some(vec!["spotify:track:bellaire".into()]);
+                match snapshot {
+                    "stale" => {
+                        app.remote.as_mut().unwrap().received_at = Instant::now() - REMOTE_FRESH
+                    }
+                    "missing" => app.remote = None,
+                    _ => {}
+                }
+                app.backend.take_player_commands();
+                app.transfer("this-computer".into());
+                assert_eq!(
+                    app.backend.take_player_commands(),
+                    [PlayerCommand::Transfer]
+                );
+                assert!(app.local_list.is_none());
+                assert!(app.resume_queue.is_empty());
+                assert_eq!(queue_uris(&app).1, upcoming);
+
+                // Loading arrives before TrackChanged and still carries the
+                // old local song. Keep showing the remote song through it.
+                let loading = LocalState {
+                    playback: Playback::Loading,
+                    ..app.local.clone()
+                };
+                app.handle_local(loading);
+                if snapshot == "fresh" {
+                    assert_eq!(app.now_playing().unwrap().uri, "spotify:track:metallica");
+                }
+                assert_eq!(queue_uris(&app).1, upcoming);
+
+                let transferred = LocalState {
+                    connected: true,
+                    playback: if playing {
+                        Playback::Playing
+                    } else {
+                        Playback::Paused
+                    },
+                    track: Some(crate::player::LocalTrack {
+                        uri: "spotify:track:metallica".into(),
+                        duration_ms: 300_000,
+                        ..Default::default()
+                    }),
+                    position_ms: 65_000,
+                    track_sequence: 4,
+                    ..Default::default()
+                };
+                app.handle_local(transferred.clone());
+                let now = app.now_playing().unwrap();
+                assert_eq!(now.uri, "spotify:track:metallica");
+                assert_eq!(now.position_ms, 65_000);
+                assert_eq!(now.playing, playing);
+                assert_eq!(app.target(), Target::Local);
+                assert_eq!(queue_uris(&app).1, upcoming);
+                assert_eq!(
+                    app.manual_queue.len(),
+                    2,
+                    "handoff does not consume a queued copy"
+                );
+                assert!(app.backend.take_queue_requests().is_empty());
+                // Selecting this computer again must not suppress the next advance.
+                app.transfer("this-computer".into());
+                assert!(app.backend.take_player_commands().is_empty());
+                app.handle_local(LocalState {
+                    track_sequence: 5,
+                    ..transferred
+                });
+                assert_eq!(queue_uris(&app).1, upcoming[1..]);
+                assert_eq!(app.manual_queue, ["spotify:track:extra"]);
+                app.backend.shutdown();
+            }
+        }
     }
 
     #[test]

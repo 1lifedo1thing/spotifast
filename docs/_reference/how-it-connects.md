@@ -279,6 +279,14 @@ uses the Web API for subsequent control requests.
 Playback runs on a separate runtime. Librespot maintains the Spotify Connect
 session, exposes this computer as a device, receives transfers, and reports
 playback state. If the session drops, it reconnects with the stored credential.
+
+On `main`, after 0.8.0, selecting this computer in the device picker asks
+librespot to transfer playback from the active Connect device. Spotify supplies
+the current song, position, playing or paused state, context, and queue together.
+This uses the existing playback session's Connect transfer request and needs
+no additional authorization. An old or unavailable Web API playback snapshot
+does not cause the previous local song to restart or replace the remote queue.
+
 When the PulseAudio backend is selected on Linux, its PulseAudio or PipeWire
 stream is named **Spotifast**, with **Spotify playback** as its description, so
 system mixers and audio processors can identify and route it. Explicit

@@ -827,6 +827,8 @@ pub struct Backend {
     #[cfg(test)]
     queued_tracks: std::sync::Mutex<Vec<String>>,
     #[cfg(test)]
+    player_commands: std::sync::Mutex<Vec<PlayerCommand>>,
+    #[cfg(test)]
     album_type_requests: std::sync::Mutex<Vec<Vec<String>>>,
 }
 
@@ -906,6 +908,8 @@ impl Backend {
             queue_requests: std::sync::Mutex::new(Vec::new()),
             #[cfg(test)]
             queued_tracks: std::sync::Mutex::new(Vec::new()),
+            #[cfg(test)]
+            player_commands: std::sync::Mutex::new(Vec::new()),
             #[cfg(test)]
             album_type_requests: std::sync::Mutex::new(Vec::new()),
         }
@@ -1069,7 +1073,14 @@ impl Backend {
         std::mem::take(&mut *self.queued_tracks.lock().unwrap())
     }
 
+    #[cfg(test)]
+    pub(crate) fn take_player_commands(&self) -> Vec<PlayerCommand> {
+        std::mem::take(&mut *self.player_commands.lock().unwrap())
+    }
+
     pub fn player(&self, command: PlayerCommand) {
+        #[cfg(test)]
+        self.player_commands.lock().unwrap().push(command.clone());
         #[cfg(test)]
         if let PlayerCommand::AddToQueue(uri) = &command {
             self.queued_tracks.lock().unwrap().push(uri.clone());

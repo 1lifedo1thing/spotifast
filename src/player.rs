@@ -286,7 +286,8 @@ pub enum PlayerCommand {
     Shuffle(bool),
     Repeat(RepeatMode),
     Load(LoadSpec),
-    Activate,
+    /// Take over the active Connect session, including its queue and position.
+    Transfer,
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -600,7 +601,7 @@ impl Engine {
                     spirc.repeat_track(true)?;
                 }
             },
-            PlayerCommand::Activate => spirc.activate()?,
+            PlayerCommand::Transfer => spirc.transfer(None)?,
             PlayerCommand::Load(spec) => {
                 let playing_track = spec
                     .offset_uri

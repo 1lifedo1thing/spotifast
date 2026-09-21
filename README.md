@@ -42,6 +42,8 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   another computer from the device picker, and keep controlling it: play,
   pause, skip, seek, shuffle, repeat, volume. The picker expands upward to
   show several devices at once, fitting the window; longer lists scroll.
+  On `main`, after 0.8.0, switching back to this computer transfers the active
+  Connect session with its song, position, queue, and paused or playing state.
 - **Finds speakers on your network.** Spotifast finds librespot, spotifyd,
   and supported hardware receivers over mDNS. Once connected, they appear as
   Spotify Connect devices. The picker uses responding receivers' names and

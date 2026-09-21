@@ -52,6 +52,11 @@ repeat settings, and pending context pages. This also works when the current
 song came from the manual queue rather than the playlist. Playback started
 on the replacement engine takes precedence over recovery.
 
+On `main`, after 0.8.0, switching from another Connect device back to this
+computer transfers that device's current song, position, and queue, including
+manually queued copies. A paused session stays paused. The handoff itself does
+not consume a queue row or restore an older queue saved on this computer.
+
 1. **The list shows the play order.** The top row plays next, followed by the
    rows below it.
 
