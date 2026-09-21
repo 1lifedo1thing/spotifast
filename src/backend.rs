@@ -243,6 +243,11 @@ pub enum ApiRequest {
         offset: u32,
         generation: u64,
     },
+    AlbumQueueTracks {
+        id: String,
+        offset: u32,
+        request: u64,
+    },
     Show {
         id: String,
     },
@@ -281,6 +286,11 @@ pub enum ApiRequest {
         uri: String,
         device_id: Option<String>,
         label: String,
+    },
+    AddManyToQueue {
+        request: u64,
+        uris: Vec<String>,
+        device_id: Option<String>,
     },
 }
 
@@ -461,6 +471,11 @@ pub enum ApiResponse {
         generation: u64,
         result: ApiResult<Page<Track>>,
     },
+    AlbumQueueTracks {
+        offset: u32,
+        request: u64,
+        result: ApiResult<Page<Track>>,
+    },
     Show {
         id: String,
         result: ApiResult<Show>,
@@ -488,6 +503,10 @@ pub enum ApiResponse {
     },
     QueueAdded {
         label: String,
+        result: ApiResult<()>,
+    },
+    QueueBatchAdded {
+        request: u64,
         result: ApiResult<()>,
     },
 }
@@ -803,6 +822,10 @@ pub struct Backend {
     #[cfg(test)]
     remote_play_requests: std::sync::Mutex<Vec<ApiRequest>>,
     #[cfg(test)]
+    queue_requests: std::sync::Mutex<Vec<ApiRequest>>,
+    #[cfg(test)]
+    queued_tracks: std::sync::Mutex<Vec<String>>,
+    #[cfg(test)]
     album_type_requests: std::sync::Mutex<Vec<Vec<String>>>,
 }
 
@@ -879,6 +902,10 @@ impl Backend {
             #[cfg(test)]
             remote_play_requests: std::sync::Mutex::new(Vec::new()),
             #[cfg(test)]
+            queue_requests: std::sync::Mutex::new(Vec::new()),
+            #[cfg(test)]
+            queued_tracks: std::sync::Mutex::new(Vec::new()),
+            #[cfg(test)]
             album_type_requests: std::sync::Mutex::new(Vec::new()),
         }
     }
@@ -930,6 +957,15 @@ impl Backend {
     }
 
     pub fn api(&self, request: ApiRequest) {
+        #[cfg(test)]
+        if matches!(
+            request,
+            ApiRequest::AlbumQueueTracks { .. }
+                | ApiRequest::AddToQueue { .. }
+                | ApiRequest::AddManyToQueue { .. }
+        ) {
+            self.queue_requests.lock().unwrap().push(request.clone());
+        }
         #[cfg(test)]
         if matches!(
             request,
@@ -1022,7 +1058,21 @@ impl Backend {
         )
     }
 
+    #[cfg(test)]
+    pub(crate) fn take_queue_requests(&self) -> Vec<ApiRequest> {
+        std::mem::take(&mut *self.queue_requests.lock().unwrap())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn take_queued_tracks(&self) -> Vec<String> {
+        std::mem::take(&mut *self.queued_tracks.lock().unwrap())
+    }
+
     pub fn player(&self, command: PlayerCommand) {
+        #[cfg(test)]
+        if let PlayerCommand::AddToQueue(uri) = &command {
+            self.queued_tracks.lock().unwrap().push(uri.clone());
+        }
         self.send(Command::Player(command));
     }
 
@@ -2989,7 +3039,8 @@ fn operation_for(api: &ApiGateway, request: &ApiRequest) -> Operation {
         | ApiRequest::Remote { .. }
         | ApiRequest::Transfer { .. }
         | ApiRequest::ShufflePlay { .. }
-        | ApiRequest::AddToQueue { .. } => Operation::Playback,
+        | ApiRequest::AddToQueue { .. }
+        | ApiRequest::AddManyToQueue { .. } => Operation::Playback,
         ApiRequest::RecentlyPlayed { .. }
         | ApiRequest::TopTracks { .. }
         | ApiRequest::TopArtists { .. }
@@ -3037,6 +3088,7 @@ fn operation_for(api: &ApiGateway, request: &ApiRequest) -> Operation {
         | ApiRequest::ArtistAlbums { .. }
         | ApiRequest::Album { .. }
         | ApiRequest::AlbumTracks { .. }
+        | ApiRequest::AlbumQueueTracks { .. }
         | ApiRequest::Show { .. }
         | ApiRequest::ShowEpisodes { .. }
         | ApiRequest::Track { .. }
@@ -3400,6 +3452,15 @@ async fn handle(
             id,
             offset,
         },
+        ApiRequest::AlbumQueueTracks {
+            id,
+            offset,
+            request,
+        } => ApiResponse::AlbumQueueTracks {
+            result: routed!(album_tracks(&id, offset, 50)),
+            offset,
+            request,
+        },
         ApiRequest::Show { id } => ApiResponse::Show {
             result: routed!(show(&id)),
             id,
@@ -3461,6 +3522,14 @@ async fn handle(
         } => ApiResponse::QueueAdded {
             result: routed!(add_to_queue(&uri, device_id.as_deref())),
             label,
+        },
+        ApiRequest::AddManyToQueue {
+            request,
+            uris,
+            device_id,
+        } => ApiResponse::QueueBatchAdded {
+            result: routed!(add_many_to_queue(&uris, device_id.as_deref())),
+            request,
         },
     };
     observe_playlists(api, &response);

@@ -80,6 +80,8 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   Discography and related-artist cards also have right-click menus (available since 0.8.0).
   Artist names in the player bar open their pages, including during local
   playback before Web API metadata arrives (available since 0.8.0).
+  On `main`, after 0.8.0, an album, single, or EP's **Add to queue** adds all
+  its playable songs in album order, on this computer or another device.
 - **Edit your playlists.** Create, rename, describe, reorder, and delete them.
   Since 0.8.0, hold a dragged song near the playlist's top or bottom
   edge to scroll to rows beyond the screen. The Library sidebar scrolls while

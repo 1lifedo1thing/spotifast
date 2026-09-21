@@ -60,6 +60,14 @@ on the replacement engine takes precedence over recovery.
    the same song twice and it plays twice. A double-click only counts
    once.
 
+   On `main`, after 0.8.0, an album's **Add to queue** adds its playable songs
+   in album order, including repeated songs. This also works for singles and
+   EPs. A fully loaded album appears immediately. Otherwise, a loading notice
+   appears while all its track pages are fetched, then its songs are appended
+   together after the songs already queued. A failed fetch adds no partial
+   album. Clear queue and sign-out cancel an album still being fetched;
+   changing playback devices asks you to add it again on the new device.
+
 3. **When a song starts, its row leaves the queue.** It doesn't matter
    how it started: the song before it ended, you pressed Next, you
    clicked it, or another device skipped to it. A song is never shown

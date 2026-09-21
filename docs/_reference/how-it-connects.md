@@ -206,6 +206,19 @@ or the request fails, the page keeps the edits and offers a retry. Refreshing
 again retries confirmation without losing the local changes. This uses the
 existing playlist requests and adds no periodic polling.
 
+## Album queueing
+
+On `main`, after 0.8.0, adding an album, single, or EP to the queue resolves
+its songs before sending playback commands. A complete album already loaded
+in the app needs no catalogue request. Otherwise, the existing album-track
+endpoint is read in pages of 50, with the normal personal/shared app routing
+and rate limits. The album URI itself is never sent to Spotify's song queue.
+Local playback queues the resolved songs through librespot. On another device,
+Web API queue writes run one at a time in album order. A later song waits for
+the album's writes, and partial queue reads cannot remove the shown album
+while those writes are pending. An error stops the remaining writes and is
+reported.
+
 ## Playlist cover uploads
 
 On `main`, after 0.8.0, **Edit details → Change cover** opens the native file

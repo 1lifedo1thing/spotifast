@@ -137,6 +137,14 @@ pub enum Target {
     Remote(Option<String>),
 }
 
+struct PendingAlbumQueue {
+    id: String,
+    label: String,
+    target: Target,
+    offset: u32,
+    tracks: Vec<Track>,
+}
+
 /// How the application is being started.
 #[derive(Clone, Copy, Debug)]
 pub struct AppOptions {
@@ -448,6 +456,10 @@ pub struct App {
     pub manual_queue: Vec<String>,
     /// Queue additions shown before Spotify confirms them, with request time.
     pending_queue_adds: Vec<(String, Instant)>,
+    pending_album_queues: HashMap<u64, PendingAlbumQueue>,
+    pending_queue_batches: HashMap<u64, Target>,
+    album_queue_serial: u64,
+    last_album_queue: Option<(String, Instant)>,
     /// The account's playlist tree from Spotify, folders and all; empty
     /// until the session answers.
     pub rootlist: Vec<crate::player::RootlistEntry>,
@@ -748,6 +760,10 @@ impl App {
             resume_queue: session.last_added_queue.clone(),
             manual_queue: Vec::new(),
             pending_queue_adds: Vec::new(),
+            pending_album_queues: HashMap::new(),
+            pending_queue_batches: HashMap::new(),
+            album_queue_serial: 0,
+            last_album_queue: None,
             rootlist: Vec::new(),
             rootlist_cache: session.rootlist.clone(),
             editable_by_grant: std::collections::BTreeSet::new(),
@@ -1844,6 +1860,9 @@ impl App {
     }
 
     fn reset_data(&mut self) {
+        self.pending_album_queues.clear();
+        self.pending_queue_batches.clear();
+        self.last_album_queue = None;
         self.cover_uploads.clear();
         self.uploaded_covers.clear();
         self.library = Library::default();
@@ -3881,12 +3900,14 @@ impl App {
         if !matches!(self.target(), Target::Local) {
             return;
         }
+        self.pending_album_queues.clear();
+        self.last_album_queue = None;
         // `queue_one` writes every queued song to both lists, so they hold
         // the same wishes and adding their counts asks for twice the rows
         // Next up was given. The extra row taken is the context's own copy
         // of that song, which stays. Neither list alone is the count
         // either: a pending add outlives its `manual_queue` entry once the
-        // song starts, and `manual_queue` drops its oldest past a hundred.
+        // song starts.
         // Take as many rows as the longer of the two holds.
         let mut counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         for uri in &self.manual_queue {
@@ -4472,12 +4493,20 @@ impl App {
                     // A newer request supersedes this response.
                     return;
                 }
-                if let Ok(fetched) = &result
-                    && self.queue_fetch_is_stale(fetched)
+                // A remote album takes several writes. Partial reads and
+                // read failures must preserve its optimistic rows throughout.
+                let writing_album = self
+                    .pending_queue_batches
+                    .values()
+                    .any(|target| *target == self.target());
+                if writing_album
+                    || result
+                        .as_ref()
+                        .is_ok_and(|fetched| self.queue_fetch_is_stale(fetched))
                 {
                     // Keep the optimistic queue and retry after a stale
                     // response. Accept Spotify's state after the retry limit.
-                    self.queue_stale_retries += 1;
+                    self.queue_stale_retries = self.queue_stale_retries.saturating_add(1);
                     self.queue_recheck_at = Some(Instant::now() + QUEUE_RECHECK);
                     return;
                 }
@@ -5426,6 +5455,13 @@ impl App {
                     self.load_more(Page::Album(id));
                 }
             }
+            ApiResponse::AlbumQueueTracks {
+                request,
+                offset,
+                result,
+            } => {
+                self.receive_album_queue(request, offset, result);
+            }
             ApiResponse::Show { id, result } => {
                 if let Ok(show) = &result
                     && let Some(image) = pick_image(&show.images, 64)
@@ -5544,6 +5580,20 @@ impl App {
                 }
                 Err(error) => self.toast_error(format!("Couldn't add to queue: {error}")),
             },
+            ApiResponse::QueueBatchAdded { request, result } => {
+                if self.pending_queue_batches.remove(&request).as_ref() != Some(&self.target()) {
+                    return;
+                }
+                for (_, at) in &mut self.pending_queue_adds {
+                    *at = Instant::now();
+                }
+                if let Err(error) = result {
+                    self.toast_error(format!(
+                        "Couldn't finish adding the album to queue: {error}"
+                    ));
+                }
+                self.refresh_queue(true);
+            }
         }
     }
 
@@ -6606,6 +6656,10 @@ impl App {
 
     /// Adds a row to Next up immediately, before the context's upcoming rows.
     fn add_to_queue(&mut self, uri: String, label: String) {
+        if util::uri_kind(&uri) == Some("album") {
+            self.queue_album(uri, label);
+            return;
+        }
         if self.queued_moments_ago(&uri) {
             return;
         }
@@ -6621,23 +6675,147 @@ impl App {
             .any(|(pending, at)| pending == uri && at.elapsed() < QUEUE_ADD_DEBOUNCE)
     }
 
+    fn queue_album(&mut self, uri: String, label: String) {
+        if self
+            .last_album_queue
+            .as_ref()
+            .is_some_and(|(previous, at)| previous == &uri && at.elapsed() < QUEUE_ADD_DEBOUNCE)
+        {
+            return;
+        }
+        let Some(id) = util::uri_id(&uri).map(str::to_string) else {
+            return;
+        };
+        self.last_album_queue = Some((uri, Instant::now()));
+        if let Some(page) = self.album_pages.get(&id)
+            && page.tracks.is_complete()
+        {
+            self.queue_album_tracks(page.tracks.items.clone(), label);
+            return;
+        }
+        self.album_queue_serial = self.album_queue_serial.wrapping_add(1);
+        let request = self.album_queue_serial;
+        self.pending_album_queues.insert(
+            request,
+            PendingAlbumQueue {
+                id: id.clone(),
+                label: label.clone(),
+                target: self.target(),
+                offset: 0,
+                tracks: Vec::new(),
+            },
+        );
+        self.backend.api(ApiRequest::AlbumQueueTracks {
+            id,
+            offset: 0,
+            request,
+        });
+        self.toast(format!("Loading {label} to queue…"));
+    }
+
+    fn receive_album_queue(
+        &mut self,
+        request: u64,
+        offset: u32,
+        result: crate::api::client::Result<crate::api::models::Page<Track>>,
+    ) {
+        let Some(pending) = self.pending_album_queues.get(&request) else {
+            return;
+        };
+        if pending.offset != offset {
+            return;
+        }
+        let mut pending = self.pending_album_queues.remove(&request).unwrap();
+        if pending.target != self.target() {
+            self.toast_error("Playback device changed. Add the album to queue again");
+            return;
+        }
+        let page = match result {
+            Ok(page) if page.offset == offset => page,
+            Ok(_) => {
+                self.toast_error("Couldn't load the album's songs in order. Try again");
+                return;
+            }
+            Err(error) => {
+                self.toast_error(format!("Couldn't add {} to queue: {error}", pending.label));
+                return;
+            }
+        };
+        let next = page.next_offset();
+        if page.next.is_some() && next.is_none() {
+            self.toast_error("Couldn't load the album's songs in order. Try again");
+            return;
+        }
+        pending.tracks.extend(page.items);
+        if let Some(next) = next {
+            if next <= offset {
+                self.toast_error("Couldn't load the album's songs in order. Try again");
+                return;
+            }
+            pending.offset = next;
+            self.backend.api(ApiRequest::AlbumQueueTracks {
+                id: pending.id.clone(),
+                offset: next,
+                request,
+            });
+            self.pending_album_queues.insert(request, pending);
+        } else {
+            self.queue_album_tracks(pending.tracks, pending.label);
+        }
+    }
+
+    fn queue_album_tracks(&mut self, tracks: Vec<Track>, label: String) {
+        let mut uris = Vec::new();
+        for track in tracks {
+            if track.is_local
+                || track.is_playable == Some(false)
+                || util::uri_kind(&track.uri) != Some("track")
+            {
+                continue;
+            }
+            let uri = track.uri.clone();
+            let name = track.name.clone();
+            if let Some(id) = util::uri_id(&uri) {
+                self.remember_track_recording(&track);
+                self.track_cache.insert(id.to_string(), track);
+            }
+            self.show_queued_song(&uri, &name);
+            uris.push(uri);
+        }
+        if uris.is_empty() {
+            self.toast_error("This album has no playable songs to queue");
+            return;
+        }
+        self.toast(match uris.len() {
+            1 => format!("1 song from {label} added to queue"),
+            count => format!("{count} songs from {label} added to queue"),
+        });
+        if self.local.is_active() && self.target() == Target::Local {
+            for uri in uris {
+                self.backend.player(PlayerCommand::AddToQueue(uri));
+            }
+            self.queue_recheck_at = Some(Instant::now() + QUEUE_RECHECK);
+        } else {
+            let device_id = match self.target() {
+                Target::Local => self.local_device_id.clone(),
+                Target::Remote(device_id) => device_id,
+            };
+            self.album_queue_serial = self.album_queue_serial.wrapping_add(1);
+            let request = self.album_queue_serial;
+            self.pending_queue_batches.insert(request, self.target());
+            self.backend.api(ApiRequest::AddManyToQueue {
+                request,
+                uris,
+                device_id,
+            });
+        }
+    }
+
     /// Adds one song after existing manual queue entries.
     ///
     /// `announce` is false when a batch should produce one toast.
     fn queue_one(&mut self, uri: String, label: String, announce: bool) {
-        self.pending_queue_adds.push((uri.clone(), Instant::now()));
-        let item = self.optimistic_queue_item(&uri, &label);
-        if let Loadable::Loaded(queue) = &self.queue {
-            let at = Self::end_of_queued_rows(&queue.queue, &self.manual_queue);
-            if let Loadable::Loaded(queue) = &mut self.queue {
-                queue.queue.insert(at, item);
-            }
-        }
-        self.manual_queue.push(uri.clone());
-        if self.manual_queue.len() > 100 {
-            self.manual_queue.remove(0);
-        }
-        self.session_dirty = true;
+        self.show_queued_song(&uri, &label);
         if announce {
             self.toast(format!("{label} added to queue"));
         }
@@ -6658,6 +6836,20 @@ impl App {
             device_id,
             label,
         });
+    }
+
+    fn show_queued_song(&mut self, uri: &str, label: &str) {
+        self.pending_queue_adds
+            .push((uri.to_string(), Instant::now()));
+        let item = self.optimistic_queue_item(uri, label);
+        if let Loadable::Loaded(queue) = &self.queue {
+            let at = Self::end_of_queued_rows(&queue.queue, &self.manual_queue);
+            if let Loadable::Loaded(queue) = &mut self.queue {
+                queue.queue.insert(at, item);
+            }
+        }
+        self.manual_queue.push(uri.to_string());
+        self.session_dirty = true;
     }
 
     /// Index after manual queue rows and before context rows.
@@ -6692,6 +6884,9 @@ impl App {
     }
 
     fn expire_pending_queue_adds(&mut self) {
+        if !self.pending_queue_batches.is_empty() {
+            return;
+        }
         self.pending_queue_adds
             .retain(|(_, at)| at.elapsed() < Duration::from_secs(30));
     }
@@ -10825,6 +11020,247 @@ mod tests {
             app.toasts.last().map(|toast| toast.message.as_str()),
             Some("c added to queue")
         );
+    }
+
+    fn album_queue_track(id: &str) -> Track {
+        Track {
+            uri: format!("spotify:track:{id}"),
+            name: id.to_string(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn queue_album_uses_every_cached_song_in_order_and_preserves_duplicates() {
+        for local in [false, true] {
+            let mut app = test_app(if local {
+                "album-queue-local"
+            } else {
+                "album-queue-remote"
+            });
+            app.local_ready = local;
+            app.local.playback = Playback::Playing;
+            app.local.connected = local;
+            app.local.track = Some(crate::player::LocalTrack {
+                uri: "spotify:track:current".into(),
+                ..Default::default()
+            });
+            app.queue = loaded_queue(
+                "spotify:track:current",
+                &["spotify:track:manual", "spotify:track:context"],
+            );
+            app.manual_queue.push("spotify:track:manual".into());
+            let mut tracks: Vec<_> = (0..120)
+                .map(|n| album_queue_track(&format!("song{n}")))
+                .collect();
+            tracks.push(album_queue_track("song0"));
+            let expected: Vec<_> = tracks.iter().map(|track| track.uri.clone()).collect();
+            tracks.push(Track {
+                is_playable: Some(false),
+                ..album_queue_track("unavailable")
+            });
+            tracks.push(Track::default());
+            tracks.push(Track {
+                is_local: true,
+                ..album_queue_track("local")
+            });
+            app.album_pages.insert(
+                "album".into(),
+                AlbumPage {
+                    tracks: PagedList {
+                        items: tracks,
+                        loaded_once: true,
+                        next_offset: None,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            );
+            let action = Action::AddToQueue {
+                uri: "spotify:album:album".into(),
+                label: "Album".into(),
+            };
+            app.apply(action.clone(), &egui::Context::default());
+            app.apply(action, &egui::Context::default());
+            let (_, queued) = queue_uris(&app);
+            assert_eq!(queued[0], "spotify:track:manual");
+            assert_eq!(queued[1..queued.len() - 1], expected);
+            assert_eq!(queued.last().unwrap(), "spotify:track:context");
+            if local {
+                assert_eq!(app.backend.take_queued_tracks(), expected);
+                assert!(app.backend.take_queue_requests().is_empty());
+            } else {
+                let requests = app.backend.take_queue_requests();
+                assert_eq!(requests.len(), 1);
+                assert!(
+                    matches!(&requests[0], ApiRequest::AddManyToQueue { uris, .. } if uris == &expected)
+                );
+            }
+            assert!(app.pending_album_queues.is_empty());
+            app.add_to_queue("spotify:track:after".into(), "After".into());
+            let (_, queued) = queue_uris(&app);
+            assert_eq!(
+                queued[queued.len() - 2],
+                "spotify:track:after",
+                "a later song stays after an album longer than 100 tracks"
+            );
+            app.backend.shutdown();
+        }
+    }
+
+    #[test]
+    fn queue_album_fetches_all_pages_before_appending_and_ignores_old_pages() {
+        let mut app = test_app("album-queue-pages");
+        app.queue = loaded_queue("spotify:track:current", &["spotify:track:context"]);
+        app.add_to_queue("spotify:album:album".into(), "Album".into());
+        let request = app.album_queue_serial;
+        let requests = app.backend.take_queue_requests();
+        assert!(matches!(
+            &requests[..],
+            [ApiRequest::AlbumQueueTracks { offset: 0, .. }]
+        ));
+        let page = crate::api::models::Page {
+            items: vec![album_queue_track("one"), album_queue_track("two")],
+            offset: 0,
+            limit: 2,
+            total: 3,
+            next: Some("next".into()),
+        };
+        app.handle_api(ApiResponse::AlbumQueueTracks {
+            request,
+            offset: 0,
+            result: Ok(page.clone()),
+        });
+        assert_eq!(queue_uris(&app).1, ["spotify:track:context"]);
+        let requests = app.backend.take_queue_requests();
+        assert!(matches!(
+            &requests[..],
+            [ApiRequest::AlbumQueueTracks { offset: 2, .. }]
+        ));
+        app.handle_api(ApiResponse::AlbumQueueTracks {
+            request,
+            offset: 0,
+            result: Ok(page),
+        });
+        assert!(app.backend.take_queue_requests().is_empty());
+        app.handle_api(ApiResponse::AlbumQueueTracks {
+            request,
+            offset: 2,
+            result: Ok(crate::api::models::Page {
+                items: vec![album_queue_track("one")],
+                offset: 2,
+                limit: 2,
+                total: 3,
+                next: None,
+            }),
+        });
+        assert_eq!(
+            queue_uris(&app).1,
+            [
+                "spotify:track:one",
+                "spotify:track:two",
+                "spotify:track:one",
+                "spotify:track:context"
+            ]
+        );
+        assert!(app.pending_album_queues.is_empty());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn remote_album_queue_keeps_its_rows_while_rate_limited_writes_are_pending() {
+        let mut app = test_app("album-queue-stale");
+        app.queue = loaded_queue("spotify:track:current", &["spotify:track:context"]);
+        let old = app.queue.get().unwrap().clone();
+        app.queue_album_tracks(
+            vec![
+                album_queue_track("a"),
+                album_queue_track("b"),
+                album_queue_track("a"),
+            ],
+            "Album".into(),
+        );
+        let request = app.album_queue_serial;
+        for (_, at) in &mut app.pending_queue_adds {
+            *at = Instant::now() - Duration::from_secs(60);
+        }
+        app.expire_pending_queue_adds();
+        assert_eq!(app.pending_queue_adds.len(), 3);
+        for _ in 0..u16::from(u8::MAX) + 2 {
+            app.handle_api(ApiResponse::Queue {
+                seq: app.queue_seq,
+                result: Ok(old.clone()),
+            });
+            assert_eq!(
+                queue_uris(&app).1,
+                [
+                    "spotify:track:a",
+                    "spotify:track:b",
+                    "spotify:track:a",
+                    "spotify:track:context"
+                ]
+            );
+        }
+        app.handle_api(ApiResponse::Queue {
+            seq: app.queue_seq,
+            result: Err(crate::api::ApiError::RateLimited),
+        });
+        assert_eq!(
+            queue_uris(&app).1,
+            [
+                "spotify:track:a",
+                "spotify:track:b",
+                "spotify:track:a",
+                "spotify:track:context"
+            ]
+        );
+        app.handle_api(ApiResponse::QueueBatchAdded {
+            request,
+            result: Ok(()),
+        });
+        assert!(app.pending_queue_batches.is_empty());
+        assert!(
+            app.pending_queue_adds
+                .iter()
+                .all(|(_, at)| at.elapsed() < Duration::from_secs(1))
+        );
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn pending_album_queue_cannot_survive_clear_sign_out_or_device_change() {
+        for cancel in ["clear", "sign-out", "device", "failure"] {
+            let mut app = test_app(&format!("album-queue-cancel-{cancel}"));
+            app.local_ready = true;
+            app.queue = loaded_queue("spotify:track:current", &["spotify:track:context"]);
+            app.add_to_queue("spotify:album:album".into(), "Album".into());
+            let request = app.album_queue_serial;
+            app.backend.take_queue_requests();
+            match cancel {
+                "clear" => app.clear_queue(),
+                "sign-out" => app.reset_data(),
+                "device" => app.selected_device = Some("phone".into()),
+                "failure" => app.handle_api(ApiResponse::AlbumQueueTracks {
+                    request,
+                    offset: 0,
+                    result: Err(crate::api::ApiError::RateLimited),
+                }),
+                _ => unreachable!(),
+            }
+            app.handle_api(ApiResponse::AlbumQueueTracks {
+                request,
+                offset: 0,
+                result: Ok(crate::api::models::Page {
+                    items: vec![album_queue_track("late")],
+                    ..Default::default()
+                }),
+            });
+            assert!(app.manual_queue.is_empty());
+            assert!(app.pending_album_queues.is_empty());
+            assert!(app.backend.take_queue_requests().is_empty());
+            assert!(app.backend.take_queued_tracks().is_empty());
+            app.backend.shutdown();
+        }
     }
 
     /// Separate requests may queue duplicates; duplicate click events do not.

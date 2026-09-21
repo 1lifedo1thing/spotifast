@@ -314,6 +314,7 @@ pub struct ApiClient {
     http: Http,
     tokens: Mutex<Option<TokenProvider>>,
     limiter: Semaphore,
+    queue_writes: tokio::sync::Mutex<()>,
     cooldown_until: tokio::sync::Mutex<Instant>,
     search_limit: u32,
     artist_albums_limit: u32,
@@ -335,6 +336,7 @@ impl ApiClient {
             http: http.into(),
             tokens: Mutex::new(None),
             limiter: Semaphore::new(MAX_IN_FLIGHT),
+            queue_writes: tokio::sync::Mutex::new(()),
             cooldown_until: tokio::sync::Mutex::new(Instant::now()),
             search_limit,
             artist_albums_limit,
@@ -696,10 +698,25 @@ impl ApiClient {
     }
 
     pub async fn add_to_queue(&self, uri: &str, device_id: Option<&str>) -> Result<()> {
+        let _write = self.queue_writes.lock().await;
+        self.append_to_queue(uri, device_id).await
+    }
+
+    async fn append_to_queue(&self, uri: &str, device_id: Option<&str>) -> Result<()> {
         let mut query = Self::device_query(device_id);
         query.push(("uri", uri.to_string()));
         self.write(Method::POST, "/me/player/queue", &query, None)
             .await?;
+        Ok(())
+    }
+
+    /// Spotify appends one song per request. Await each write to keep an
+    /// album's order, including repeated tracks, and stop on the first error.
+    pub async fn add_many_to_queue(&self, uris: &[String], device_id: Option<&str>) -> Result<()> {
+        let _write = self.queue_writes.lock().await;
+        for uri in uris {
+            self.append_to_queue(uri, device_id).await?;
+        }
         Ok(())
     }
 
@@ -1172,6 +1189,117 @@ mod tests {
         );
         assert!(store.lease(slot).load().await.unwrap().grant.is_none());
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[tokio::test]
+    async fn queue_batch_preserves_order_and_duplicates_and_stops_on_failure() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        for fail in [false, true] {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let first_request = Arc::new(tokio::sync::Notify::new());
+            let notify = Arc::clone(&first_request);
+            let server = tokio::spawn(async move {
+                let mut paths = Vec::new();
+                for index in 0..if fail { 2 } else { 4 } {
+                    let (mut socket, _) =
+                        tokio::time::timeout(Duration::from_secs(5), listener.accept())
+                            .await
+                            .unwrap()
+                            .unwrap();
+                    let mut request = Vec::new();
+                    while !request.ends_with(b"\r\n\r\n") {
+                        request.push(socket.read_u8().await.unwrap());
+                        assert!(request.len() < 8192);
+                    }
+                    paths.push(
+                        String::from_utf8(request)
+                            .unwrap()
+                            .lines()
+                            .next()
+                            .unwrap()
+                            .to_string(),
+                    );
+                    if index == 0 {
+                        notify.notify_one();
+                    }
+                    assert!(
+                        tokio::time::timeout(Duration::from_millis(10), listener.accept())
+                            .await
+                            .is_err(),
+                        "the next append must wait for this response"
+                    );
+                    let status = if fail && index == 1 {
+                        "403 Forbidden"
+                    } else {
+                        "204 No Content"
+                    };
+                    socket.write_all(format!("HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
+                }
+                paths
+            });
+            let http = reqwest::Client::builder().no_proxy().build().unwrap();
+            let mut client = ApiClient::new(
+                http.clone(),
+                Arc::new(NetActivity::default()),
+                20,
+                50,
+                ApiSource::Shared,
+            );
+            client.base_url = Some(format!("http://{address}"));
+            client.set_token_provider(Some(TokenProvider::Web(WebTokens::new(
+                http,
+                crate::auth::StoredToken {
+                    access_token: "test-only".into(),
+                    expires_at: u64::MAX,
+                    ..Default::default()
+                },
+                crate::credentials::Store::in_memory(crate::paths::AppDirs {
+                    config: std::env::temp_dir().join("unused-queue-token/config"),
+                    state: std::env::temp_dir().join("unused-queue-token/state"),
+                    cache: std::env::temp_dir().join("unused-queue-token/cache"),
+                })
+                .lease(crate::credentials::Slot::Shared),
+                ApiSource::Shared,
+                Arc::new(|_| {}),
+            ))));
+            let mut uris = vec![
+                "spotify:track:a".into(),
+                "spotify:track:b".into(),
+                "spotify:track:a".into(),
+            ];
+            let result = if fail {
+                client.add_many_to_queue(&uris, Some("phone")).await
+            } else {
+                let (album, later_song) =
+                    tokio::join!(client.add_many_to_queue(&uris, Some("phone")), async {
+                        first_request.notified().await;
+                        client
+                            .add_to_queue("spotify:track:later", Some("phone"))
+                            .await
+                    });
+                later_song.unwrap();
+                uris.push("spotify:track:later".into());
+                album
+            };
+            assert_eq!(result.is_err(), fail);
+            if fail {
+                assert_eq!(result.unwrap_err().status(), Some(403));
+            }
+            let paths = server.await.unwrap();
+            assert_eq!(paths.len(), if fail { 2 } else { 4 });
+            for (path, expected) in paths.iter().zip(uris) {
+                assert!(path.starts_with("POST /me/player/queue?"));
+                let url = reqwest::Url::parse(&format!(
+                    "http://test{}",
+                    path.split_whitespace().nth(1).unwrap()
+                ))
+                .unwrap();
+                let query: std::collections::HashMap<_, _> = url.query_pairs().collect();
+                assert_eq!(query["uri"], expected);
+                assert_eq!(query["device_id"], "phone");
+            }
+        }
     }
 
     #[tokio::test]
