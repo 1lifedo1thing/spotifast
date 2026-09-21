@@ -136,6 +136,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
 - **Light and dark**, or follow the system.
 - **Repeat stays selected.** On `main`, after 0.8.0, starting another song
   locally preserves Repeat, with Shuffle on or off.
+- **Song changes keep the selected song.** On `main`, after 0.8.0, the default
+  audio output keeps discarded audio paced while a replacement loads, preventing
+  the old cached song from racing to its end and causing an extra skip.
 - **Reconnects keep the queue.** On `main`, after 0.8.0, recovering an
   interrupted local playback session restores its playlist position,
   queued songs, shuffle order, and Repeat mode.

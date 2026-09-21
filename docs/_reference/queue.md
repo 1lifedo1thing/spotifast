@@ -40,6 +40,10 @@ On `main`, after 0.8.0, starting another song on this computer keeps the
 selected Repeat mode, with Shuffle on or off. Loading a playlist no longer
 silently disables repeat in the playback engine.
 
+On `main`, after 0.8.0, silencing the old song during a local track change
+keeps the decoder paced while the replacement loads. Cached audio no longer
+races to the end and causes an unwanted extra skip during that handoff.
+
 On `main`, after 0.8.0, an unexpected local playback disconnect retains the
 engine's in-memory playback state before closing the session. Reconnection
 restores the same song and position, paused or playing, with its playlist

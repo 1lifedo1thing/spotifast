@@ -542,10 +542,16 @@ impl Sink for RodioSink {
         let samples = packet
             .samples()
             .map_err(|error| SinkError::OnWrite(error.to_string()))?;
-        let samples = converter.f64_to_f32(samples);
         if self.control.waiting_for_track() {
+            // Muting must not remove decoder backpressure. Otherwise cached
+            // audio races to EndOfTrack while Connect is still handling the
+            // replacement load, and that old event can skip the chosen song.
+            // Pace one discarded packet, then let librespot process commands.
+            let frames = samples.len() / NUM_CHANNELS as usize;
+            thread::sleep(Duration::from_secs_f64(frames as f64 / SAMPLE_RATE as f64));
             return Ok(());
         }
+        let samples = converter.f64_to_f32(samples);
         self.follow_default(false);
         self.ensure_open()?;
         if self.control.take_reset()
@@ -933,6 +939,34 @@ mod tests {
         }
         assert_eq!(envelope.next_gain(), 0.0);
         assert!(envelope.silent());
+    }
+
+    #[test]
+    fn an_interrupted_decoder_cannot_race_to_the_end_while_a_new_track_loads() {
+        let control = AudioControl::new(DEFAULT_BUFFER_MS);
+        control.interrupt();
+        let mut sink = RodioSink::new(
+            None,
+            Arc::new(|error| panic!("no audio device should be opened: {error}")),
+            Box::new(librespot_playback::mixer::NoOpVolume),
+            DEFAULT_BUFFER_MS,
+            control,
+        );
+        let mut converter = Converter::new(None);
+        let frames = SAMPLE_RATE as usize / 100;
+        let started = Instant::now();
+        for _ in 0..4 {
+            sink.write(
+                AudioPacket::Samples(vec![0.0; frames * NUM_CHANNELS as usize]),
+                &mut converter,
+            )
+            .unwrap();
+        }
+        assert!(
+            started.elapsed() >= Duration::from_millis(40),
+            "discarded audio must retain backpressure until the new load reaches the decoder"
+        );
+        assert!(sink.output.is_none());
     }
 
     #[test]
