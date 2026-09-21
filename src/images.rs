@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-use egui::load::{Bytes, BytesLoadResult, BytesLoader, BytesPoll, LoadError};
+use egui::load::{Bytes, BytesLoadResult, BytesLoader, BytesPoll, ImagePoll, LoadError};
 use sha1::{Digest, Sha1};
 
 use crate::http::Http;
@@ -584,16 +584,17 @@ impl SoftenedCovers {
         {
             return None;
         }
-        match ctx.try_load_bytes(uri) {
-            Ok(BytesPoll::Ready { bytes, .. }) => {
+        // The visible thumbnail has already been decoded by egui. Its source
+        // bytes may have been released by paint_cover_url, which would discard
+        // them again on the next frame before this consumer could use them.
+        match ctx.try_load_image(uri, Default::default()) {
+            Ok(ImagePoll::Ready { image }) => {
                 let ready_tx = self.ready_tx.clone();
                 let ready_uri = uri.to_string();
                 let ctx = ctx.clone();
-                let loader = loader.clone();
                 self.pending.insert(ready_uri.clone());
-                loader.inner.runtime.clone().spawn_blocking(move || {
-                    let image = blurred_background(&bytes, COVER_BLUR);
-                    loader.release_bytes(&ready_uri);
+                loader.inner.runtime.spawn_blocking(move || {
+                    let image = softened_background(&image);
                     let _ = ready_tx.send((ready_uri, image));
                     ctx.request_repaint();
                 });
@@ -605,6 +606,20 @@ impl SoftenedCovers {
         }
         None
     }
+}
+
+fn softened_background(image: &egui::ColorImage) -> Option<egui::ColorImage> {
+    let [width, height] = image.size;
+    if width > 8192 || height > 8192 || image.pixels.len() > 64 * 1024 * 1024 / 4 {
+        return None;
+    }
+    let pixels = image
+        .pixels
+        .iter()
+        .flat_map(egui::Color32::to_srgba_unmultiplied)
+        .collect();
+    let image = image::RgbaImage::from_raw(width as u32, height as u32, pixels)?;
+    Some(blurred_image(image.into(), COVER_BLUR))
 }
 
 fn blurred_background(bytes: &[u8], sigma: f32) -> Option<egui::ColorImage> {
@@ -619,12 +634,15 @@ fn blurred_background(bytes: &[u8], sigma: f32) -> Option<egui::ColorImage> {
     limits.max_image_height = Some(8192);
     limits.max_alloc = Some(64 * 1024 * 1024);
     reader.limits(limits);
-    let image = reader.decode().ok()?;
+    Some(blurred_image(reader.decode().ok()?, sigma))
+}
+
+fn blurred_image(image: image::DynamicImage, sigma: f32) -> egui::ColorImage {
     let image = image.thumbnail(256, 256).blur(sigma).to_rgba8();
-    Some(egui::ColorImage::from_rgba_unmultiplied(
+    egui::ColorImage::from_rgba_unmultiplied(
         [image.width() as usize, image.height() as usize],
         image.as_raw(),
-    ))
+    )
 }
 
 #[cfg(test)]
@@ -798,6 +816,68 @@ mod tests {
 
     fn softened_test_image() -> egui::ColorImage {
         egui::ColorImage::filled([1, 1], egui::Color32::WHITE)
+    }
+
+    #[test]
+    fn softened_cover_reuses_decoded_art_after_source_bytes_are_released() {
+        let runtime = artwork_test_runtime();
+        let dir = std::env::temp_dir().join(format!(
+            "fastpotify-softened-decoded-{}",
+            std::process::id()
+        ));
+        let loader = artwork_test_loader(&runtime, dir.clone());
+        let ctx = egui::Context::default();
+        egui_extras::install_image_loaders(&ctx);
+        ctx.add_bytes_loader(Arc::new(loader.clone()));
+        let uri = "https://i.scdn.co/image/decoded";
+        let mut encoded = std::io::Cursor::new(Vec::new());
+        image::RgbImage::from_pixel(64, 32, image::Rgb([20, 30, 40]))
+            .write_to(&mut encoded, image::ImageFormat::Png)
+            .unwrap();
+        let bytes: Arc<[u8]> = encoded.into_inner().into();
+        loader.inner.entries.lock().unwrap().insert(
+            uri.into(),
+            Entry::Ready {
+                retained: bytes.len(),
+                bytes: Some(bytes),
+                last_used: Instant::now(),
+            },
+        );
+        runtime.block_on(async {
+            tokio::time::timeout(Duration::from_secs(10), async {
+                while !matches!(
+                    ctx.try_load_texture(uri, Default::default(), Default::default()),
+                    Ok(egui::load::TexturePoll::Ready { .. })
+                ) {
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                }
+                // Painting a visible cover releases its encoded bytes every
+                // frame. There is deliberately no disk file or HTTP server.
+                loader.release_bytes(uri);
+                let mut covers = SoftenedCovers::default();
+                loop {
+                    loader.release_bytes(uri);
+                    let texture = covers.texture(&ctx, &loader, uri);
+                    assert!(
+                        matches!(
+                            loader.inner.entries.lock().unwrap().get(uri),
+                            Some(Entry::Ready { bytes: None, .. })
+                        ),
+                        "softening must not restart the byte loader"
+                    );
+                    if let Some(texture) = texture {
+                        assert_eq!(texture.size(), [256, 128]);
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(1)).await;
+                }
+                assert!(covers.pending.is_empty());
+                assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+            })
+            .await
+            .expect("decoded artwork produces a softened cover");
+        });
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]
