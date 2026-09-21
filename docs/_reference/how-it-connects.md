@@ -216,8 +216,13 @@ and rate limits. The album URI itself is never sent to Spotify's song queue.
 Local playback queues the resolved songs through librespot. On another device,
 Web API queue writes run one at a time in album order. A later song waits for
 the album's writes, and partial queue reads cannot remove the shown album
-while those writes are pending. An error stops the remaining writes and is
-reported.
+while those writes are pending. A rate-limited queue write waits for the full
+`Retry-After` delay and retries automatically, keeping its place ahead of later
+additions. This applies to individual songs too. Sign-out cancels the wait.
+A permanent rejection stops the remaining album writes, reports the error, and
+removes only the unaccepted additions. Songs already accepted stay queued.
+Network failures and server errors are not retried automatically because an
+append might already have succeeded.
 
 ## Playlist cover uploads
 

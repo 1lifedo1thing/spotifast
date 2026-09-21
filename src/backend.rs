@@ -507,6 +507,7 @@ pub enum ApiResponse {
     },
     QueueBatchAdded {
         request: u64,
+        added: usize,
         result: ApiResult<()>,
     },
 }
@@ -3527,10 +3528,20 @@ async fn handle(
             request,
             uris,
             device_id,
-        } => ApiResponse::QueueBatchAdded {
-            result: routed!(add_many_to_queue(&uris, device_id.as_deref())),
-            request,
-        },
+        } => {
+            let (added, result) = match &selected {
+                Ok(client) => client.add_many_to_queue(&uris, device_id.as_deref()).await,
+                Err(error) => (0, Err(error.clone())),
+            };
+            if let Err(ApiError::SignInExpired { api_source }) = &result {
+                expired.set(Some(*api_source));
+            }
+            ApiResponse::QueueBatchAdded {
+                request,
+                added,
+                result,
+            }
+        }
     };
     observe_playlists(api, &response);
     (response, expired.get())

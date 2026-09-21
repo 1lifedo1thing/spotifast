@@ -424,8 +424,9 @@ impl ApiClient {
         let _activity = ActivityGuard(&self.activity);
 
         let mut attempt = 0;
+        let queue_write = method == Method::POST && path == "/me/player/queue";
         loop {
-            attempt += 1;
+            attempt = u32::saturating_add(attempt, 1);
             self.wait_for_cooldown().await;
             let permit = self
                 .limiter
@@ -457,18 +458,25 @@ impl ApiClient {
                 provider.invalidate().await;
                 continue;
             }
-            if status == StatusCode::TOO_MANY_REQUESTS && attempt <= RATE_LIMIT_RETRIES {
+            if status == StatusCode::TOO_MANY_REQUESTS {
                 let wait = response
                     .headers()
                     .get(reqwest::header::RETRY_AFTER)
                     .and_then(|value| value.to_str().ok())
                     .and_then(|value| value.parse::<u64>().ok())
-                    .map_or(Duration::from_secs(1), Duration::from_secs)
-                    .min(MAX_RETRY_AFTER);
+                    .map_or(Duration::from_secs(1), Duration::from_secs);
                 let text = response.text().await.unwrap_or_default();
                 if is_quota_exhausted(&text) {
                     return Err(ApiError::QuotaExhausted);
                 }
+                // A rejected queue append is safe to retry. Keep its place
+                // in the write lock and honor the full server-requested wait.
+                // Other requests retain their existing bounded retry policy.
+                let wait = if queue_write {
+                    wait
+                } else {
+                    wait.min(MAX_RETRY_AFTER)
+                };
                 log::warn!("Spotify rate limit source={} wait={wait:?}", self.source);
                 log::info!(
                     "Spotify cooldown source={} duration_ms={}",
@@ -477,15 +485,15 @@ impl ApiClient {
                 );
                 drop(permit);
                 self.extend_cooldown(wait).await;
+                if !queue_write && attempt > RATE_LIMIT_RETRIES {
+                    return Err(ApiError::RateLimited);
+                }
                 continue;
             }
             if status.is_server_error() && method == Method::GET && attempt == 1 {
                 drop(permit);
                 tokio::time::sleep(Duration::from_millis(800)).await;
                 continue;
-            }
-            if status == StatusCode::TOO_MANY_REQUESTS {
-                return Err(ApiError::RateLimited);
             }
             let text = response.text().await?;
             log::debug!(
@@ -712,12 +720,18 @@ impl ApiClient {
 
     /// Spotify appends one song per request. Await each write to keep an
     /// album's order, including repeated tracks, and stop on the first error.
-    pub async fn add_many_to_queue(&self, uris: &[String], device_id: Option<&str>) -> Result<()> {
+    pub async fn add_many_to_queue(
+        &self,
+        uris: &[String],
+        device_id: Option<&str>,
+    ) -> (usize, Result<()>) {
         let _write = self.queue_writes.lock().await;
-        for uri in uris {
-            self.append_to_queue(uri, device_id).await?;
+        for (added, uri) in uris.iter().enumerate() {
+            if let Err(error) = self.append_to_queue(uri, device_id).await {
+                return (added, Err(error));
+            }
         }
-        Ok(())
+        (uris.len(), Ok(()))
     }
 
     // ---- playlists ---------------------------------------------------------
@@ -1194,19 +1208,29 @@ mod tests {
     #[tokio::test]
     async fn queue_batch_preserves_order_and_duplicates_and_stops_on_failure() {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        for fail in [false, true] {
+        for (fail, rate_limit) in [(false, false), (true, false), (false, true)] {
             let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
             let address = listener.local_addr().unwrap();
             let first_request = Arc::new(tokio::sync::Notify::new());
             let notify = Arc::clone(&first_request);
             let server = tokio::spawn(async move {
                 let mut paths = Vec::new();
-                for index in 0..if fail { 2 } else { 4 } {
+                let mut cooldown_started: Option<Instant> = None;
+                for index in 0..if fail {
+                    2
+                } else if rate_limit {
+                    8
+                } else {
+                    4
+                } {
                     let (mut socket, _) =
                         tokio::time::timeout(Duration::from_secs(5), listener.accept())
                             .await
                             .unwrap()
                             .unwrap();
+                    if index == 2 && rate_limit {
+                        assert!(cooldown_started.unwrap().elapsed() >= Duration::from_secs(1));
+                    }
                     let mut request = Vec::new();
                     while !request.ends_with(b"\r\n\r\n") {
                         request.push(socket.read_u8().await.unwrap());
@@ -1229,12 +1253,17 @@ mod tests {
                             .is_err(),
                         "the next append must wait for this response"
                     );
-                    let status = if fail && index == 1 {
+                    let limited = rate_limit && (1..=4).contains(&index);
+                    let status = if limited {
+                        "429 Too Many Requests"
+                    } else if fail && index == 1 {
                         "403 Forbidden"
                     } else {
                         "204 No Content"
                     };
-                    socket.write_all(format!("HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
+                    let retry_after = if limited && index == 1 { 1 } else { 0 };
+                    cooldown_started = Some(Instant::now());
+                    socket.write_all(format!("HTTP/1.1 {status}\r\nRetry-After: {retry_after}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
                 }
                 paths
             });
@@ -1268,7 +1297,7 @@ mod tests {
                 "spotify:track:b".into(),
                 "spotify:track:a".into(),
             ];
-            let result = if fail {
+            let (added, result) = if fail {
                 client.add_many_to_queue(&uris, Some("phone")).await
             } else {
                 let (album, later_song) =
@@ -1283,11 +1312,17 @@ mod tests {
                 album
             };
             assert_eq!(result.is_err(), fail);
+            assert_eq!(added, if fail { 1 } else { 3 });
             if fail {
                 assert_eq!(result.unwrap_err().status(), Some(403));
             }
             let paths = server.await.unwrap();
-            assert_eq!(paths.len(), if fail { 2 } else { 4 });
+            if rate_limit {
+                // Only the rejected song is retried, even beyond the normal
+                // request retry budget. The later single still follows the album.
+                uris.splice(1..1, std::iter::repeat_n("spotify:track:b".into(), 4));
+            }
+            assert_eq!(paths.len(), if fail { 2 } else { uris.len() });
             for (path, expected) in paths.iter().zip(uris) {
                 assert!(path.starts_with("POST /me/player/queue?"));
                 let url = reqwest::Url::parse(&format!(

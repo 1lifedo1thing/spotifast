@@ -68,6 +68,12 @@ on the replacement engine takes precedence over recovery.
    album. Clear queue and sign-out cancel an album still being fetched;
    changing playback devices asks you to add it again on the new device.
 
+   On another device, a rate limit delays additions instead of dropping them.
+   Spotifast retries automatically after Spotify's requested wait and keeps
+   later songs behind the album. Pending rows retain their known titles and
+   durations. If Spotify permanently rejects an addition, only the rejected
+   song and any unsent remainder of its album disappear; accepted songs stay.
+
 3. **When a song starts, its row leaves the queue.** It doesn't matter
    how it started: the song before it ended, you pressed Next, you
    clicked its queue row, or another device skipped to it. Only that
