@@ -129,7 +129,8 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   Large playlist checkpoints read and write their JSON through a small background
   buffer, preserving the existing cache format without another full JSON copy.
 - **Lyrics.** Follow synced lyrics in a side panel or full-screen view, or read
-  unsynced lyrics when timestamps are unavailable.
+  unsynced lyrics when timestamps are unavailable. Full-screen lyrics scroll
+  smoothly and highlight the playing line automatically.
 - **Resumes the last session.** On startup, the last song is paused where it
   stopped. Play resumes it, and the other playback controls work before it
   starts.

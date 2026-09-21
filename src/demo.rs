@@ -1413,17 +1413,6 @@ mod tests {
                 vec![accessible_action(expand, AccessibleAction::Click, None)],
             );
             assert!(app.lyrics_fullscreen.is_some());
-            for source in ["Reduce lyrics motion", "Enable lyrics motion"] {
-                let before = app.lyrics_reduce_motion;
-                let tree = accessible_frame(&ctx, &mut app, vec![]);
-                let motion = accessible_node(&tree, &gettext(locale, source), Role::Button);
-                accessible_frame(
-                    &ctx,
-                    &mut app,
-                    vec![accessible_action(motion, AccessibleAction::Click, None)],
-                );
-                assert_ne!(app.lyrics_reduce_motion, before);
-            }
             app.lyrics_following = false;
             let tree = accessible_frame(&ctx, &mut app, vec![]);
             let follow =

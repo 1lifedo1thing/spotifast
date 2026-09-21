@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-15 00:25+0200\n"
+"POT-Creation-Date: 2026-09-21 19:45+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Japanese\n"
@@ -16,11 +16,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/ui/sidebar.rs:64 src/app.rs:1930 src/app.rs:12699
+#: src/ui/sidebar.rs:64 src/app.rs:2104 src/app.rs:13536
 msgid "Liked Songs"
 msgstr "お気に入りの曲"
 
-#: src/ui/sidebar.rs:67 src/app.rs:1956 src/app.rs:12694
+#: src/ui/sidebar.rs:67 src/app.rs:2130 src/app.rs:13531
 msgid "Playlist"
 msgstr "プレイリスト"
 
@@ -96,7 +96,7 @@ msgstr "ポッドキャスト"
 msgid "Search in Your Library"
 msgstr "ライブラリ内を検索"
 
-#: src/ui/sidebar.rs:780 src/app.rs:1991
+#: src/ui/sidebar.rs:780 src/app.rs:2165
 msgid "Artist"
 msgstr "アーティスト"
 
@@ -107,7 +107,7 @@ msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
 msgstr[0] "プレイリスト • {count}曲"
 
-#: src/ui/player_bar.rs:85 src/ui/lyrics.rs:108 src/ui/lyrics.rs:432
+#: src/ui/player_bar.rs:85 src/ui/lyrics.rs:108 src/ui/lyrics.rs:411
 msgid "Nothing playing"
 msgstr "再生していません"
 
@@ -223,7 +223,7 @@ msgstr "次に再生"
 msgid "Next up"
 msgstr "このあと再生"
 
-#: src/ui/queue.rs:339 src/ui/queue.rs:372 src/ui/widgets.rs:2028
+#: src/ui/queue.rs:339 src/ui/queue.rs:372 src/ui/widgets.rs:2116
 msgid "Retry"
 msgstr "再試行"
 
@@ -243,37 +243,37 @@ msgstr "さらに読み込む"
 msgid "Full screen lyrics"
 msgstr "歌詞を全画面表示"
 
-#: src/ui/lyrics.rs:81 src/ui/lyrics.rs:378
+#: src/ui/lyrics.rs:81 src/ui/lyrics.rs:357
 msgctxt "lyrics"
 msgid "Follow"
 msgstr "追従"
 
-#: src/ui/lyrics.rs:109 src/ui/lyrics.rs:433
+#: src/ui/lyrics.rs:109 src/ui/lyrics.rs:412
 msgid "Play a song to see its lyrics."
 msgstr "曲を再生すると歌詞が表示されます。"
 
-#: src/ui/lyrics.rs:121 src/ui/lyrics.rs:445
+#: src/ui/lyrics.rs:121 src/ui/lyrics.rs:424
 #, rust-format
 msgid "Couldn't fetch the lyrics: {error}"
 msgstr "歌詞を取得できませんでした: {error}"
 
-#: src/ui/lyrics.rs:125 src/ui/lyrics.rs:449
+#: src/ui/lyrics.rs:125 src/ui/lyrics.rs:428
 msgid "Try again"
 msgstr "もう一度試す"
 
-#: src/ui/lyrics.rs:136 src/ui/lyrics.rs:460
+#: src/ui/lyrics.rs:136 src/ui/lyrics.rs:439
 msgid "No lyrics"
 msgstr "歌詞はありません"
 
-#: src/ui/lyrics.rs:137 src/ui/lyrics.rs:461
+#: src/ui/lyrics.rs:137 src/ui/lyrics.rs:440
 msgid "No lyrics found for this track."
 msgstr "この曲の歌詞は見つかりませんでした。"
 
-#: src/ui/lyrics.rs:146 src/ui/lyrics.rs:470
+#: src/ui/lyrics.rs:146 src/ui/lyrics.rs:449
 msgid "Instrumental"
 msgstr "インストゥルメンタル"
 
-#: src/ui/lyrics.rs:147 src/ui/lyrics.rs:471
+#: src/ui/lyrics.rs:147 src/ui/lyrics.rs:450
 msgid "No timed lyrics for this track."
 msgstr "この曲には同期された歌詞がありません。"
 
@@ -281,38 +281,36 @@ msgstr "この曲には同期された歌詞がありません。"
 msgid "Leave full screen (Esc)"
 msgstr "全画面表示を終了 (Esc)"
 
-#: src/ui/lyrics.rs:352
-msgid "Enable lyrics motion"
-msgstr "歌詞の動きを有効にする"
-
-#: src/ui/lyrics.rs:354
-msgid "Reduce lyrics motion"
-msgstr "歌詞の動きを減らす"
-
-#: src/ui/widgets.rs:2013
+#: src/ui/widgets.rs:2101
 msgid "Loading…"
 msgstr "読み込み中…"
 
-#: src/app.rs:1938
+#: src/app.rs:2112
 msgid "Radio"
 msgstr "ラジオ"
 
-#: src/app.rs:1972
+#: src/app.rs:2146
 msgid "Album"
 msgstr "アルバム"
 
-#: src/app.rs:2010
+#: src/app.rs:2184
 msgid "Podcast"
 msgstr "ポッドキャスト"
 
 #. Translators: Keep {track} unchanged. The song title itself is not translated.
-#: src/app.rs:2028 src/app.rs:12704
+#: src/app.rs:2202 src/app.rs:13541
 #, rust-format
 msgid "{track} Radio"
 msgstr "{track} のラジオ"
 
 #. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
-#: src/app.rs:3798 src/app.rs:12684
+#: src/app.rs:3974 src/app.rs:13521
 #, rust-format
 msgid "Queue {date}"
 msgstr "再生待ち {date}"
+
+#~ msgid "Enable lyrics motion"
+#~ msgstr "歌詞の動きを有効にする"
+
+#~ msgid "Reduce lyrics motion"
+#~ msgstr "歌詞の動きを減らす"

@@ -286,8 +286,8 @@ choose **Follow** to resume it, or choose a line to jump to that part of the son
 
 **In development, not included in 0.8.0:** the expand button opens lyrics in
 full screen. Press **Esc** or choose the shrink button to return to your previous
-window size. In full screen, the waveform button reduces or restores movement
-in the scrolling and highlights.
+window size. Full-screen lyrics scroll smoothly and highlight the playing line
+automatically. Scrolling by hand pauses following; choose **Follow** to resume.
 
 | Dark theme | Light theme |
 | --- | --- |
