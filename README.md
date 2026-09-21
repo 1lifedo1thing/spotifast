@@ -110,6 +110,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
 - **Queue** as a side panel or a page; it names what is playing from, and
   anything can be added to it from a row menu. **Add to queue** places songs
   after those already queued and before the context continues.
+  Starting an album or playlist keeps those additions under **Playing next**,
+  even when it starts a song you also queued. **Clear queue** removes the
+  additions and keeps the playing collection's remaining songs.
   Selecting repeated playlist rows queues every occurrence in the selected
   order. A repeated click counts once, and the notification counts actual additions.
   Since 0.8.0, Recent keeps repeated short-song plays separate,

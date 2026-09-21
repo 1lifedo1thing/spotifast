@@ -416,6 +416,10 @@ pub struct App {
     /// hide stale state.
     assumed_context: Option<AssumedContext>,
     last_now_playing_uri: Option<String>,
+    last_now_playing_sequence: u64,
+    /// A requested start whose effect on the manual queue is already applied.
+    /// Context loads keep it; explicit skips consume their rows immediately.
+    queue_start_pending: Option<Target>,
     pub playlist_busy: bool,
     pub quit_requested: bool,
     /// The axis a scroll gesture settled on, and when it last moved.
@@ -734,6 +738,8 @@ impl App {
             premium_notice_shown: false,
             assumed_context: None,
             last_now_playing_uri: None,
+            last_now_playing_sequence: 0,
+            queue_start_pending: None,
             playlist_busy: false,
             quit_requested: false,
             scroll_lock: None,
@@ -1858,6 +1864,7 @@ impl App {
     }
 
     fn reset_data(&mut self) {
+        self.queue_start_pending = None;
         self.pending_album_queues.clear();
         self.pending_queue_batches.clear();
         self.last_album_queue = None;
@@ -1949,7 +1956,8 @@ impl App {
         {
             self.listening = None;
         }
-        let track_changed = state.track != self.local.track;
+        let track_changed =
+            state.track != self.local.track || state.track_sequence != self.local.track_sequence;
         let reconnected = state.connected && !self.local.connected;
         if state.shuffle != self.local.shuffle
             && self
@@ -2332,9 +2340,15 @@ impl App {
         let Some(now) = self.now_playing_live() else {
             return;
         };
-        if self.last_now_playing_uri.as_deref() == Some(now.uri.as_str()) {
+        let same_uri = self.last_now_playing_uri.as_deref() == Some(now.uri.as_str());
+        let new_occurrence =
+            now.local && self.last_now_playing_sequence != self.local.track_sequence;
+        if same_uri && !new_occurrence {
             return;
         }
+        let queue_already_updated =
+            self.queue_start_pending.take().as_ref() == Some(&self.target());
+        let repeating = same_uri && new_occurrence && now.repeat == RepeatMode::Track;
         // Restore the saved queue only when the remembered track resumes.
         if !self.resume_queue.is_empty() {
             let queued = std::mem::take(&mut self.resume_queue);
@@ -2350,17 +2364,21 @@ impl App {
                 }
             }
         }
-        // Remove a manually queued track once it starts.
-        if self.manual_queue.first().map(String::as_str) == Some(now.uri.as_str()) {
-            self.manual_queue.remove(0);
-            self.session_dirty = true;
+        // A context load can start the same song as the manual queue's head
+        // without consuming that queued copy. Explicit skips have already
+        // consumed their rows; only an unrequested advance consumes one here.
+        if !queue_already_updated && !repeating {
+            self.consume_manual_queue_head(&now.uri);
         }
-        // Move the started track out of Next up before the Web API catches up.
-        if let Loadable::Loaded(queue) = &mut self.queue {
+        if !queue_already_updated
+            && !repeating
+            && let Loadable::Loaded(queue) = &mut self.queue
+        {
             let accounted = queue
                 .currently_playing
                 .as_ref()
-                .is_some_and(|item| item.uri() == now.uri);
+                .is_some_and(|item| item.uri() == now.uri)
+                && !(same_uri && new_occurrence);
             if !accounted
                 && queue
                     .queue
@@ -2372,6 +2390,9 @@ impl App {
             }
         }
         self.last_now_playing_uri = Some(now.uri.clone());
+        if now.local {
+            self.last_now_playing_sequence = self.local.track_sequence;
+        }
         self.resume_context = self.playing_context_uri();
         self.resume_track = Some(now.uri.clone());
         self.resume_position_ms = 0;
@@ -3849,6 +3870,7 @@ impl App {
                 .retain(|(pending, _)| pending != gone);
         }
         self.expect_track(uri.clone(), 0);
+        self.queue_start_pending = Some(self.target());
         self.set_play_pending(vec![uri]);
         self.optimistic_playing = Some((true, Instant::now()));
         match self.target() {
@@ -4005,7 +4027,24 @@ impl App {
         let item = queue.queue.remove(0);
         let uri = item.uri().to_string();
         queue.currently_playing = Some(item);
+        self.consume_manual_queue_head(&uri);
+        self.queue_start_pending = Some(self.target());
         self.expect_track(uri, 0);
+    }
+
+    /// Consume one queued occurrence, retaining any later copy of this song.
+    fn consume_manual_queue_head(&mut self, uri: &str) {
+        if self.manual_queue.first().map(String::as_str) == Some(uri) {
+            self.manual_queue.remove(0);
+            if let Some(index) = self
+                .pending_queue_adds
+                .iter()
+                .position(|(pending, _)| pending == uri)
+            {
+                self.pending_queue_adds.remove(index);
+            }
+            self.session_dirty = true;
+        }
     }
 
     /// Whether a fetched queue predates the latest local change.
@@ -6119,6 +6158,7 @@ impl App {
             shuffle: shuffle.then_some(true),
             at: Instant::now(),
         });
+        self.queue_start_pending = Some(self.target());
         match self.target() {
             Target::Local if !self.local.connected => {
                 // Hold the request while the local engine reconnects.
@@ -6168,6 +6208,7 @@ impl App {
                 {
                     self.queued_play = Some(request);
                 } else {
+                    self.queue_start_pending = None;
                     self.clear_play_pending();
                     self.queued_play = None;
                     self.toast("Choose a device, or enable playback on this computer");
@@ -7201,6 +7242,7 @@ impl App {
                 let id = util::uri_id(&uri).unwrap_or_default();
                 let station = format!("spotify:station:track:{id}");
                 self.local_list = None;
+                self.queue_start_pending = Some(Target::Local);
                 self.backend.player(PlayerCommand::Load(LoadSpec {
                     context_uri: Some(station.clone()),
                     play: true,
@@ -7308,6 +7350,7 @@ impl App {
                 // discard that expectation or a quick Next, Previous leaves
                 // the row marker stuck on the skipped-to song.
                 self.intent_track = None;
+                self.queue_start_pending = Some(self.target());
                 match self.target() {
                     Target::Local => self.backend.player(PlayerCommand::Previous),
                     Target::Remote(device_id) => self.remote(RemoteAction::Previous, device_id),
@@ -11024,6 +11067,178 @@ mod tests {
             uri: format!("spotify:track:{id}"),
             name: id.to_string(),
             ..Default::default()
+        }
+    }
+
+    #[test]
+    fn starting_a_queued_album_preserves_its_manual_copies_and_clear_button() {
+        let ctx = egui::Context::default();
+        for advance in ["clear", "next", "natural"] {
+            let mut app = headless_app();
+            app.local.connected = true;
+            app.local.track = Some(crate::player::LocalTrack {
+                uri: "spotify:track:old".into(),
+                ..Default::default()
+            });
+            app.local.playback = Playback::Playing;
+            app.queue = loaded_queue("spotify:track:old", &["spotify:track:old-next"]);
+            app.on_now_playing_changed();
+            app.album_pages.insert(
+                "album".into(),
+                AlbumPage {
+                    tracks: PagedList {
+                        items: ["intro", "second", "third"]
+                            .into_iter()
+                            .map(album_queue_track)
+                            .collect(),
+                        loaded_once: true,
+                        next_offset: None,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            );
+            app.apply(
+                Action::AddToQueue {
+                    uri: "spotify:album:album".into(),
+                    label: "Album".into(),
+                },
+                &ctx,
+            );
+            app.add_to_queue("spotify:track:extra".into(), "Extra".into());
+            let manual = app.manual_queue.clone();
+            assert_eq!(manual.len(), 4);
+            app.apply(
+                Action::PlayContext {
+                    uri: "spotify:album:album".into(),
+                    offset_uri: None,
+                    offset_index: None,
+                },
+                &ctx,
+            );
+            let mut started = app.local.clone();
+            started.track = Some(crate::player::LocalTrack {
+                uri: "spotify:track:intro".into(),
+                ..Default::default()
+            });
+            started.track_sequence += 1;
+            app.handle_local(started);
+            assert_eq!(
+                app.manual_queue, manual,
+                "the album start is not a queued play"
+            );
+
+            let next = [
+                "spotify:track:intro",
+                "spotify:track:second",
+                "spotify:track:third",
+                "spotify:track:extra",
+                "spotify:track:second",
+                "spotify:track:third",
+            ];
+            let Loadable::Loaded(fetched) = loaded_queue("spotify:track:intro", &next) else {
+                unreachable!();
+            };
+            app.handle_api(ApiResponse::Queue {
+                seq: app.queue_seq,
+                result: Ok(fetched),
+            });
+            assert_eq!(queue_uris(&app).1, next);
+            assert_eq!(app.queued_rows_len(), 4);
+            assert!(app.can_clear_queue());
+
+            // Restarting the same album also keeps its separate queued copy.
+            app.apply(
+                Action::PlayContext {
+                    uri: "spotify:album:album".into(),
+                    offset_uri: None,
+                    offset_index: None,
+                },
+                &ctx,
+            );
+            let mut restarted = app.local.clone();
+            restarted.track_sequence += 1;
+            app.handle_local(restarted);
+            assert_eq!(app.manual_queue, manual);
+            assert_eq!(queue_uris(&app).1, next);
+
+            if advance != "clear" {
+                if advance == "next" {
+                    app.apply(Action::Next, &ctx);
+                    assert_eq!(app.queued_rows_len(), 3);
+                }
+                // The queued intro has the same URI and metadata as the album's
+                // intro. Both Next and natural completion consume it once.
+                let mut queued_intro = app.local.clone();
+                queued_intro.track_sequence += 1;
+                app.handle_local(queued_intro);
+                assert_eq!(app.manual_queue, manual[1..]);
+                assert_eq!(queue_uris(&app).1, next[1..]);
+                assert_eq!(app.queued_rows_len(), 3);
+                assert!(app.can_clear_queue());
+            }
+
+            app.apply(Action::ClearQueue, &ctx);
+            assert_eq!(queue_uris(&app).1, next[4..]);
+            assert!(!app.can_clear_queue());
+            app.backend.shutdown();
+        }
+    }
+
+    #[test]
+    fn replaying_a_song_only_consumes_a_queue_copy_when_the_queue_advances() {
+        let ctx = egui::Context::default();
+        for repeat in [RepeatMode::Off, RepeatMode::Track] {
+            let mut app = headless_app();
+            app.local = LocalState {
+                connected: true,
+                playback: Playback::Playing,
+                repeat,
+                track: Some(crate::player::LocalTrack {
+                    uri: "spotify:track:a".into(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            };
+            app.on_now_playing_changed();
+            app.manual_queue = vec!["spotify:track:b".into(), "spotify:track:b".into()];
+            app.queue = loaded_queue(
+                "spotify:track:a",
+                &[
+                    "spotify:track:b",
+                    "spotify:track:b",
+                    "spotify:track:context",
+                ],
+            );
+            app.apply(Action::Next, &ctx);
+            let mut started = app.local.clone();
+            started.track = Some(crate::player::LocalTrack {
+                uri: "spotify:track:b".into(),
+                ..Default::default()
+            });
+            started.track_sequence += 1;
+            app.handle_local(started);
+            assert_eq!(app.manual_queue, ["spotify:track:b"]);
+            assert_eq!(app.queued_rows_len(), 1);
+
+            let mut again = app.local.clone();
+            again.track_sequence += 1;
+            app.handle_local(again);
+            if repeat == RepeatMode::Track {
+                assert_eq!(app.manual_queue, ["spotify:track:b"]);
+                assert_eq!(
+                    app.queued_rows_len(),
+                    1,
+                    "repeat does not advance the queue"
+                );
+                app.apply(Action::Next, &ctx);
+                let mut skipped = app.local.clone();
+                skipped.track_sequence += 1;
+                app.handle_local(skipped);
+            }
+            assert!(app.manual_queue.is_empty());
+            assert_eq!(queue_uris(&app).1, ["spotify:track:context"]);
+            app.backend.shutdown();
         }
     }
 
@@ -17119,9 +17334,10 @@ mod tests {
         assert_eq!(app.now_playing().unwrap().uri, rows[0]);
         assert!(!app.now_playing().unwrap().loading);
         assert!(app.intent_track.is_none());
-        assert!(
-            app.manual_queue.is_empty(),
-            "the confirmed song consumes its row"
+        assert_eq!(
+            app.manual_queue,
+            vec![rows[0].clone()],
+            "starting the playlist preserves the separately queued copy"
         );
         app.note_listening();
         assert_eq!(app.listening.as_ref().unwrap().uri, rows[0]);

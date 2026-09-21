@@ -70,8 +70,8 @@ on the replacement engine takes precedence over recovery.
 
 3. **When a song starts, its row leaves the queue.** It doesn't matter
    how it started: the song before it ended, you pressed Next, you
-   clicked it, or another device skipped to it. A song is never shown
-   as playing and as next at the same time.
+   clicked its queue row, or another device skipped to it. Only that
+   occurrence leaves: another copy you queued remains until its own turn.
 
 4. **Next removes the top row right away.** The app doesn't wait for
    Spotify to confirm it.
@@ -80,9 +80,12 @@ on the replacement engine takes precedence over recovery.
    skipped and removed, as if you had pressed Next down to it. The rows
    below it stay, and the playlist keeps going afterwards.
 
-6. **Starting a new playlist keeps your songs.** The rows underneath
-   change to the new playlist; your songs stay on top and still play
-   first.
+6. **Starting a playlist or album keeps your songs.** The rows underneath
+   change to the new collection; your songs stay under **Playing next**
+   and play before the collection continues. If you queue an album and then
+   start it from the Library, its first song plays now and the separately
+   queued album still follows. **Clear queue** removes those manual copies
+   while keeping the playing album's remaining songs.
 
 7. **Clear only removes your songs.** The trash button sits beside the
    *Playing next* heading and empties that section; the playlist's rows
