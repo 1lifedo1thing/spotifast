@@ -17827,10 +17827,15 @@ mod tests {
             Ok(false),
         );
         assert_eq!(std::fs::read(app.dirs.settings_file()).unwrap(), original);
-        assert_eq!(
-            std::fs::read_to_string(app.dirs.proxy_secret_file()).unwrap(),
-            "dummy-legacy-secret"
-        );
+        // An unlocked native store can finish the launch-time migration while
+        // this test runs, in which case deleting the plaintext file is right.
+        // If migration is still pending, changing the address must leave the
+        // only surviving copy untouched.
+        match std::fs::read_to_string(app.dirs.proxy_secret_file()) {
+            Ok(password) => assert_eq!(password, "dummy-legacy-secret"),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => panic!("could not read the legacy proxy password: {error}"),
+        }
     }
 
     #[test]
