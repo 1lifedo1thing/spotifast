@@ -49,6 +49,11 @@ the selected target inputs and recipe assets under `dist/`, then run
 `native-packages build --version 1.2.3 --target linux-amd64 --target linux-arm64`.
 Outputs go to `dist/packages/1.2.3`; use `--output` for a fresh destination when rebuilding.
 
+Before tagging, commit written notes at `packaging/release-notes/vVERSION.md`.
+CI requires notes for the current Cargo version, and the release workflow
+publishes that file immediately instead of a generated PR-only summary.
+Verify the notes and their download links after the artifacts are published.
+
 Stable tags run the existing native build jobs first. After binaries and
 `checksums.txt` are published, the shared workflow verifies their hashes,
 builds the configured packages, and attaches them to the GitHub release.

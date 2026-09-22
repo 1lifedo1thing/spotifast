@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import sys
+import tomllib
 import unittest
 
 sys.dont_write_bytecode = True
@@ -12,6 +13,13 @@ spec.loader.exec_module(release_names)
 
 
 class ReleaseNamesTest(unittest.TestCase):
+    def test_current_version_has_written_release_notes_before_tagging(self):
+        root = Path(__file__).resolve().parent.parent
+        version = tomllib.loads((root / "Cargo.toml").read_text())["package"]["version"]
+        notes = root / "packaging/release-notes" / f"v{version}.md"
+        self.assertTrue(notes.is_file(), f"Write {notes} before tagging the release")
+        self.assertTrue(notes.read_text().strip(), "Release notes must not be empty")
+
     def test_releases_after_the_bridge_have_only_the_new_name(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

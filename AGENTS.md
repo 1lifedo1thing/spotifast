@@ -142,10 +142,11 @@ A release is not the tag alone. Do these in order:
    only the package version changed. Verify `nix build .#default` locally or
    in CI. Wait for every required CI job on the release commit before tagging.
    Commit and push this before the tag so the binaries report the right
-   version.
+   version. Include written notes in `packaging/release-notes/vVERSION.md`
+   so the release publishes the real description immediately.
 2. Push the `v*` tag, which triggers the release workflow. Wait for every
-   required artifact and `checksums.txt`, then replace the generated notes
-   with written ones.
+   required artifact and `checksums.txt`, then verify the published written
+   notes, screenshot and download links. Never publish generated placeholder notes.
 3. A prerelease stops here. Keep the stable version current on the website,
    Homebrew, and AUR. The prerelease remains available from GitHub's releases
    page.

@@ -268,7 +268,9 @@ jobs:
         with:
           files: dist/*
           name: Spotifast ${{ github.ref_name }}
-          generate_release_notes: true
+          # Publish reviewed notes immediately, not a generated PR-only summary.
+          body_path: packaging/release-notes/${{ github.ref_name }}.md
+          generate_release_notes: false
           # A tag with a suffix (v0.4.0-rc1) is a pre-release: it stays
           # off "latest", so the app's update check never offers it.
           prerelease: ${{ contains(github.ref_name, '-') }}
