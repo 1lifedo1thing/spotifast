@@ -71,6 +71,9 @@ fixture survives installation and removal. The checks run both `spotifast --vers
 and verify the desktop entry and icon. They cover installation and library
 resolution, not a running desktop or Spotify playback. On release runs these
 checks follow artifact attachment; a failure marks the workflow as failed.
+The generated Homebrew cask is also installed, launched with `--version`,
+signature-checked, and uninstalled on a native macOS runner. Wait for this
+check before publishing the staged cask to the tap.
 The install script defaults to the new `spotifast` desktop ID; its fourth
 argument is explicitly `fastpotify` only when checking the historical 0.8.0
 fixture. Both cases reject a second launcher and check removal of both names.
