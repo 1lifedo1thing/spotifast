@@ -4,7 +4,7 @@ set -euo pipefail
 
 # These overrides also let the hook be tested without changing the desktop.
 theme_dir=${SPOTIFAST_OMARCHY_THEME_DIR:-$HOME/.local/state/omarchy/current/theme}
-themes_dir=${SPOTIFAST_THEMES_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/fastpotify/themes}
+themes_dir=${SPOTIFAST_THEMES_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/spotifast/themes}
 source_file=$theme_dir/spotifast.json
 
 # A theme without a generated palette leaves the last accepted colors alone.

@@ -299,7 +299,7 @@ impl Catalog {
         let (sender, receiver) = mpsc::channel();
         let wake = waker.clone();
         match std::thread::Builder::new()
-            .name("fastpotify-themes".into())
+            .name("spotifast-themes".into())
             .spawn(move || {
                 let result = load();
                 if sender.send(result).is_ok() {
@@ -546,7 +546,7 @@ mod custom_theme_tests {
 
     #[test]
     fn discovery_sorts_valid_files_and_skips_invalid_files() {
-        let dir = std::env::temp_dir().join(format!("fastpotify-themes-{}", rand::random::<u64>()));
+        let dir = std::env::temp_dir().join(format!("spotifast-themes-{}", rand::random::<u64>()));
         assert!(discover(&dir, None).themes.is_empty());
         std::fs::create_dir_all(&dir).unwrap();
         for (name, text) in [
@@ -571,7 +571,7 @@ mod custom_theme_tests {
     #[test]
     fn reads_are_bounded_and_cannot_escape_to_other_files() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-theme-bounds-{}", rand::random::<u64>()));
+            std::env::temp_dir().join(format!("spotifast-theme-bounds-{}", rand::random::<u64>()));
         let dir = root.join("themes");
         std::fs::create_dir_all(&dir).unwrap();
         let mut boundary = vec![b' '; MAX_FILE_BYTES as usize];
@@ -612,10 +612,8 @@ mod custom_theme_tests {
 
     #[test]
     fn catalog_limits_keep_the_saved_selection_without_an_arbitrary_partial_listing() {
-        let dir = std::env::temp_dir().join(format!(
-            "fastpotify-theme-catalog-{}",
-            rand::random::<u64>()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("spotifast-theme-catalog-{}", rand::random::<u64>()));
         std::fs::create_dir(&dir).unwrap();
         for index in 0..MAX_THEMES + 1 {
             std::fs::write(dir.join(format!("{index:03}.json")), b"{}").unwrap();

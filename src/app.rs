@@ -215,7 +215,7 @@ pub struct App {
     /// The window should close and reopen at once as the other kind: the
     /// big window or the Winamp mini player.
     pub switch_intent: bool,
-    /// Commands from control clients (a second `fastpotify <verb>` launch,
+    /// Commands from control clients (a second `spotifast <verb>` launch,
     /// a Raycast script), on the platforms where they do not arrive through
     /// MPRIS. Drained every frame.
     control_commands: Option<std::sync::Arc<std::sync::Mutex<Vec<ControlCommand>>>>,
@@ -12952,7 +12952,7 @@ mod tests {
 
     fn test_app(name: &str) -> App {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-{name}-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-{name}-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         App::new(
             &Waker::default(),
@@ -13803,7 +13803,7 @@ mod tests {
     #[test]
     fn the_queue_comes_back_after_a_restart() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-queue-restart-test-{}",
+            "spotifast-queue-restart-test-{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&root);
@@ -14136,7 +14136,7 @@ mod tests {
         assert!(!app.window_hidden, "a window this app still owns");
 
         // #when something asks for the window: the Dock, the tray, or
-        // `fastpotify show`
+        // `spotifast show`
         let mut output = ctx.run_ui(Default::default(), |ui| {
             app.apply(Action::ShowWindow, ui.ctx());
         });
@@ -14594,7 +14594,7 @@ mod tests {
 
     fn headless_app() -> App {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-volume-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-volume-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -17549,7 +17549,7 @@ mod tests {
         app.selected_device = None;
         app.plays = crate::history::History::default();
         let state_dir =
-            std::env::temp_dir().join(format!("fastpotify-repeat-history-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-repeat-history-{}", std::process::id()));
         app.dirs.state = state_dir.clone();
         for sequence in [1, 2] {
             app.handle_local(LocalState {
@@ -18693,7 +18693,7 @@ mod tests {
             .unwrap();
         let call = |uri: &str| {
             client.call_method(
-                Some("org.mpris.MediaPlayer2.fastpotify"),
+                Some("org.mpris.MediaPlayer2.spotifast"),
                 "/org/mpris/MediaPlayer2",
                 Some("org.mpris.MediaPlayer2.Player"),
                 "OpenUri",
@@ -18720,7 +18720,7 @@ mod tests {
         assert!(matches!(app.actions.as_slice(), [Action::OpenLink(_)]));
         let schemes: Vec<String> = zbus::blocking::Proxy::new(
             &client,
-            "org.mpris.MediaPlayer2.fastpotify",
+            "org.mpris.MediaPlayer2.spotifast",
             "/org/mpris/MediaPlayer2",
             "org.mpris.MediaPlayer2",
         )
@@ -18805,7 +18805,7 @@ mod tests {
     #[test]
     fn the_last_playlist_tree_stays_visible_for_its_account() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-rootlist-restart-test-{}",
+            "spotifast-rootlist-restart-test-{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&root);

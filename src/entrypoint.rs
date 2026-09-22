@@ -1,6 +1,6 @@
 // Shared by the Spotifast command and its Fastpotify compatibility command.
 
-use fastpotify::{app, backend, paths, settings, single_instance, util};
+use spotifast::{app, backend, paths, settings, single_instance, util};
 
 use clap::{CommandFactory, FromArgMatches, Parser};
 
@@ -60,7 +60,7 @@ struct Cli {
     /// Language for the navigation translation pilot. Requires demo mode.
     #[cfg(feature = "demo")]
     #[arg(long, value_enum)]
-    demo_language: Option<fastpotify::i18n::Locale>,
+    demo_language: Option<spotifast::i18n::Locale>,
 
     /// Write a PNG of the demo window to this path and exit. Implies
     /// `--demo`. Without `--demo-size`, the shot is the window's own frame
@@ -243,7 +243,7 @@ fn run_control(control: Control) -> i32 {
         _ => {
             eprintln!(
                 "On Linux the running instance speaks MPRIS instead; use e.g. \
-                 `playerctl --player=fastpotify play-pause`."
+                 `playerctl --player=spotifast play-pause`."
             );
             return 2;
         }
@@ -310,7 +310,7 @@ fn format_now_playing(snapshot: &str) -> String {
 }
 
 /// The `devices` snapshot as one line per device, the active one marked.
-/// The id comes first because `fastpotify transfer` is what it is for.
+/// The id comes first because `spotifast transfer` is what it is for.
 #[cfg(not(target_os = "linux"))]
 fn format_devices(snapshot: &str) -> String {
     let Ok(devices) = serde_json::from_str::<Vec<serde_json::Value>>(snapshot) else {
@@ -341,7 +341,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     configure_pulseaudio_properties();
     let arguments: Vec<_> = std::env::args_os().collect();
     if arguments.len() == 3 && arguments[1] == "--apply-update" {
-        let result = fastpotify::updates::install::run_helper(std::path::Path::new(&arguments[2]));
+        let result = spotifast::updates::install::run_helper(std::path::Path::new(&arguments[2]));
         if let Err(error) = &result {
             eprintln!("{error:#}");
         }
@@ -352,8 +352,8 @@ pub(crate) fn run() -> eframe::Result<()> {
     // buffer, and never touches the app's state. Handle it before anything
     // else, including the argument parser, which does not know its flags.
     #[cfg(feature = "milkdrop")]
-    if let Some(args) = fastpotify::milkdrop::child::Args::parse() {
-        std::process::exit(fastpotify::milkdrop::child::run(args));
+    if let Some(args) = spotifast::milkdrop::child::Args::parse() {
+        std::process::exit(spotifast::milkdrop::child::run(args));
     }
 
     // Follow the invoked command, including the Linux package's spotifast
@@ -379,19 +379,60 @@ pub(crate) fn run() -> eframe::Result<()> {
     let link = cli
         .link
         .as_deref()
-        .map(|text| match fastpotify::link::parse(text) {
+        .map(|text| match spotifast::link::parse(text) {
             Some(uri) => uri,
             None => {
                 eprintln!("not a Spotify link: {text}");
                 std::process::exit(2);
             }
         });
-    let default_filter = if cli.verbose {
-        "info,librespot=info,fastpotify=debug,spotifast=debug"
+    // The application (audio engine, Web API, MPRIS, tray) outlives any
+    // window. Closing to the tray destroys the window and this loop creates
+    // a new one when the tray or MPRIS asks for it. Plain window lifecycle,
+    // portable across desktops.
+    let waker = backend::Waker::default();
+
+    // A second launch surfaces the instance already running instead of
+    // starting a rival one. Held for the lifetime of the process.
+    #[cfg(feature = "demo")]
+    let demo = cli.demo || cli.demo_shot.is_some();
+    #[cfg(feature = "demo")]
+    let guarded = !demo;
+    #[cfg(not(feature = "demo"))]
+    let guarded = true;
+    let instance = if guarded {
+        match single_instance::acquire(&waker, link.as_deref()) {
+            single_instance::Outcome::Only(guard) => Some(guard),
+            single_instance::Outcome::Surfaced => {
+                log::info!("Spotifast is already running; asked it to show its window");
+                return Ok(());
+            }
+        }
     } else {
-        "warn,fastpotify=info,spotifast=info"
+        None
     };
-    let dirs = paths::AppDirs::discover();
+    #[cfg(feature = "demo")]
+    let migrate = guarded && cli.demo_data.is_none() && cli.update_receipt.is_none();
+    #[cfg(not(feature = "demo"))]
+    let migrate = guarded && cli.update_receipt.is_none();
+    if migrate {
+        paths::AppDirs::discover()
+            .migrate_legacy()
+            .map_err(|error| eframe::Error::AppCreation(Box::new(error)))?;
+        if let (Some(old), Some(new)) = (
+            eframe::storage_dir("fastpotify"),
+            eframe::storage_dir("spotifast"),
+        ) {
+            paths::migrate_directory(&old, &new)
+                .map_err(|error| eframe::Error::AppCreation(Box::new(error)))?;
+        }
+    }
+    let default_filter = if cli.verbose {
+        "info,librespot=info,spotifast=debug"
+    } else {
+        "warn,spotifast=info"
+    };
+    let dirs = paths::AppDirs::for_launch(cli.update_receipt.is_some());
     #[cfg(feature = "demo")]
     let dirs = cli
         .demo_data
@@ -435,38 +476,10 @@ pub(crate) fn run() -> eframe::Result<()> {
     if let Some(name) = cli.device_name {
         settings.device_name = name;
     }
-
-    // The application (audio engine, Web API, MPRIS, tray) outlives any
-    // window. Closing to the tray destroys the window and this loop creates
-    // a new one when the tray or MPRIS asks for it. Plain window lifecycle,
-    // portable across desktops.
-    let waker = backend::Waker::default();
-
-    // A second launch surfaces the instance already running instead of
-    // starting a rival one. Held for the lifetime of the process.
-    #[cfg(feature = "demo")]
-    let demo = cli.demo || cli.demo_shot.is_some();
-    #[cfg(feature = "demo")]
-    let guarded = !demo;
-    #[cfg(not(feature = "demo"))]
-    let guarded = true;
-    let instance = if guarded {
-        match single_instance::acquire(&waker, link.as_deref()) {
-            single_instance::Outcome::Only(guard) => Some(guard),
-            single_instance::Outcome::Surfaced => {
-                log::info!("Spotifast is already running; asked it to show its window");
-                return Ok(());
-            }
-        }
-    } else {
-        None
-    };
-    // macOS hands links to an app as Apple Events, the one it was launched
-    // for included, so the handler is in place before the event loop that
-    // delivers them starts.
+    // macOS delivers links as Apple Events; install before the event loop.
     #[cfg(target_os = "macos")]
     if let Some(guard) = &instance {
-        fastpotify::mac_links::install(guard.commands(), waker.clone());
+        spotifast::mac_links::install(guard.commands(), waker.clone());
     }
 
     // A capture run is a throwaway process next to the real one: no tray
@@ -512,10 +525,10 @@ pub(crate) fn run() -> eframe::Result<()> {
     }
     #[cfg(feature = "demo")]
     if demo {
-        fastpotify::demo::populate(&mut app);
-        fastpotify::demo::apply_flags(&mut app, cli.demo_page.as_deref(), cli.demo_show.as_deref());
+        spotifast::demo::populate(&mut app);
+        spotifast::demo::apply_flags(&mut app, cli.demo_page.as_deref(), cli.demo_show.as_deref());
         if let Some(feed) = &cli.demo_update_feed {
-            match fastpotify::updates::Source::local(feed) {
+            match spotifast::updates::Source::local(feed) {
                 Ok(source) => app.update_source = source,
                 Err(error) => {
                     eprintln!("{error:#}");
@@ -528,7 +541,7 @@ pub(crate) fn run() -> eframe::Result<()> {
                 app.update_restart_arguments
                     .extend(["--demo-data".into(), base.to_string_lossy().into_owned()]);
             }
-            app.actions.push(fastpotify::model::Action::CheckForUpdates);
+            app.actions.push(spotifast::model::Action::CheckForUpdates);
         }
         if let Some(locale) = cli.demo_language {
             app.locale = locale;
@@ -544,6 +557,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     let demo_inner = cli.demo_size;
     #[cfg(feature = "demo")]
     let demo_storage = app.dirs.cache.join("demo-window.ron");
+    let window_profile = app.dirs.window_profile();
     let slot = std::sync::Arc::new(std::sync::Mutex::new(Some(app)));
     loop {
         let creator_slot = std::sync::Arc::clone(&slot);
@@ -569,6 +583,7 @@ pub(crate) fn run() -> eframe::Result<()> {
         };
         #[cfg(not(feature = "demo"))]
         let options = native_options(false, mini, None);
+        let options = profile_options(options, window_profile);
         let persist_memory = options.persist_window;
         #[cfg(windows)]
         let thumbbar_enabled = desktop_surfaces && options.viewport.taskbar != Some(false);
@@ -601,23 +616,23 @@ pub(crate) fn run() -> eframe::Result<()> {
                 // repaint.
                 #[cfg(target_os = "macos")]
                 {
-                    fastpotify::mac_touchbar_crash_guard::install();
-                    fastpotify::mac_menu::init();
+                    spotifast::mac_touchbar_crash_guard::install();
+                    spotifast::mac_menu::init();
                     let ctx = cc.egui_ctx.clone();
-                    fastpotify::mac_menu::set_waker(move || ctx.request_repaint());
+                    spotifast::mac_menu::set_waker(move || ctx.request_repaint());
                 }
                 {
                     use raw_window_handle::HasDisplayHandle;
                     if let Ok(display) = cc.display_handle() {
                         app.window_level_supported =
-                            fastpotify::window::supports_window_level(display.as_raw());
+                            spotifast::window::supports_window_level(display.as_raw());
                     }
                 }
                 app.attach(&cc.egui_ctx);
                 #[cfg(windows)]
                 let thumbbar = {
                     use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-                    let mut toolbar = fastpotify::thumbbar::ThumbBar::new();
+                    let mut toolbar = spotifast::thumbbar::ThumbBar::new();
                     if thumbbar_enabled
                         && let Ok(handle) = cc.window_handle()
                         && let RawWindowHandle::Win32(window) = handle.as_raw()
@@ -676,7 +691,7 @@ pub(crate) fn run() -> eframe::Result<()> {
                     break;
                 }
             }
-            fastpotify::tray::idle(std::time::Duration::from_millis(150));
+            spotifast::tray::idle(std::time::Duration::from_millis(150));
         }
         let quit = {
             let guard = slot.lock().unwrap_or_else(|p| p.into_inner());
@@ -722,7 +737,7 @@ fn log_panics(path: std::path::PathBuf) {
         previous(info);
         let thread = std::thread::current();
         let entry = format!(
-            "{} fastpotify {} on thread {:?}: {info}\n",
+            "{} spotifast {} on thread {:?}: {info}\n",
             jiff::Timestamp::now(),
             env!("CARGO_PKG_VERSION"),
             thread.name().unwrap_or("unnamed"),
@@ -751,7 +766,7 @@ struct MiniWindow {
 impl MiniWindow {
     fn wanted(app: &app::App) -> Option<Self> {
         app.settings.winamp_window.then(|| Self {
-            size: fastpotify::ui::winamp::initial_size(&app.settings),
+            size: spotifast::ui::winamp::initial_size(&app.settings),
             position: app.winamp.restore_pos,
             on_top: app.settings.winamp_on_top,
             taskbar: app.settings.winamp_show_taskbar,
@@ -804,14 +819,13 @@ fn native_options(
     let persistence_path = mini.as_ref().map(|mini| mini.storage_path.clone());
     #[cfg(target_os = "linux")]
     let persistence_path = persistence_path.or_else(|| {
-        // Window identity now matches spotifast.desktop (or the Flatpak ID),
-        // while the existing geometry and egui state stay at their old path.
-        eframe::storage_dir("fastpotify").map(|dir| dir.join("app.ron"))
+        // Keep the native profile path even when Flatpak supplies its app ID.
+        eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"))
     });
     #[cfg(target_os = "linux")]
-    let app_id = fastpotify::media_controls::desktop_entry();
+    let app_id = spotifast::media_controls::desktop_entry();
     #[cfg(not(target_os = "linux"))]
-    let app_id = "fastpotify";
+    let app_id = "spotifast";
     let icon = if cfg!(target_os = "macos") {
         // macOS takes the dock icon from the bundle's .icns, which is the
         // 1024px drawing with the platform's rounding. Setting a window
@@ -884,6 +898,13 @@ fn native_options(
     }
 }
 
+fn profile_options(mut options: eframe::NativeOptions, profile: &str) -> eframe::NativeOptions {
+    if options.persist_window {
+        options.persistence_path = eframe::storage_dir(profile).map(|dir| dir.join("app.ron"));
+    }
+    options
+}
+
 #[cfg(any(test, feature = "demo"))]
 fn demo_native_options(
     mut options: eframe::NativeOptions,
@@ -899,6 +920,23 @@ fn demo_native_options(
 #[cfg(test)]
 mod native_window_tests {
     use super::*;
+
+    #[test]
+    fn updater_trial_keeps_previous_geometry_without_touching_demo_storage() {
+        for profile in ["fastpotify", "spotifast"] {
+            let main = profile_options(native_options(false, None, None), profile);
+            assert_eq!(
+                main.persistence_path,
+                eframe::storage_dir(profile).map(|dir| dir.join("app.ron"))
+            );
+            let demo_path = std::path::PathBuf::from("temporary/demo.ron");
+            let demo = profile_options(
+                demo_native_options(native_options(false, None, None), demo_path.clone()),
+                profile,
+            );
+            assert_eq!(demo.persistence_path, Some(demo_path));
+        }
+    }
 
     #[test]
     fn launcher_identity_preserves_main_and_mini_storage() {
@@ -917,17 +955,17 @@ mod native_window_tests {
         );
         #[cfg(target_os = "linux")]
         {
-            let id = fastpotify::media_controls::desktop_entry();
+            let id = spotifast::media_controls::desktop_entry();
             assert_eq!(main.viewport.app_id.as_deref(), Some(id.as_str()));
             assert_eq!(mini.viewport.app_id, main.viewport.app_id);
             assert_eq!(
                 main.persistence_path,
-                eframe::storage_dir("fastpotify").map(|dir| dir.join("app.ron"))
+                eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"))
             );
         }
         #[cfg(not(target_os = "linux"))]
         {
-            assert_eq!(main.viewport.app_id.as_deref(), Some("fastpotify"));
+            assert_eq!(main.viewport.app_id.as_deref(), Some("spotifast"));
             assert_eq!(mini.viewport.app_id, main.viewport.app_id);
             assert_eq!(main.persistence_path, None);
         }
@@ -953,7 +991,7 @@ mod native_window_tests {
                 skin_scale: Some(2),
                 ..Default::default()
             };
-            let size = fastpotify::ui::winamp::initial_size(&settings);
+            let size = spotifast::ui::winamp::initial_size(&settings);
             let options = native_options(
                 false,
                 Some(MiniWindow {
@@ -1060,7 +1098,7 @@ mod native_window_tests {
                 slot: Default::default(),
                 persist_memory: options.persist_window,
                 #[cfg(windows)]
-                thumbbar: fastpotify::thumbbar::ThumbBar::new(),
+                thumbbar: spotifast::thumbbar::ThumbBar::new(),
                 #[cfg(feature = "demo")]
                 shot: None,
             };
@@ -1084,7 +1122,7 @@ struct Shell {
     /// after on_exit has returned the App to the event loop.
     persist_memory: bool,
     #[cfg(windows)]
-    thumbbar: fastpotify::thumbbar::ThumbBar,
+    thumbbar: spotifast::thumbbar::ThumbBar,
     /// A pending `--demo-shot` capture, if this is a screenshot run.
     #[cfg(feature = "demo")]
     shot: Option<Shot>,
@@ -1155,9 +1193,9 @@ impl eframe::App for Shell {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if let Some(app) = self.app.as_mut() {
             #[cfg(target_os = "macos")]
-            for command in fastpotify::mac_menu::drain_commands() {
-                use fastpotify::mac_menu::MenuCommand;
-                use fastpotify::model::{Action, Dialog, Page};
+            for command in spotifast::mac_menu::drain_commands() {
+                use spotifast::mac_menu::MenuCommand;
+                use spotifast::model::{Action, Dialog, Page};
                 let action = match command {
                     MenuCommand::PlayPause => Action::TogglePlay,
                     MenuCommand::Next => Action::Next,
@@ -1232,7 +1270,7 @@ impl eframe::App for Shell {
             app.frame_ui(ui);
             if let Some(receipt) = app.update_receipt.take() {
                 std::thread::spawn(move || {
-                    if let Err(error) = fastpotify::updates::install::acknowledge(&receipt) {
+                    if let Err(error) = spotifast::updates::install::acknowledge(&receipt) {
                         log::error!("Could not confirm the update: {error:#}");
                     }
                 });

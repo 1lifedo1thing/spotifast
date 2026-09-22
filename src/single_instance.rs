@@ -38,7 +38,7 @@ const INSTANCE_NAME: &str = "rocks.fastpotify.Instance";
 
 /// The MPRIS player to ask when another instance already holds the name.
 #[cfg(target_os = "linux")]
-const MPRIS_NAME: &str = "org.mpris.MediaPlayer2.fastpotify";
+const MPRIS_NAME: &str = "org.mpris.MediaPlayer2.spotifast";
 
 /// Where the running instance answers `Open` for links, on [`INSTANCE_NAME`].
 #[cfg(target_os = "linux")]
@@ -234,7 +234,7 @@ pub fn acquire(waker: &crate::backend::Waker, link: Option<&str>) -> Outcome {
     let devices = Arc::clone(&guard.devices);
     let waker = waker.clone();
     let spawned = std::thread::Builder::new()
-        .name("fastpotify-instance".to_owned())
+        .name("spotifast-instance".to_owned())
         .spawn(move || serve(listener, &commands, &now_playing, &devices, &waker));
     if let Err(error) = spawned {
         log::warn!("cannot listen for other launches: {error}");
@@ -529,7 +529,7 @@ pub fn acquire(waker: &crate::backend::Waker, link: Option<&str>) -> Outcome {
 fn serve_links(connection: zbus::blocking::Connection, instance: Instance) -> Result<(), String> {
     let (ready_tx, ready_rx) = std::sync::mpsc::channel();
     let spawned = std::thread::Builder::new()
-        .name("fastpotify-links".to_owned())
+        .name("spotifast-links".to_owned())
         .spawn(move || {
             let runtime = match tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -581,7 +581,7 @@ fn open_in_running_instance(
 ) -> Result<(), String> {
     let (answer_tx, answer_rx) = std::sync::mpsc::channel();
     let spawned = std::thread::Builder::new()
-        .name("fastpotify-open-link".to_owned())
+        .name("spotifast-open-link".to_owned())
         .spawn(move || {
             let opened = connection.call_method(
                 Some(INSTANCE_NAME),

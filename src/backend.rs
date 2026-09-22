@@ -844,7 +844,7 @@ impl Backend {
         let (event_tx, event_rx) = std::sync::mpsc::channel();
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
-            .thread_name("fastpotify-runtime")
+            .thread_name("spotifast-runtime")
             .enable_all()
             .build()
             .expect("unable to start the async runtime");
@@ -865,7 +865,7 @@ impl Backend {
         let worker_art = art.clone();
         let worker_commands = command_tx.clone();
         let thread = std::thread::Builder::new()
-            .name("fastpotify-backend".to_string())
+            .name("spotifast-backend".to_string())
             .spawn(move || {
                 runtime.block_on(async move {
                     let mut worker = Worker::new(
@@ -3894,7 +3894,7 @@ mod playlist_cache_tests {
     #[tokio::test]
     async fn the_file_reader_accepts_legacy_caches_and_ignores_unknown_fields() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-playlist-cache-legacy-read-test-{}-{:?}",
+            "spotifast-playlist-cache-legacy-read-test-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
         ));
@@ -3918,7 +3918,7 @@ mod playlist_cache_tests {
     #[tokio::test]
     async fn the_file_reader_rejects_missing_corrupt_and_trailing_data() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-playlist-cache-invalid-read-test-{}-{:?}",
+            "spotifast-playlist-cache-invalid-read-test-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
         ));
@@ -3944,7 +3944,7 @@ mod playlist_cache_tests {
     #[tokio::test]
     async fn a_new_checkpoint_atomically_replaces_the_previous_one() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-playlist-cache-test-{}-{:?}",
+            "spotifast-playlist-cache-test-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
         ));
@@ -3973,7 +3973,7 @@ mod playlist_cache_tests {
     #[tokio::test]
     async fn streaming_preserves_the_cache_bytes_and_duplicate_unavailable_rows() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-playlist-cache-stream-test-{}-{:?}",
+            "spotifast-playlist-cache-stream-test-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
         ));
@@ -4026,7 +4026,7 @@ mod playlist_cache_tests {
     #[tokio::test]
     async fn failed_checkpoint_keeps_existing_data_and_cleans_only_its_temporary_file() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-playlist-cache-failure-test-{}-{:?}",
+            "spotifast-playlist-cache-failure-test-{}-{:?}",
             std::process::id(),
             std::thread::current().id()
         ));
@@ -4345,7 +4345,7 @@ mod authorization_tests {
             .build()
             .unwrap();
         let root =
-            std::env::temp_dir().join(format!("fastpotify-auth-{name}-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-auth-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let dirs = AppDirs {
             config: root.join("config"),

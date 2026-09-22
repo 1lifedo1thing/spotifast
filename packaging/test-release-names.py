@@ -12,6 +12,17 @@ spec.loader.exec_module(release_names)
 
 
 class ReleaseNamesTest(unittest.TestCase):
+    def test_releases_after_the_bridge_have_only_the_new_name(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "spotifast-v0.9.2-linux.tar.gz").write_bytes(b"new build")
+            release_names.prepare(root, "v0.9.2")
+            self.assertEqual(len((root / "checksums.txt").read_text().splitlines()), 1)
+            self.assertFalse((root / "fastpotify-v0.9.2-linux.tar.gz").exists())
+            (root / "fastpotify-v0.9.2-linux.tar.gz").write_bytes(b"legacy build")
+            with self.assertRaisesRegex(ValueError, "forbidden"):
+                release_names.prepare(root, "v0.9.2")
+
     def test_old_and_new_inputs_keep_their_bytes_and_checksums(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

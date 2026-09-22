@@ -20,28 +20,28 @@ nfpm:
   replaces: [fastpotify]
   conflicts: [fastpotify]
   contents:
-  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/fastpotify"
-    dst: "/usr/bin/fastpotify"
+  - src: "@PAYLOAD@/*-v@VERSION@-@TARGET@/spotifast"
+    dst: "/usr/bin/spotifast"
     file_info:
       mode: 493
-  - src: fastpotify
-    dst: /usr/bin/spotifast
+  - src: spotifast
+    dst: /usr/bin/fastpotify
     type: symlink
-  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/LICENSE"
+  - src: "@PAYLOAD@/*-v@VERSION@-@TARGET@/LICENSE"
     dst: "/usr/share/licenses/spotifast/LICENSE"
     file_info:
       mode: 420
-  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/README.md"
+  - src: "@PAYLOAD@/*-v@VERSION@-@TARGET@/README.md"
     dst: "/usr/share/doc/spotifast/README.md"
     file_info:
       mode: 420
   # Retain the input release's launcher identity: current builds use Spotifast,
   # while historical binaries still advertise the Fastpotify window class.
-  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/packaging/applications/*.desktop"
+  - src: "@PAYLOAD@/*-v@VERSION@-@TARGET@/packaging/applications/*.desktop"
     dst: "/usr/share/applications/"
     file_info:
       mode: 420
-  - src: "@PAYLOAD@/fastpotify-v@VERSION@-@TARGET@/packaging/icons/*.svg"
+  - src: "@PAYLOAD@/*-v@VERSION@-@TARGET@/packaging/icons/*.svg"
     dst: "/usr/share/icons/hicolor/scalable/apps/"
     file_info:
       mode: 420

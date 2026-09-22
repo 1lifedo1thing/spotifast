@@ -390,7 +390,7 @@ macro_rules! icons {
     ($($variant:ident => $file:literal),* $(,)?) => {
         &[$((
             Icon::$variant,
-            concat!("bytes://fastpotify-icon-", $file, ".svg"),
+            concat!("bytes://spotifast-icon-", $file, ".svg"),
             include_bytes!(concat!("../assets/icons/", $file, ".svg")).as_slice(),
         )),*]
     };
@@ -1002,7 +1002,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn a_local_palette_keeps_fastpotifys_widget_style_local() {
+    fn a_local_palette_keeps_spotifasts_widget_style_local() {
         let ctx = egui::Context::default();
         apply(&ctx, &Palette::light());
         let dark = Palette::dark();

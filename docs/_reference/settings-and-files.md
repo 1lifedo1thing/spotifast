@@ -6,34 +6,38 @@ nav_order: 0
 
 ## Where things live
 
-Spotifast was previously called Fastpotify. The existing `fastpotify` file
-paths, credential-store IDs and desktop integration IDs stay the same, so the
-rename does not require signing in again or moving your settings. Both
-`spotifast` and `fastpotify` commands control the same running app. Saved Spotify
-Connect device names remain unchanged; new settings default to `Spotifast`.
+Starting with 0.9.1, Spotifast moves the previous profile to the paths below
+on its first normal launch. Settings, skins, presets, history, caches and window
+positions carry over. An existing destination profile is never overwritten or
+merged. Saved sign-ins migrate within the protected credential store, with the
+replacement read back before the old entry is deleted. An unlocked store is
+required. See [the rename guide](/renaming/) for older installations.
+
+The old default Connect device name becomes `Spotifast`; custom names stay as
+chosen. Linux media controls now use `playerctl --player=spotifast`.
 
 Spotifast follows each platform's conventions. On Linux:
 
 | What | Where | Safe to delete? |
 | --- | --- | --- |
-| Settings | `~/.config/fastpotify/settings.json` | Yes, you lose preferences |
-| Winamp skins | `~/.config/fastpotify/skins/` | Yes, you add them again |
-| MilkDrop presets | `~/.config/fastpotify/milkdrop/` | Yes, you fetch them again |
+| Settings | `~/.config/spotifast/settings.json` | Yes, you lose preferences |
+| Winamp skins | `~/.config/spotifast/skins/` | Yes, you add them again |
+| MilkDrop presets | `~/.config/spotifast/milkdrop/` | Yes, you fetch them again |
 | Spotify grants (available since 0.8.0) | System credential store | Use Sign out in Settings |
-| Credential revocation markers (available since 0.8.0) | `~/.local/state/fastpotify/credential-storage/` | Keep after a failed sign-out deletion |
-| Legacy shared Web API grant | `~/.local/state/fastpotify/shared_web_api_token.json` | Removed after migration or sign-out |
-| Legacy personal Web API grant | `~/.local/state/fastpotify/personal_web_api_token.json` | Removed after migration or sign-out |
-| Legacy playback credential | `~/.local/state/fastpotify/credentials/` | Removed after migration or sign-out |
+| Credential revocation markers (available since 0.8.0) | `~/.local/state/spotifast/credential-storage/` | Keep after a failed sign-out deletion |
+| Legacy shared Web API grant | `~/.local/state/spotifast/shared_web_api_token.json` | Removed after migration or sign-out |
+| Legacy personal Web API grant | `~/.local/state/spotifast/personal_web_api_token.json` | Removed after migration or sign-out |
+| Legacy playback credential | `~/.local/state/spotifast/credentials/` | Removed after migration or sign-out |
 | Proxy password | System credential store | Clear the password and apply the manual proxy settings |
-| Legacy proxy password | `~/.local/state/fastpotify/proxy_password` | Removed after protected migration |
-| Last session | `~/.local/state/fastpotify/session.json` | Yes |
-| Play history | `~/.local/state/fastpotify/history.json` | Yes |
-| Audio cache | `~/.cache/fastpotify/audio/` | Always |
-| Artwork cache | `~/.cache/fastpotify/art/` | Always |
-| Lyrics cache | `~/.cache/fastpotify/lyrics/` | Always |
-| Account-scoped playlist page cache | `~/.cache/fastpotify/playlists/<account-id>/` | Always |
-| Last run's log | `~/.local/state/fastpotify/fastpotify.log` | Always |
-| Crash log | `~/.local/state/fastpotify/panic.log` | Always |
+| Legacy proxy password | `~/.local/state/spotifast/proxy_password` | Removed after protected migration |
+| Last session | `~/.local/state/spotifast/session.json` | Yes |
+| Play history | `~/.local/state/spotifast/history.json` | Yes |
+| Audio cache | `~/.cache/spotifast/audio/` | Always |
+| Artwork cache | `~/.cache/spotifast/art/` | Always |
+| Lyrics cache | `~/.cache/spotifast/lyrics/` | Always |
+| Account-scoped playlist page cache | `~/.cache/spotifast/playlists/<account-id>/` | Always |
+| Last run's log | `~/.local/state/spotifast/spotifast.log` | Always |
+| Crash log | `~/.local/state/spotifast/panic.log` | Always |
 
 Clearing caches never signs you out. Sign-out from Settings covers the shared
 and personal Web API grants and the independent playback credential.
@@ -42,7 +46,7 @@ The following credential storage is available since 0.8.0.
 
 Durable grants use **Secret Service on Linux**, **Keychain on macOS**, and
 **Credential Manager on Windows**, under the service name
-`rocks.fastpotify.Fastpotify`. Entries are separated by application state
+`rocks.spotifast.Spotifast`. Entries are separated by application state
 location and grant type; Web grants carry their Client ID and must verify as
 the same account. Playback and receiver activation require that account too.
 Non-secret settings and session data remain readable JSON. Native credential
@@ -185,7 +189,7 @@ automatic requests and shows a Retry button in the reserved row space.
 Since 0.8.0, Flatpak also preserves the fallback
 state directory used when `XDG_STATE_HOME` is unset. Session state, history,
 logs, and credential revocation markers survive a full quit and relaunch under
-`~/.var/app/rocks.spotifast.Spotifast/.local/state/fastpotify/` in newly named
+`~/.var/app/rocks.spotifast.Spotifast/.local/state/spotifast/` in newly named
 Flatpak builds. Older bundles use `~/.var/app/rocks.fastpotify.Fastpotify/`
 as their application data root. Configuration
 and caches remain under the app's `config/` and `cache/` directories. State
@@ -194,11 +198,11 @@ See [switching Flatpak installations](/renaming/#flatpak) to retain existing
 settings and history when installing the new application ID.
 
 On macOS, settings, state, and the logs are in
-`~/Library/Application Support/me.paolino.fastpotify` and the caches in
-`~/Library/Caches/me.paolino.fastpotify`. On Windows, settings are in
-`%APPDATA%\paolino\fastpotify\config`, state and the logs in
-`%LOCALAPPDATA%\paolino\fastpotify\data`, and the caches in
-`%LOCALAPPDATA%\paolino\fastpotify\cache`.
+`~/Library/Application Support/me.paolino.spotifast` and the caches in
+`~/Library/Caches/me.paolino.spotifast`. On Windows, settings are in
+`%APPDATA%\paolino\spotifast\config`, state and the logs in
+`%LOCALAPPDATA%\paolino\spotifast\data`, and the caches in
+`%LOCALAPPDATA%\paolino\spotifast\cache`.
 
 ## settings.json
 
@@ -221,7 +225,7 @@ main fields are:
 | `accent_from_art` | `true` | Tint pages with album art |
 | `library_sort` | `{}` | Per-section Library order overrides, since 0.8.0: `library`, `recently_played`, `name`, `recently_added`, `local`, or `spotify`, where supported |
 | `sidebar_order` | `[]` | Saved local playlist arrangement, including an unpinned Liked Songs, retained when another sort is selected |
-| `pinned_contexts` | `[]` | Local Library pin order; Liked Songs uses `fastpotify:liked-songs`, a local key never sent to Spotify |
+| `pinned_contexts` | `[]` | Local Library pin order; Liked Songs uses `spotifast:liked-songs`, a local key never sent to Spotify |
 | `liked_songs_pinned` | `true` | Keep Liked Songs in the pin block; older settings place it first until moved |
 | `sidebar_compact` | `false` | Names only in the library sidebar, no covers |
 | `tracklist_compact` | `false` | One-line track rows without covers |
@@ -272,7 +276,7 @@ A link goes to the running Spotifast when there is one, which then opens
 the page and brings its window forward; otherwise the app starts on it. The
 desktop's handler for `spotify:` links runs exactly this.
 
-Attach `fastpotify.log` from the state directory to bug reports. It contains
+Attach `spotifast.log` from the state directory to bug reports. It contains
 the last run's output, including extra lines from `spotifast -v`. After a
 crash, attach `panic.log` too.
 
@@ -431,8 +435,8 @@ page should keep the theme's fixed colors.
 
 The hook uses Omarchy's current theme at
 `~/.local/state/omarchy/current/theme` and Spotifast's existing
-`${XDG_CONFIG_HOME:-~/.config}/fastpotify/themes` directory. The retained
-`fastpotify` directory is intentional. A custom profile can set
+`${XDG_CONFIG_HOME:-~/.config}/spotifast/themes` directory. The shipped hook
+is updated automatically if its contents have not been customized. A custom profile can set
 `SPOTIFAST_THEMES_DIR` in the installed hook; this example uses the native
 `spotifast` command, not a Flatpak launcher. Themes without `colors.toml` need
 their own `spotifast.json` file. Missing or invalid palettes leave the last

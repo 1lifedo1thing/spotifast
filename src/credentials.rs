@@ -19,8 +19,8 @@ use sha2::{Digest, Sha256};
 
 use crate::{auth::StoredToken, paths::AppDirs};
 
-// This is a credential-store identity, not the product display name.
-const SERVICE: &str = "rocks.fastpotify.Fastpotify";
+const SERVICE: &str = "rocks.spotifast.Spotifast";
+const LEGACY_SERVICE: &str = "rocks.fastpotify.Fastpotify";
 const TIMEOUT: Duration = Duration::from_secs(20);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -176,10 +176,22 @@ trait ProtectedStore: Send {
 #[derive(Default)]
 struct NativeStore {
     store: Option<Arc<keyring_core::api::CredentialStore>>,
+    legacy_profile: bool,
 }
 
 impl NativeStore {
     fn entry(&mut self, key: &str) -> Result<keyring_core::Entry, Error> {
+        self.entry_in(
+            if self.legacy_profile {
+                LEGACY_SERVICE
+            } else {
+                SERVICE
+            },
+            key,
+        )
+    }
+
+    fn entry_in(&mut self, service: &str, key: &str) -> Result<keyring_core::Entry, Error> {
         if self.store.is_none() {
             #[cfg(target_os = "linux")]
             let store = zbus_secret_service_keyring_store::Store::new();
@@ -192,7 +204,7 @@ impl NativeStore {
         self.store
             .as_ref()
             .ok_or(Error::Unavailable)?
-            .build(SERVICE, key, None)
+            .build(service, key, None)
             .map_err(native_error)
     }
 }
@@ -201,7 +213,22 @@ impl ProtectedStore for NativeStore {
     fn read(&mut self, key: &str) -> Result<Option<Vec<u8>>, Error> {
         match self.entry(key)?.get_secret() {
             Ok(secret) => Ok(Some(secret)),
-            Err(keyring_core::Error::NoEntry) => Ok(None),
+            Err(keyring_core::Error::NoEntry) => {
+                let legacy = self.entry_in(LEGACY_SERVICE, key)?;
+                let secret = match legacy.get_secret() {
+                    Ok(secret) => secret,
+                    Err(keyring_core::Error::NoEntry) => return Ok(None),
+                    Err(error) => return Err(native_error(error)),
+                };
+                let current = self.entry(key)?;
+                current.set_secret(&secret).map_err(native_error)?;
+                if current.get_secret().map_err(native_error)? != secret {
+                    return Err(Error::Unavailable);
+                }
+                // Delete only after reading the replacement back successfully.
+                legacy.delete_credential().map_err(native_error)?;
+                Ok(Some(secret))
+            }
             Err(error) => Err(native_error(error)),
         }
     }
@@ -209,10 +236,13 @@ impl ProtectedStore for NativeStore {
         self.entry(key)?.set_secret(secret).map_err(native_error)
     }
     fn delete(&mut self, key: &str) -> Result<(), Error> {
-        match self.entry(key)?.delete_credential() {
-            Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),
-            Err(error) => Err(native_error(error)),
+        for service in [SERVICE, LEGACY_SERVICE] {
+            match self.entry_in(service, key)?.delete_credential() {
+                Ok(()) | Err(keyring_core::Error::NoEntry) => (),
+                Err(error) => return Err(native_error(error)),
+            }
         }
+        Ok(())
     }
 }
 
@@ -253,7 +283,11 @@ pub struct Loaded {
 
 impl Store {
     pub fn new(dirs: AppDirs) -> Self {
-        Self::with_backend(dirs, Box::<NativeStore>::default())
+        let backend = NativeStore {
+            legacy_profile: dirs.is_legacy_profile(),
+            ..Default::default()
+        };
+        Self::with_backend(dirs, Box::new(backend))
     }
 
     #[cfg(test)]
@@ -272,10 +306,15 @@ impl Store {
                     job(backend.as_mut());
                 }
             });
-        let profile = format!(
-            "{:x}",
-            Sha256::digest(dirs.state.to_string_lossy().as_bytes())
-        );
+        let profile = std::fs::read_to_string(dirs.state.join("credential-profile"))
+            .ok()
+            .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
+            .unwrap_or_else(|| {
+                format!(
+                    "{:x}",
+                    Sha256::digest(dirs.state.to_string_lossy().as_bytes())
+                )
+            });
         Self {
             inner: Arc::new(Inner {
                 dirs,
@@ -699,7 +738,7 @@ mod tests {
         fn new() -> Self {
             static NEXT: AtomicU64 = AtomicU64::new(0);
             let root = std::env::temp_dir().join(format!(
-                "fastpotify-credential-tests-{}-{}",
+                "spotifast-credential-tests-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
@@ -734,6 +773,38 @@ mod tests {
     }
     fn playback() -> Grant {
         Grant::Playback(Credentials { username: Some("dummy-account".into()), auth_data: b"dummy-reusable-grant".to_vec(), auth_type: librespot_protocol::authentication::AuthenticationType::AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS })
+    }
+
+    #[tokio::test]
+    async fn renamed_profile_keeps_grants_and_revocation_markers() {
+        let fixture = Fixture::new();
+        let grant = web(crate::auth::DEFAULT_WEB_CLIENT_ID);
+        fixture
+            .store
+            .lease(Slot::Shared)
+            .save(grant.clone())
+            .await
+            .unwrap();
+        fixture.store.revoke(Slot::Playback).unwrap();
+        let parent = fixture.dirs.state.parent().unwrap();
+        let renamed = AppDirs {
+            config: parent.join("new-config"),
+            state: parent.join("new-state"),
+            cache: parent.join("new-cache"),
+        };
+        renamed.migrate_from(&fixture.dirs).unwrap();
+        let store = Store::with_backend(renamed, Box::new(Backend(fixture.fake.clone())));
+        assert_eq!(store.inner.profile, fixture.store.inner.profile);
+        assert!(store.lease(Slot::Shared).load().await.unwrap().grant == Some(grant));
+        assert!(
+            store
+                .lease(Slot::Playback)
+                .load()
+                .await
+                .unwrap()
+                .grant
+                .is_none()
+        );
     }
     fn proxy_password() -> Grant {
         Grant::Proxy(ProxyPassword {
@@ -876,6 +947,40 @@ mod tests {
     #[ignore = "requires an unlocked platform credential store; uses dummy grants only"]
     async fn native_store_round_trip() {
         let f = Fixture::new();
+        let key = f.store.lease(Slot::Shared).key();
+        tokio::task::spawn_blocking(move || {
+            let mut native = NativeStore::default();
+            let legacy = native.entry_in(LEGACY_SERVICE, &key).unwrap();
+            legacy.set_secret(b"dummy-rename-probe").unwrap();
+            let mut trial = NativeStore {
+                legacy_profile: true,
+                ..Default::default()
+            };
+            assert_eq!(
+                trial.read(&key).unwrap().as_deref(),
+                Some(b"dummy-rename-probe".as_slice())
+            );
+            assert_eq!(legacy.get_secret().unwrap(), b"dummy-rename-probe");
+            assert!(matches!(
+                native.entry(&key).unwrap().get_secret(),
+                Err(keyring_core::Error::NoEntry)
+            ));
+            assert_eq!(
+                native.read(&key).unwrap().as_deref(),
+                Some(b"dummy-rename-probe".as_slice())
+            );
+            assert!(matches!(
+                legacy.get_secret(),
+                Err(keyring_core::Error::NoEntry)
+            ));
+            assert_eq!(
+                native.entry(&key).unwrap().get_secret().unwrap(),
+                b"dummy-rename-probe"
+            );
+            native.delete(&key).unwrap();
+        })
+        .await
+        .unwrap();
         let store = Store::new(f.dirs.clone());
         let grants = [
             web(crate::auth::DEFAULT_WEB_CLIENT_ID),

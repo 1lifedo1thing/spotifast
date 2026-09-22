@@ -78,7 +78,7 @@ Spotifast has a limited scope:
 - Spotifast is an **unofficial** app. Changes at Spotify can temporarily
   break features until Spotifast is updated.
 
-Bug reports should include `fastpotify.log`, `panic.log` after a crash, and
+Bug reports should include `spotifast.log`, `panic.log` after a crash, and
 steps to reproduce the problem. See the
 [issue form](https://github.com/crmne/spotifast/issues/new/choose).
 Development builds after 0.8.0 also record the app version, operating system,

@@ -16,7 +16,7 @@ use crate::media::{MediaCommand, MediaState, MediaTrack};
 use crate::player::{Playback, RepeatMode};
 
 const PLAYING_POSITION_INTERVAL: Duration = Duration::from_millis(1000);
-const TRACK_OBJECT_PATH_PREFIX: &str = "/me/paolino/Fastpotify/Track/";
+const TRACK_OBJECT_PATH_PREFIX: &str = "/rocks/spotifast/Track/";
 
 enum Update {
     State(MediaState),
@@ -36,7 +36,7 @@ impl MediaService {
         let (command_tx, commands) = std::sync::mpsc::channel();
         let wake: std::sync::Arc<dyn Fn() + Send + Sync> = std::sync::Arc::new(wake);
         let spawned = thread::Builder::new()
-            .name("fastpotify-mpris".to_string())
+            .name("spotifast-mpris".to_string())
             .spawn(move || {
                 let runtime = match tokio::runtime::Builder::new_current_thread()
                     .enable_all()
@@ -110,7 +110,7 @@ async fn run(
     commands: Sender<MediaCommand>,
     wake: std::sync::Arc<dyn Fn() + Send + Sync>,
 ) -> mpris_server::zbus::Result<()> {
-    let player = Player::builder("fastpotify")
+    let player = Player::builder("spotifast")
         .identity("Spotifast")
         .desktop_entry(desktop_entry())
         .can_raise(true)

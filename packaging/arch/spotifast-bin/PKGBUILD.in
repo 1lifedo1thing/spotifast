@@ -29,10 +29,13 @@ package() {
     x86_64) target="x86_64-unknown-linux-gnu" ;;
     aarch64) target="aarch64-unknown-linux-gnu" ;;
   esac
-  local dir="${srcdir}/fastpotify-v${pkgver}-${target}"
+  local dir="${srcdir}/spotifast-v${pkgver}-${target}"
+  [[ -d "$dir" ]] || dir="${srcdir}/fastpotify-v${pkgver}-${target}"
 
-  install -Dm755 "${dir}/fastpotify" "${pkgdir}/usr/bin/fastpotify"
-  ln -s fastpotify "${pkgdir}/usr/bin/spotifast"
+  local binary=spotifast
+  [[ -f "${dir}/$binary" ]] || binary=fastpotify
+  install -Dm755 "${dir}/$binary" "${pkgdir}/usr/bin/spotifast"
+  ln -s spotifast "${pkgdir}/usr/bin/fastpotify"
   install -Dm644 "${dir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
   install -Dm644 "${dir}/README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
   # Historical releases retain their matching launcher/window identity.

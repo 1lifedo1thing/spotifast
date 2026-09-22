@@ -188,7 +188,7 @@ pub fn download_for(
         ("macos", "aarch64" | "x86_64") => "macos-universal",
         _ => bail!("Use the download page for this operating system or architecture"),
     };
-    let stem = format!("fastpotify-v{}-{target}", release.version);
+    let stem = format!("spotifast-v{}-{target}", release.version);
     let name = match installation.kind {
         #[cfg(target_os = "macos")]
         install::Kind::MacBundle => format!("{stem}.dmg"),
@@ -274,19 +274,17 @@ pub fn download_for(
         let payload = if installation.kind == install::Kind::WindowsInstaller {
             archive.clone()
         } else {
-            let canonical = installation
-                .executable
-                .file_stem()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.eq_ignore_ascii_case("spotifast"));
-            let executable = match (canonical, cfg!(windows)) {
-                (true, true) => "spotifast.exe",
-                (true, false) => "spotifast",
-                (false, true) => "fastpotify.exe",
-                (false, false) => "fastpotify",
+            let executable = if cfg!(windows) {
+                "spotifast.exe"
+            } else {
+                "spotifast"
             };
             let payload = directory.join(executable);
-            install::extract(&archive, &format!("{stem}/{executable}"), &payload)?;
+            install::extract(
+                &archive,
+                &portable_entry(&release.version, target),
+                &payload,
+            )?;
             install::verify_version(&payload, &release.version)?;
             fs::remove_file(&archive)?;
             payload
@@ -305,9 +303,130 @@ pub fn download_for(
     result
 }
 
+// Renamed 0.8.0 and 0.9.0 downloads retained their original archive layout.
+// The installed command's spelling must not dictate the incoming layout.
+fn portable_entry(version: &str, target: &str) -> String {
+    let legacy = matches!(version, "0.8.0" | "0.9.0");
+    let prefix = if legacy { "fastpotify" } else { "spotifast" };
+    let binary = if legacy { "fastpotify" } else { "spotifast" };
+    let extension = if target.contains("windows") {
+        ".exe"
+    } else {
+        ""
+    };
+    format!("{prefix}-v{version}-{target}/{binary}{extension}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(all(feature = "demo", target_os = "linux"))]
+    #[test]
+    fn an_old_installation_downloads_a_release_with_only_spotifast_files() {
+        use std::net::TcpListener;
+        let root =
+            std::env::temp_dir().join(format!("spotifast-update-rename-{}", rand::random::<u64>()));
+        fs::create_dir(&root).unwrap();
+        let target = format!("{}-unknown-linux-gnu", std::env::consts::ARCH);
+        let stem = format!("spotifast-v0.9.2-{target}");
+        fs::create_dir(root.join(&stem)).unwrap();
+        fs::write(
+            root.join(&stem).join("spotifast"),
+            b"#!/bin/sh\nprintf 'spotifast 0.9.2\\n'\n",
+        )
+        .unwrap();
+        let name = format!("{stem}.tar.gz");
+        assert!(
+            std::process::Command::new("tar")
+                .args(["czf", &name, &stem])
+                .current_dir(&root)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let archive = fs::read(root.join(&name)).unwrap();
+        let digest = format!("{:x}", Sha256::digest(&archive));
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let checksums = format!("{digest}  {name}\n");
+        let metadata = serde_json::json!({"tag_name":"v0.9.2", "assets":[
+            {"name":name,"size":archive.len(),"browser_download_url":format!("{base}/package")},
+            {"name":"checksums.txt","size":checksums.len(),"browser_download_url":format!("{base}/checksums")}
+        ]}).to_string();
+        let server = std::thread::spawn(move || {
+            for body in [metadata.into_bytes(), checksums.into_bytes(), archive] {
+                let deadline = std::time::Instant::now() + Duration::from_secs(5);
+                let mut stream = loop {
+                    match listener.accept() {
+                        Ok((stream, _)) => break stream,
+                        Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                            assert!(std::time::Instant::now() < deadline);
+                            std::thread::sleep(Duration::from_millis(5));
+                        }
+                        Err(error) => panic!("{error}"),
+                    }
+                };
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut request = [0; 4096];
+                let received = stream.read(&mut request).unwrap();
+                assert!(received > 0, "the updater closed without sending a request");
+                write!(
+                    stream,
+                    "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                )
+                .unwrap();
+                stream.write_all(&body).unwrap();
+            }
+        });
+        let old = root.join("fastpotify");
+        fs::write(&old, b"old installation").unwrap();
+        let prepared = download_for(
+            &Release {
+                version: "0.9.2".into(),
+                url: base.clone(),
+            },
+            &Source::local(&base).unwrap(),
+            install::Installation {
+                executable: old.clone(),
+                kind: install::Kind::Portable,
+            },
+            &crate::settings::ProxyConfig::Off,
+            |_, _| {},
+        )
+        .unwrap();
+        assert_eq!(prepared.payload.file_name().unwrap(), "spotifast");
+        install::verify_version(&prepared.payload, "0.9.2").unwrap();
+        assert_eq!(fs::read(&old).unwrap(), b"old installation");
+        server.join().unwrap();
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn portable_downloads_cross_the_rename_without_requiring_legacy_files() {
+        for target in ["x86_64-unknown-linux-gnu", "aarch64-pc-windows-msvc"] {
+            let extension = if target.contains("windows") {
+                ".exe"
+            } else {
+                ""
+            };
+            assert_eq!(
+                portable_entry("0.9.0", target),
+                format!("fastpotify-v0.9.0-{target}/fastpotify{extension}")
+            );
+            for version in ["0.9.1", "0.10.0", "1.0.0"] {
+                assert_eq!(
+                    portable_entry(version, target),
+                    format!("spotifast-v{version}-{target}/spotifast{extension}")
+                );
+            }
+        }
+    }
 
     #[cfg(all(feature = "demo", any(target_os = "windows", target_os = "linux")))]
     #[test]
@@ -340,7 +459,7 @@ mod tests {
             } else {
                 "unknown-linux-gnu.tar.gz"
             };
-            let name = format!("fastpotify-v0.8.0-{}-{platform}", std::env::consts::ARCH);
+            let name = format!("spotifast-v0.8.0-{}-{platform}", std::env::consts::ARCH);
             let payload = b"damaged download";
             let hash = if interrupted {
                 format!("{:x}", Sha256::digest(payload))

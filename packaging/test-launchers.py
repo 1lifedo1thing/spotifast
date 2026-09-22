@@ -33,6 +33,9 @@ def payload(root, desktop):
     (root / "target/release").mkdir(parents=True)
     for name in ["fastpotify", "target/release/fastpotify"]:
         shutil.copyfile(shutil.which("true"), root / name)
+    if desktop == "spotifast":
+        for name in ["spotifast", "target/release/spotifast"]:
+            shutil.copyfile(shutil.which("true"), root / name)
     for name in ["LICENSE", "README.md"]:
         shutil.copyfile(ROOT / name, root / name)
     shutil.copytree(ROOT / "contrib/omarchy", root / "contrib/omarchy")
@@ -56,8 +59,9 @@ class LauncherInstallTest(unittest.TestCase):
         icons = list((prefix / "share/icons/hicolor/scalable/apps").glob("*.svg"))
         self.assertEqual([p.name for p in icons], [icon + ".svg"])
         self.assertEqual(icons[0].read_bytes(), (ROOT / "packaging/icons/spotifast.svg").read_bytes())
-        self.assertTrue((prefix / "bin/spotifast").is_symlink())
-        self.assertEqual(os.readlink(prefix / "bin/spotifast"), "fastpotify")
+        self.assertFalse((prefix / "bin/spotifast").is_symlink())
+        self.assertTrue((prefix / "bin/spotifast").is_file())
+        self.assertEqual(os.readlink(prefix / "bin/fastpotify"), "spotifast")
 
     def test_current_and_historical_aur_payloads_install_matching_launchers(self):
         for package in ["spotifast", "spotifast-bin", "spotifast-git"]:
@@ -67,7 +71,7 @@ class LauncherInstallTest(unittest.TestCase):
                 with self.subTest(package=package, desktop=desktop), tempfile.TemporaryDirectory() as directory:
                     root = Path(directory)
                     if package.endswith("-bin"):
-                        relative = "fastpotify-v9.8.7-x86_64-unknown-linux-gnu"
+                        relative = desktop + "-v9.8.7-x86_64-unknown-linux-gnu"
                     elif package.endswith("-git"):
                         relative = package
                     else:
@@ -105,7 +109,7 @@ class LauncherInstallTest(unittest.TestCase):
         for desktop in ["spotifast", "fastpotify"]:
             with self.subTest(desktop=desktop), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
-                payload(root / "fastpotify-v9.8.7-linux-amd64", desktop)
+                payload(root / (desktop + "-v9.8.7-linux-amd64"), desktop)
                 for entry in entries:
                     pattern = entry["src"].replace("@PAYLOAD@/", "").replace("@VERSION@", "9.8.7").replace("@TARGET@", "linux-amd64")
                     files = list(root.glob(pattern))

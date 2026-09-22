@@ -150,7 +150,7 @@ A release is not the tag alone. Do these in order:
    Homebrew, and AUR. The prerelease remains available from GitHub's releases
    page.
 4. For a stable release, only after the GitHub release exists, update
-   `docs/_config.yml` `fastpotify_version` and
+   `docs/_config.yml` `spotifast_version` and
    `docs/_data/versions.yml`. The selector carries only the latest stable
    version: replace its version entry, make it `current`, and point it at
    `/download/`. Do not retain older version entries; they remain available

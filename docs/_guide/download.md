@@ -8,7 +8,7 @@ Spotifast was previously called **Fastpotify**. Version 0.8.0 introduces the
 new name. Choose Spotifast when installing or updating. Your settings and
 sign-ins carry over, except when [switching the Flatpak installation](/renaming/#flatpak).
 
-{% assign v = site.fastpotify_version %}
+{% assign v = site.spotifast_version %}
 {% assign base = "https://github.com/crmne/spotifast/releases/download/v" | append: v %}
 
 The current version is **v{{ v }}**. You can use the

@@ -32,6 +32,8 @@ finish-args:
   # Platform storage for this application's Spotify grants.
   - --talk-name=org.freedesktop.secrets
   - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.mpris.MediaPlayer2.spotifast
+  # Historical release binaries still advertise this name.
   - --own-name=org.mpris.MediaPlayer2.fastpotify
   - --own-name=rocks.fastpotify.Instance
   # Older Flatpak versions leave XDG_STATE_HOME unset. Keep the fallback
@@ -40,20 +42,20 @@ finish-args:
 build-options:
   append-path: /usr/lib/sdk/rust-stable/bin
   env:
-    CARGO_HOME: /run/build/fastpotify/cargo
+    CARGO_HOME: /run/build/spotifast/cargo
 modules:
-  - name: fastpotify
+  - name: spotifast
     buildsystem: simple
     build-commands:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
       - cargo --offline build --release --locked
-      - install -Dm755 target/release/fastpotify /app/bin/fastpotify
-      - ln -s fastpotify /app/bin/spotifast
+      - binary=spotifast; test -f target/release/$binary || binary=fastpotify; install -Dm755 target/release/$binary /app/bin/spotifast
+      - ln -s spotifast /app/bin/fastpotify
       - install -Dm644 packaging/applications/*.desktop /app/share/applications/rocks.spotifast.Spotifast.desktop
       - sed -i 's/^Icon=.*$/Icon=rocks.spotifast.Spotifast/;s/^StartupWMClass=spotifast$/StartupWMClass=rocks.spotifast.Spotifast/' /app/share/applications/rocks.spotifast.Spotifast.desktop
       - install -Dm644 packaging/icons/*.svg /app/share/icons/hicolor/scalable/apps/rocks.spotifast.Spotifast.svg
       - install -Dm644 packaging/flatpak/rocks.spotifast.Spotifast.metainfo.xml /app/share/metainfo/rocks.spotifast.Spotifast.metainfo.xml
-      - install -Dm644 LICENSE /app/share/licenses/fastpotify/LICENSE
+      - install -Dm644 LICENSE /app/share/licenses/spotifast/LICENSE
     sources:
       - type: dir
         path: ../..

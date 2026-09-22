@@ -1,91 +1,101 @@
 ---
 title: The Rename
-description: How existing installations, commands, settings and links survive the new name.
+description: How existing installations, commands, settings and links move to Spotifast.
 ---
 
 Fastpotify is now **Spotifast**, at [spotifast.rocks](https://spotifast.rocks/).
-Version 0.8.0 is the first release with the new name. Releases through 0.7.1
-use the Fastpotify name.
+Version 0.9.1 completes the application and profile rename and is the last
+release with old-named compatibility downloads.
 
 ## Existing installations
 
-Settings, saved sign-ins, local pins, history, caches and window positions stay
-where they are for native packages. Flatpak's new application ID uses a new
-data directory, with migration instructions below. Saved
-Spotify Connect names also stay as you chose them; new settings use Spotifast.
+Quit the old app before upgrading. The first normal launch moves settings,
+skins, MilkDrop presets, history, caches and window state to Spotifast's
+directories. This uses directory renames, preserves permissions, and never
+merges with or overwrites an existing destination profile. A failed move
+stops startup so the app does not silently start with empty preferences.
+Demo mode does not migrate your profile.
+The updater's trial launch also keeps the old profile and credential service
+until startup has succeeded. Migration happens on the next normal launch,
+so a failed update can restore the old app with its settings and sign-ins intact.
 
-The `spotifast` and `fastpotify` commands open and control the same application.
-Linux packages provide `spotifast` as an alias, without installing a second
-copy of the app. Existing `playerctl --player=fastpotify` commands keep working.
+Saved sign-ins and proxy passwords move from the old protected-store service
+to the new one. Each replacement is read back before the old entry is deleted.
+Unlock the system credential store if prompted. A non-secret
+`credential-profile` file preserves the account identifier used by a migrated
+profile; keep this file with the state directory. Revocation markers move too,
+so a previous sign-out remains effective.
 
-On `main`, after 0.8.0, native Linux launchers use `spotifast.desktop`, with
-`Icon=spotifast` and `StartupWMClass=spotifast`. Wayland windows and the desktop
-entry reported through MPRIS use the same identity. Flatpak uses its full
-`rocks.spotifast.Spotifast` ID instead. The main window still reads its existing
-`fastpotify/app.ron` state, so geometry and interface preferences survive.
-The mini player's state remains separate.
+The old default Spotify Connect device name becomes Spotifast. Custom names,
+volume, themes and local pin ordering are preserved. The local Liked Songs key
+is migrated when settings are loaded.
 
-After installing the updated launcher, select it again for any pinned desktop
-shortcut or custom launcher command that explicitly names `fastpotify.desktop`.
-Run `xdg-mime default spotifast.desktop x-scheme-handler/spotify` to choose it
-for Spotify links. Published 0.8.0 packages retain their old desktop filename
-and window identity until an application update; their executable bytes are
-unchanged by the package rename.
+Use `spotifast` for command-line controls. Packages retain `fastpotify` as a
+compatibility command for existing scripts, and both commands reach one app.
+Linux MPRIS now uses `org.mpris.MediaPlayer2.spotifast`; update custom
+`playerctl --player=fastpotify` bindings to `playerctl --player=spotifast`.
+The single-instance wire protocol retains its old identity for existing clients.
 
-AUR packages are now `spotifast`, `spotifast-bin` and `spotifast-git`.
-The old packages have a packaging-only update that announces the move.
-Install the matching new package and accept the replacement, for example:
+Linux launchers use `spotifast.desktop`, matching the window and icon.
+Re-pin an old launcher shortcut if necessary. To open Spotify links:
+
+```sh
+xdg-mime default spotifast.desktop x-scheme-handler/spotify
+```
+
+## Package managers
+
+AUR packages are `spotifast`, `spotifast-bin` and `spotifast-git`.
+Install the matching replacement and accept removal of the old package:
 
 ```sh
 yay -S spotifast-bin
 ```
 
-There is no need to uninstall first or remove settings. The source and binary
-release packages still use the same 0.8.0 application code. The `-git` variant
-continues to build the current development revision.
+Do not remove settings first. DEB/RPM packages also declare replacement of
+the old package. The executable is now `spotifast`; the old command is an alias.
 
-The Homebrew cask is now `crmne/tap/spotifast`. Its rename metadata lets
-Homebrew migrate existing installations during updates, or explicitly with
-`brew migrate --cask fastpotify` after updating the tap. DEB/RPM packages are
-also named `spotifast` and declare replacement of `fastpotify`.
-Nix exposes `spotifast` as the package for both the command and, on macOS,
-the `Spotifast.app` bundle, alongside the old `fastpotify` attribute.
-Community-maintained distribution packages may still use the old name until
-their maintainers update them.
+The Homebrew cask is `crmne/tap/spotifast`. Update the tap and use
+`brew migrate --cask fastpotify` if Homebrew has not already migrated it.
+Homebrew installations continue to update through Homebrew.
+
+Nix's primary package and app attributes are `spotifast` and `spotifast-app`.
+Old attribute names remain aliases for existing configurations.
+Community-maintained packages may still use their previous package names.
+
+For a previous Cargo installation, run `cargo install --path . --locked --force`
+from the updated checkout. Cargo needs `--force` once because the package
+owning the existing commands changed from `fastpotify` to `spotifast`.
 
 ## Updates and packaging
 
-Public release downloads use the `spotifast-` prefix. The 0.8.0 native downloads
-were renamed without changing their bytes. Flatpak was repackaged with its
-new application ID while retaining the original executable. Byte-identical
-native `fastpotify-` compatibility downloads remain for installed update clients that request
-those exact filenames, with both names recorded in `checksums.txt`. The compatibility command keeps its `fastpotify VERSION`
-response. The Spotifast command reports `spotifast VERSION`; new update clients
-accept either name and still require the exact expected version and checksum.
+New clients request only `spotifast-*` downloads. Version 0.9.1 also publishes
+old-named downloads and carries the original archive layout for updaters in
+0.8.0 and 0.9.0. Both names are verified by the published checksums. Subsequent
+releases publish only Spotifast downloads.
 
-New macOS installations use `Spotifast.app`. The bundle ID remains
-`me.paolino.fastpotify`, and its internal executable remains `fastpotify`.
-The disk image also includes a hidden, signed copy named `Fastpotify.app` for
-older updaters that require that path. Updating an existing installation
-preserves its current bundle location. Homebrew updates remain owned by
-Homebrew, whichever bundle name is installed.
+**Update to 0.9.1 before relying on automatic updates to later versions.**
+An older client that skips this bridge needs a manual download from the
+[download page](/download/). Installing the current version manually still
+migrates its profile. Existing published releases and their checksums stay intact.
 
-Windows keeps its original installer ID, registry identities and installation
-directory. Its app name and new shortcuts say Spotifast. The previous command
-remains installed for existing shortcuts and scripts.
+New macOS installations use `Spotifast.app`. For 0.9.1 only, its internal
+executable and bundle ID retain the names older updaters validate, and its
+disk image includes their hidden compatibility bundle. The 0.9.1 updater
+accepts the Spotifast executable and bundle ID used afterward, while retaining
+version, signature and signing-team checks. Updating preserves an existing
+installation's chosen bundle location.
 
-The protected credential-store service, MPRIS bus name and single-instance
-protocol retain their original identities for existing integrations.
+Windows keeps the installer GUID so an upgrade remains the same installed
+application. Fresh installs use `Programs\Spotifast`; upgrades preserve the
+installation directory recorded by the existing installer. The app, shortcuts,
+registered link handler and primary executable use Spotifast.
 
 ## Flatpak
 
-The Spotifast Flatpak bundle uses **`rocks.spotifast.Spotifast`**. This is a separate
-Flatpak application, so install the new bundle and remove the old application.
-The repackaged 0.8.0 bundle is available from the [download page](/download/)
-and contains the original 0.8.0 executable.
-
-To retain settings, local pins and history, quit the old application. Before
-the first launch of the new one, copy its data directory:
+The application ID is **`rocks.spotifast.Spotifast`**. Flatpak treats the old ID
+as a separate application. Before first launching the new one, quit the old
+one and copy its profile if wanted:
 
 ```sh
 old_data="$HOME/.var/app/rocks.fastpotify.Fastpotify"
@@ -93,30 +103,20 @@ new_data="$HOME/.var/app/rocks.spotifast.Spotifast"
 test -d "$old_data" && test ! -e "$new_data" && cp -a "$old_data" "$new_data"
 ```
 
-This leaves the original directory intact and refuses to overwrite an existing
-new profile. If you have already opened the new application, retain that profile
-or move it aside before copying. Protected sign-ins are scoped to the original
-state directory, so sign in again after switching.
+This preserves the original and refuses to overwrite an existing new profile.
+If you already launched the new app, keep that profile or move it aside before
+copying. Sign in again after switching Flatpak IDs: protected credentials are
+scoped to the original application data directory.
 
-Install the new bundle from the [download page](/download/), then run it:
-
-```sh
-flatpak install --user ~/Downloads/spotifast-v0.8.0-x86_64.flatpak
-flatpak run rocks.spotifast.Spotifast
-```
-
-After checking the new installation, remove the old one:
-
-```sh
-flatpak uninstall --user rocks.fastpotify.Fastpotify
-```
-
-Use `--system` instead of `--user` if the old application was installed
-system-wide. Uninstalling without `--delete-data` retains its data for recovery.
+Install the bundle from the [download page](/download/), then run
+`flatpak run rocks.spotifast.Spotifast`. After checking the new installation,
+remove the old application with
+`flatpak uninstall --user rocks.fastpotify.Fastpotify`.
+Use `--system` for a system-wide installation. Omitting `--delete-data`
+keeps its data for recovery.
 
 ## Website links
 
-The guides now live at `/using-spotifast/` and `/what-is-spotifast/`.
-`jekyll-redirect-from` generates redirects from their old Fastpotify URLs.
-The download page continues to link to the existing stable artifacts until a
-new release is available.
+The guides live at `/using-spotifast/` and `/what-is-spotifast/`.
+Redirects preserve their old URLs. The download page switches to a new stable
+version only after its files have been published.

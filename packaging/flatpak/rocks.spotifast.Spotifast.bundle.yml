@@ -16,20 +16,22 @@ finish-args:
   # Platform storage for this application's Spotify grants.
   - --talk-name=org.freedesktop.secrets
   - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.mpris.MediaPlayer2.spotifast
+  # Historical release binaries still advertise this name.
   - --own-name=org.mpris.MediaPlayer2.fastpotify
   - --own-name=rocks.fastpotify.Instance
   - --persist=.local/state
 modules:
-  - name: fastpotify
+  - name: spotifast
     buildsystem: simple
     build-commands:
-      - install -Dm755 fastpotify /app/bin/fastpotify
-      - ln -s fastpotify /app/bin/spotifast
+      - binary=spotifast; test -f $binary || binary=fastpotify; install -Dm755 $binary /app/bin/spotifast
+      - ln -s spotifast /app/bin/fastpotify
       - install -Dm644 packaging/applications/*.desktop /app/share/applications/rocks.spotifast.Spotifast.desktop
       - sed -i 's/^Icon=.*$/Icon=rocks.spotifast.Spotifast/;s/^StartupWMClass=spotifast$/StartupWMClass=rocks.spotifast.Spotifast/' /app/share/applications/rocks.spotifast.Spotifast.desktop
       - install -Dm644 packaging/icons/*.svg /app/share/icons/hicolor/scalable/apps/rocks.spotifast.Spotifast.svg
       - install -Dm644 packaging/flatpak/rocks.spotifast.Spotifast.metainfo.xml /app/share/metainfo/rocks.spotifast.Spotifast.metainfo.xml
-      - install -Dm644 LICENSE /app/share/licenses/fastpotify/LICENSE
+      - install -Dm644 LICENSE /app/share/licenses/spotifast/LICENSE
     sources:
       - type: dir
         path: built

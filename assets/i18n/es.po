@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-21 19:45+0200\n"
+"POT-Creation-Date: 2026-09-22 12:43+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Spanish\n"
@@ -16,11 +16,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/ui/sidebar.rs:64 src/app.rs:2104 src/app.rs:13536
+#: src/ui/sidebar.rs:64 src/app.rs:2132 src/app.rs:13946
 msgid "Liked Songs"
 msgstr "Canciones favoritas"
 
-#: src/ui/sidebar.rs:67 src/app.rs:2130 src/app.rs:13531
+#: src/ui/sidebar.rs:67 src/app.rs:2158 src/app.rs:13941
 msgid "Playlist"
 msgstr "Playlist"
 
@@ -96,7 +96,7 @@ msgstr "Pódcasts"
 msgid "Search in Your Library"
 msgstr "Buscar en tu biblioteca"
 
-#: src/ui/sidebar.rs:780 src/app.rs:2165
+#: src/ui/sidebar.rs:780 src/app.rs:2193
 msgid "Artist"
 msgstr "Artista"
 
@@ -286,26 +286,26 @@ msgstr "Salir de pantalla completa (Esc)"
 msgid "Loading…"
 msgstr "Cargando…"
 
-#: src/app.rs:2112
+#: src/app.rs:2140
 msgid "Radio"
 msgstr "Radio"
 
-#: src/app.rs:2146
+#: src/app.rs:2174
 msgid "Album"
 msgstr "Álbum"
 
-#: src/app.rs:2184
+#: src/app.rs:2212
 msgid "Podcast"
 msgstr "Pódcast"
 
 #. Translators: Keep {track} unchanged. The song title itself is not translated.
-#: src/app.rs:2202 src/app.rs:13541
+#: src/app.rs:2230 src/app.rs:13951
 #, rust-format
 msgid "{track} Radio"
 msgstr "Radio de {track}"
 
 #. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
-#: src/app.rs:3974 src/app.rs:13521
+#: src/app.rs:4013 src/app.rs:13931
 #, rust-format
 msgid "Queue {date}"
 msgstr "Cola {date}"

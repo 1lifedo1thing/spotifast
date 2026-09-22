@@ -93,14 +93,13 @@ On macOS, opening Spotifast makes it available for Spotify links. If Spotify's
 own app is installed too, macOS uses whichever app last registered for them.
 On Windows, choose the app in **Settings → Apps → Default apps**.
 
-On Linux, after installing the app launcher, use this command for 0.8.0:
+On Linux, after installing the current app launcher:
 
 ```sh
-xdg-mime default fastpotify.desktop x-scheme-handler/spotify
+xdg-mime default spotifast.desktop x-scheme-handler/spotify
 ```
 
-Development builds after 0.8.0 rename the launcher to `spotifast.desktop`.
-If you installed that launcher, use its new name in the command.
+Version 0.8.0 used the old launcher name; update the app before using this command.
 See [rename compatibility](/renaming/) for details.
 
 ## If your network needs a proxy

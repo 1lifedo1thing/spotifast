@@ -39,9 +39,9 @@ fn both_commands_report_their_name_and_pass_the_update_version_check() {
                 .unwrap()
                 .contains(&format!("Usage: {name}"))
         );
-        fastpotify::updates::install::verify_version(Path::new(binary), env!("CARGO_PKG_VERSION"))
+        spotifast::updates::install::verify_version(Path::new(binary), env!("CARGO_PKG_VERSION"))
             .unwrap();
-        assert!(fastpotify::updates::install::verify_version(Path::new(binary), "0.0.0").is_err());
+        assert!(spotifast::updates::install::verify_version(Path::new(binary), "0.0.0").is_err());
     }
 }
 
@@ -61,7 +61,7 @@ fn the_linux_package_alias_reports_spotifast_without_copying_the_app() {
 
 #[test]
 fn existing_preferences_and_custom_connect_names_survive_the_rename() {
-    use fastpotify::settings::{Settings, ThemeChoice};
+    use spotifast::settings::{Settings, ThemeChoice};
 
     let scratch = Scratch::new();
     let path = scratch.0.join("settings.json");
@@ -77,7 +77,12 @@ fn existing_preferences_and_custom_connect_names_survive_the_rename() {
             ..Settings::default()
         };
         saved.save(&path);
-        assert_eq!(Settings::load(&path), saved);
+        let mut expected = saved;
+        if expected.device_name == "Fastpotify" {
+            expected.device_name = "Spotifast".into();
+        }
+        expected.pinned_contexts[1] = spotifast::settings::LIKED_SONGS_KEY.into();
+        assert_eq!(Settings::load(&path), expected);
     }
     assert_eq!(Settings::default().device_name, "Spotifast");
 }
@@ -85,7 +90,7 @@ fn existing_preferences_and_custom_connect_names_survive_the_rename() {
 #[cfg(target_os = "linux")]
 #[test]
 fn both_commands_forward_links_to_the_existing_instance_on_a_private_bus() {
-    use fastpotify::single_instance::{ControlCommand, Outcome};
+    use spotifast::single_instance::{ControlCommand, Outcome};
 
     const CHILD: &str = "SPOTIFAST_RENAME_PRIVATE_BUS";
     if std::env::var_os(CHILD).is_none() {
@@ -141,7 +146,7 @@ fn both_commands_forward_links_to_the_existing_instance_on_a_private_bus() {
             String::from_utf8_lossy(&result.stderr)
         );
     }
-    let Outcome::Only(guard) = fastpotify::single_instance::acquire(&Default::default(), None)
+    let Outcome::Only(guard) = spotifast::single_instance::acquire(&Default::default(), None)
     else {
         panic!("the private bus must start without another instance");
     };

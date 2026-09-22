@@ -58,8 +58,10 @@ check() {
 package() {
   cd "$(_source_dir)"
 
-  install -Dm755 "target/release/fastpotify" "${pkgdir}/usr/bin/fastpotify"
-  ln -s fastpotify "${pkgdir}/usr/bin/spotifast"
+  local binary=spotifast
+  [[ -f "target/release/$binary" ]] || binary=fastpotify
+  install -Dm755 "target/release/$binary" "${pkgdir}/usr/bin/spotifast"
+  ln -s spotifast "${pkgdir}/usr/bin/fastpotify"
   install -Dm644 "LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
   install -Dm644 "README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
   # Historical releases retain their matching launcher/window identity.

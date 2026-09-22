@@ -924,7 +924,7 @@ mod tests {
 
     fn accessible_app(name: &str) -> (egui::Context, App) {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-a11y-{name}-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-a11y-{name}-{}", std::process::id()));
         let ctx = egui::Context::default();
         ctx.enable_accesskit();
         let waker = crate::backend::Waker::default();
@@ -3771,7 +3771,7 @@ mod tests {
     #[test]
     fn a_toast_is_wide_enough_to_read() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-toast-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-toast-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -3845,7 +3845,7 @@ mod tests {
     #[test]
     fn the_shortcuts_dialog_fits_a_small_window() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-shortcuts-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-shortcuts-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -3898,7 +3898,7 @@ mod tests {
     #[test]
     fn interface_zoom_puts_minus_on_the_left() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-zoom-order-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-zoom-order-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -3979,7 +3979,7 @@ mod tests {
     #[test]
     fn the_frame_rate_dial_steps_between_its_stops() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-fps-dial-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-fps-dial-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -4060,7 +4060,7 @@ mod tests {
     #[test]
     fn the_narrowest_panels_keep_their_headers_on_one_row() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-queue-header-test-{}",
+            "spotifast-queue-header-test-{}",
             std::process::id()
         ));
         let dirs = AppDirs {
@@ -4156,7 +4156,7 @@ mod tests {
     #[test]
     fn the_queue_names_where_the_song_plays_from() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-playing-from-test-{}",
+            "spotifast-playing-from-test-{}",
             std::process::id()
         ));
         let dirs = AppDirs {
@@ -4261,7 +4261,7 @@ mod tests {
     #[test]
     fn fullscreen_lyrics_highlight_preserves_line_layout() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-lyrics-layout-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-lyrics-layout-{}", std::process::id()));
         let ctx = egui::Context::default();
         let waker = crate::backend::Waker::default();
         waker.attach(&ctx);
@@ -4331,7 +4331,7 @@ mod tests {
     #[test]
     fn every_surface_renders_headless() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-render-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-render-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -4447,7 +4447,7 @@ mod tests {
     #[test]
     fn a_long_virtual_queue_and_library_still_draw() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-virtual-long-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-virtual-long-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -4513,7 +4513,7 @@ mod tests {
 
     fn drop_songs_on_sidebar(count: usize) {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-drag-test-{}-{count}",
+            "spotifast-drag-test-{}-{count}",
             std::process::id()
         ));
         let dirs = AppDirs {
@@ -4899,7 +4899,7 @@ mod tests {
     #[test]
     fn dragging_the_now_playing_song_supplies_a_playlist_row() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-now-playing-drag-test-{}",
+            "spotifast-now-playing-drag-test-{}",
             std::process::id()
         ));
         let dirs = AppDirs {
@@ -4973,7 +4973,7 @@ mod tests {
     #[test]
     fn dragging_within_the_pinned_block_reorders_it() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-reorder-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-reorder-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -5051,7 +5051,7 @@ mod tests {
     #[test]
     fn dropping_between_unpinned_playlists_creates_the_custom_order() {
         let root =
-            std::env::temp_dir().join(format!("fastpotify-unpinned-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("spotifast-unpinned-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -5826,8 +5826,7 @@ mod tests {
     /// before asking the server.
     #[test]
     fn dragging_a_row_within_a_playlist_reorders_it() {
-        let root =
-            std::env::temp_dir().join(format!("fastpotify-move-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("spotifast-move-test-{}", std::process::id()));
         let dirs = AppDirs {
             config: root.join("config"),
             state: root.join("state"),
@@ -5976,7 +5975,7 @@ mod tests {
     #[test]
     fn clicking_search_in_library_shelf_focuses_search_field() {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-sidebar-search-focus-test-{}",
+            "spotifast-sidebar-search-focus-test-{}",
             std::process::id()
         ));
         let dirs = AppDirs {

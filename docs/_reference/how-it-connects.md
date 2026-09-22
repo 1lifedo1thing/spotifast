@@ -133,9 +133,11 @@ with its current-track pickup.
   No Spotify credential is sent. These are GitHub-hosted checksums, not a
   separate publisher signature.
 
-  Updates stage their files in a private `.fastpotify-update-*` directory beside
+  Updates stage their files in a private `.spotifast-update-*` directory beside
   the application so replacement stays on the same filesystem. The directory
   retains the previous executable or Mac app bundle and `result.txt` for recovery and diagnosis.
+  Helper startup errors are retained in `helper.log`. On macOS the helper runs
+  from the signed installed bundle instead of copying its executable outside it.
   Settings, caches and credential stores are not replaced. Package-manager
   installs keep their package-manager update path. Mac updates verify the bundle
   identifier, version and code signature before replacing the whole app bundle.

@@ -13,22 +13,22 @@ fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|| "spotify:track:4uLU6hMCjMI75M1A2tKUQC".into());
     let id = track.rsplit(':').next().unwrap_or_default().to_string();
 
-    let dirs = fastpotify::paths::AppDirs::discover();
+    let dirs = spotifast::paths::AppDirs::discover();
     let cache = Cache::new::<&std::path::Path>(None, None, None, None)?.with_memory_credentials();
 
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
     runtime.block_on(async move {
-        let store = fastpotify::credentials::Store::new(dirs);
+        let store = spotifast::credentials::Store::new(dirs);
         let loaded = store
-            .lease(fastpotify::credentials::Slot::Playback)
+            .lease(spotifast::credentials::Slot::Playback)
             .load()
             .await?;
         if let Some(warning) = loaded.warning {
             eprintln!("{warning}");
         }
-        let Some(fastpotify::credentials::Grant::Playback(credentials)) = loaded.grant else {
+        let Some(spotifast::credentials::Grant::Playback(credentials)) = loaded.grant else {
             anyhow::bail!("Enable playback in Spotifast first");
         };
         let session = Session::new(SessionConfig::default(), Some(cache));

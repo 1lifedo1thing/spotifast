@@ -27,7 +27,7 @@ pub fn show(app: &mut App, ctx: &egui::Context) {
             color: palette.shadow,
         });
     egui::Window::new("Update Spotifast")
-        .id(egui::Id::new("fastpotify-update"))
+        .id(egui::Id::new("spotifast-update"))
         .title_bar(false)
         .resizable(false)
         .auto_sized()

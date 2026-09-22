@@ -112,7 +112,7 @@ This starts the app if needed or opens its existing window. When signed out,
 the latest search link waits for sign-in. Use `https://open.spotify.com/search`
 without a query to open an empty, focused search box.
 
-On Linux, `playerctl --player=fastpotify open` accepts the same search link
+On Linux, `playerctl --player=spotifast open` accepts the same search link
 when the app is running. Links to songs, albums, and playlists still start
 playback as before.
 

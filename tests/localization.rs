@@ -33,7 +33,7 @@ fn compiled_po_omits_unfinished_messages_and_uses_locale_plural_rules() {
 fn all_pilot_catalogs_cover_the_template_and_preserve_named_placeholders() {
     // A POT leaves these values for msginit. For this comparison its source
     // language is English; the translator's PO carries its own actual rules.
-    let template = include_str!("../assets/i18n/fastpotify.pot").replace(
+    let template = include_str!("../assets/i18n/spotifast.pot").replace(
         "nplurals=INTEGER; plural=EXPRESSION;",
         "nplurals=2; plural=(n != 1);",
     );
@@ -81,7 +81,7 @@ fn all_pilot_catalogs_cover_the_template_and_preserve_named_placeholders() {
     }
     assert_eq!(
         catalogs + 1,
-        <fastpotify::i18n::Locale as clap::ValueEnum>::value_variants().len()
+        <spotifast::i18n::Locale as clap::ValueEnum>::value_variants().len()
     );
 }
 

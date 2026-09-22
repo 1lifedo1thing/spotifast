@@ -18,12 +18,12 @@ xgettext --language=Rust --from-code=UTF-8 \
     --files-from=assets/i18n/POTFILES --output="$translation_template"
 if [[ "$mode" == --check ]]; then
     # The extraction timestamp is the only nondeterministic header.
-    diff -u <(sed '/^"POT-Creation-Date:/d' assets/i18n/fastpotify.pot) \
+    diff -u <(sed '/^"POT-Creation-Date:/d' assets/i18n/spotifast.pot) \
         <(sed '/^"POT-Creation-Date:/d' "$translation_template")
 else
-    cp "$translation_template" assets/i18n/fastpotify.pot
+    cp "$translation_template" assets/i18n/spotifast.pot
     for catalog in assets/i18n/*.po; do
-        msgmerge --update --backup=none "$catalog" assets/i18n/fastpotify.pot
+        msgmerge --update --backup=none "$catalog" assets/i18n/spotifast.pot
     done
 fi
 for catalog in assets/i18n/*.po; do

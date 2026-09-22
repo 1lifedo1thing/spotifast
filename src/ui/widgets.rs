@@ -2887,7 +2887,7 @@ mod tests {
 
     fn test_app() -> App {
         let root = std::env::temp_dir().join(format!(
-            "fastpotify-virtual-{}-{}",
+            "spotifast-virtual-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

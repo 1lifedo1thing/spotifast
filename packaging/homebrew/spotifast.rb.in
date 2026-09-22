@@ -17,6 +17,8 @@ cask "spotifast" do
   app bundle_name
 
   zap trash: [
+    "~/Library/Application Support/me.paolino.spotifast",
+    "~/Library/Caches/me.paolino.spotifast",
     "~/Library/Application Support/me.paolino.fastpotify",
     "~/Library/Caches/me.paolino.fastpotify",
   ]

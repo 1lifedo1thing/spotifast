@@ -276,7 +276,7 @@ fn wanted(file_name: &str) -> bool {
 }
 
 /// The built-in skin, drawn by `examples/default_skin.rs`.
-const BUILTIN_ARCHIVE: &[u8] = include_bytes!("../../assets/skins/fastpotify.wsz");
+const BUILTIN_ARCHIVE: &[u8] = include_bytes!("../../assets/skins/spotifast.wsz");
 
 static BUILTIN: LazyLock<Arc<Skin>> = LazyLock::new(|| {
     Arc::new(Skin::from_archive("Spotifast", BUILTIN_ARCHIVE).expect("the built-in skin reads"))
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn a_folder_of_bitmaps_is_a_skin_too() {
-        let dir = std::env::temp_dir().join(format!("fastpotify-skin-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("spotifast-skin-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("MAIN.BMP"), png(275, 116, [7, 7, 7])).unwrap();
         std::fs::write(dir.join("readme.txt"), b"a folder skin").unwrap();
@@ -475,7 +475,7 @@ mod tests {
 
     #[test]
     fn a_folder_skin_is_read_from_the_folder_it_was_unpacked_into() {
-        let dir = std::env::temp_dir().join(format!("fastpotify-nested-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("spotifast-nested-{}", std::process::id()));
         let inner = dir.join("Some Skin");
         std::fs::create_dir_all(&inner).unwrap();
         std::fs::write(inner.join("MAIN.BMP"), png(275, 116, [9, 9, 9])).unwrap();
@@ -488,8 +488,7 @@ mod tests {
 
     #[test]
     fn shallower_skin_files_win_across_sibling_subtrees() {
-        let dir =
-            std::env::temp_dir().join(format!("fastpotify-skin-depth-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("spotifast-skin-depth-{}", std::process::id()));
         for folder in ["a/nested", "b", "c"] {
             std::fs::create_dir_all(dir.join(folder)).unwrap();
         }
@@ -506,8 +505,7 @@ mod tests {
 
     #[test]
     fn unpacked_skin_search_stops_at_its_depth_limit() {
-        let dir =
-            std::env::temp_dir().join(format!("fastpotify-skin-limit-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("spotifast-skin-limit-{}", std::process::id()));
         let mut inner = dir.clone();
         for _ in 0..=MAX_SKIN_DEPTH {
             inner = inner.join("nested");
@@ -528,8 +526,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn unpacked_skin_search_does_not_follow_file_or_directory_links() {
-        let dir =
-            std::env::temp_dir().join(format!("fastpotify-skin-links-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("spotifast-skin-links-{}", std::process::id()));
         let chosen = dir.join("chosen");
         let outside = dir.join("outside");
         std::fs::create_dir_all(&chosen).unwrap();
@@ -547,11 +544,11 @@ mod tests {
         assert!(matches!(Skin::load(missing), Err(SkinError::Io(_))));
     }
 
-    /// Loads every skin in `$FASTPOTIFY_SKIN_SAMPLES`, when set, to check
+    /// Loads every skin in `$SPOTIFAST_SKIN_SAMPLES`, when set, to check
     /// the reader against real files without shipping any.
     #[test]
     fn sample_skins_load() {
-        let Ok(dir) = std::env::var("FASTPOTIFY_SKIN_SAMPLES") else {
+        let Ok(dir) = std::env::var("SPOTIFAST_SKIN_SAMPLES") else {
             return;
         };
         let mut seen = 0;

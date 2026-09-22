@@ -38,7 +38,7 @@ impl FastTray {
 
 impl ksni::Tray for FastTray {
     fn id(&self) -> String {
-        "fastpotify".into()
+        "spotifast".into()
     }
 
     fn title(&self) -> String {
@@ -191,7 +191,7 @@ mod tests {
     /// A subprocess keeps the test's bus and sandbox environment isolated.
     #[test]
     fn flatpak_tray_registers_without_owning_a_name() {
-        const CHILD: &str = "FASTPOTIFY_TRAY_TEST_CHILD";
+        const CHILD: &str = "SPOTIFAST_TRAY_TEST_CHILD";
         if std::env::var_os(CHILD).is_some() {
             let (registered, registrations) = std::sync::mpsc::channel();
             let server = zbus::blocking::connection::Builder::session()
@@ -234,7 +234,7 @@ mod tests {
             return;
         }
 
-        let root = std::env::temp_dir().join(format!("fastpotify-tray-bus-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("spotifast-tray-bus-{}", std::process::id()));
         std::fs::create_dir_all(&root).unwrap();
         let config = root.join("bus.conf");
         std::fs::write(&config, r#"<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN" "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">

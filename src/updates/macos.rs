@@ -6,14 +6,10 @@ use anyhow::{Context, Result, ensure};
 
 use super::install::{self, Installation, Prepared};
 
-const IDENTIFIER: &str = "me.paolino.fastpotify";
+const IDENTIFIER: &str = "rocks.spotifast.Spotifast";
 
-// The bundled executable is still "fastpotify", left over from before the
-// app itself was renamed to Spotifast. A future release means to rename it
-// to "Spotifast" too; this lands first so every current install already
-// accepts that name (as opposed to the app bundle, already handled by
-// `image_bundle`) once it does, rather than rejecting the download that
-// renames it.
+// 0.9.1 retains the original executable for older clients' validation.
+// Its updater must already accept the name used by subsequent releases.
 const EXECUTABLE_NAMES: [&str; 2] = ["fastpotify", "Spotifast"];
 
 pub(super) fn bundle_root(executable: &Path) -> Result<&Path> {
@@ -49,7 +45,8 @@ fn plist(bundle: &Path, key: &str) -> Result<String> {
 
 fn identity(bundle: &Path) -> Result<()> {
     ensure!(
-        plist(bundle, "CFBundleIdentifier")? == IDENTIFIER
+        [IDENTIFIER, "me.paolino.fastpotify"]
+            .contains(&plist(bundle, "CFBundleIdentifier")?.as_str())
             && EXECUTABLE_NAMES.contains(&plist(bundle, "CFBundleExecutable")?.as_str())
             && plist(bundle, "CFBundlePackageType")? == "APPL",
         "The download is not a Spotifast app bundle"
@@ -311,7 +308,7 @@ mod tests {
     #[test]
     fn another_mount_attempt_leaves_the_previous_volume_alone() {
         let directory =
-            std::env::temp_dir().join(format!("fastpotify-mount-test-{}", rand::random::<u64>()));
+            std::env::temp_dir().join(format!("spotifast-mount-test-{}", rand::random::<u64>()));
         fs::create_dir(&directory).unwrap();
         let archive = directory.join("update.dmg");
         let first = mountpoint(&archive).unwrap();
@@ -329,7 +326,7 @@ mod tests {
     #[test]
     fn homebrew_app_symlink_does_not_claim_other_copies() {
         let directory =
-            std::env::temp_dir().join(format!("fastpotify-cask-test-{}", rand::random::<u64>()));
+            std::env::temp_dir().join(format!("spotifast-cask-test-{}", rand::random::<u64>()));
         let installed = directory.join("Applications/Fastpotify.app");
         let cask = directory.join("Caskroom/fastpotify");
         let copy = directory.join("dev/Fastpotify.app");
@@ -345,7 +342,7 @@ mod tests {
     #[test]
     fn rollback_restores_resources_and_executable_together() {
         let directory =
-            std::env::temp_dir().join(format!("fastpotify-mac-test-{}", rand::random::<u64>()));
+            std::env::temp_dir().join(format!("spotifast-mac-test-{}", rand::random::<u64>()));
         let app = directory.join("Fastpotify.app");
         fs::create_dir_all(app.join("Contents/MacOS")).unwrap();
         fs::write(app.join("Contents/MacOS/fastpotify"), b"new executable").unwrap();
@@ -460,15 +457,20 @@ mod tests {
     #[test]
     fn identity_accepts_either_executable_name_but_nothing_else() {
         let bundle = std::env::temp_dir()
-            .join(format!(
-                "fastpotify-identity-test-{}",
-                rand::random::<u64>()
-            ))
+            .join(format!("spotifast-identity-test-{}", rand::random::<u64>()))
             .join("Spotifast.app");
         for executable in ["fastpotify", "Spotifast"] {
-            write_info_plist(&bundle, executable);
-            identity(&bundle)
-                .unwrap_or_else(|error| panic!("{executable} should be accepted: {error}"));
+            for identifier in [IDENTIFIER, "me.paolino.fastpotify"] {
+                write_info_plist(&bundle, executable);
+                let path = bundle.join("Contents/Info.plist");
+                let contents = fs::read_to_string(&path)
+                    .unwrap()
+                    .replace(IDENTIFIER, identifier);
+                fs::write(path, contents).unwrap();
+                identity(&bundle).unwrap_or_else(|error| {
+                    panic!("{identifier}/{executable} should be accepted: {error}")
+                });
+            }
         }
         write_info_plist(&bundle, "SomeOtherName");
         assert!(identity(&bundle).is_err());
@@ -482,7 +484,7 @@ mod tests {
         // a download that renames the executable still gets found.
         let bundle = std::env::temp_dir()
             .join(format!(
-                "fastpotify-executable-path-test-{}",
+                "spotifast-executable-path-test-{}",
                 rand::random::<u64>()
             ))
             .join("Spotifast.app");

@@ -9,8 +9,6 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const LIMIT: u64 = 2 * 1024 * 1024 * 1024;
-#[cfg(not(target_os = "macos"))]
-const MARKER: &str = "fastpotify-portable-v1";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Kind {
@@ -86,8 +84,7 @@ pub fn detect_at(executable: &Path) -> Result<Installation> {
         let installed = std::env::var_os("LOCALAPPDATA")
             .map(PathBuf::from)
             .map(|base| base.join("Programs/Fastpotify/fastpotify.exe"));
-        if fs::read_to_string(directory.join("fastpotify-installer.txt"))
-            .is_ok_and(|value| value.trim() == "fastpotify-installer-v1")
+        if installation_marker(directory, "installer")
             || (installed
                 .and_then(|path| path.canonicalize().ok())
                 .as_deref()
@@ -111,8 +108,7 @@ pub fn detect_at(executable: &Path) -> Result<Installation> {
     #[cfg(not(target_os = "macos"))]
     {
         ensure!(
-            fs::read_to_string(directory.join("fastpotify-portable.txt"))
-                .is_ok_and(|value| value.trim() == MARKER),
+            installation_marker(directory, "portable"),
             "This installation does not identify itself as a portable download. Use the download page to install an update-enabled build."
         );
         Ok(Installation {
@@ -120,6 +116,14 @@ pub fn detect_at(executable: &Path) -> Result<Installation> {
             kind: Kind::Portable,
         })
     }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn installation_marker(directory: &Path, kind: &str) -> bool {
+    ["spotifast", "fastpotify"].iter().any(|name| {
+        fs::read_to_string(directory.join(format!("{name}-{kind}.txt")))
+            .is_ok_and(|value| value.trim() == format!("{name}-{kind}-v1"))
+    })
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -157,7 +161,7 @@ pub fn staging(installation: &Installation) -> Result<PathBuf> {
         .root()?
         .parent()
         .context("Missing installation directory")?;
-    let directory = parent.join(format!(".fastpotify-update-{:016x}", rand::random::<u64>()));
+    let directory = parent.join(format!(".spotifast-update-{:016x}", rand::random::<u64>()));
     fs::create_dir(&directory).context("Cannot write to the installation directory")?;
     #[cfg(unix)]
     {
@@ -271,12 +275,22 @@ pub fn handoff(prepared: &Prepared, arguments: Vec<String>) -> Result<()> {
         hash(&prepared.payload)? == prepared.sha256,
         "The staged update changed. Download it again."
     );
-    let helper = prepared.directory.join(if cfg!(windows) {
-        "helper.exe"
-    } else {
-        "helper"
-    });
-    fs::copy(std::env::current_exe()?, &helper)?;
+    // Launch the signed executable in its bundle on macOS. Copying just the
+    // Mach-O out of that bundle loses the context of its code signature.
+    // macOS permits replacing the bundle while this process is running;
+    // Windows requires a separate executable so it does not lock the target.
+    #[cfg(target_os = "macos")]
+    let helper = std::env::current_exe()?;
+    #[cfg(not(target_os = "macos"))]
+    let helper = {
+        let helper = prepared.directory.join(if cfg!(windows) {
+            "helper.exe"
+        } else {
+            "helper"
+        });
+        fs::copy(std::env::current_exe()?, &helper)?;
+        helper
+    };
     let job = prepared.directory.join("handoff.json");
     let mut file = File::create(&job)?;
     serde_json::to_writer(
@@ -295,7 +309,7 @@ pub fn handoff(prepared: &Prepared, arguments: Vec<String>) -> Result<()> {
         .arg(&job)
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null());
+        .stderr(File::create(prepared.directory.join("helper.log"))?);
     hidden(&mut command);
     let mut child = command.spawn().context("Cannot start the update helper")?;
     let ready = prepared.directory.join("ready");
@@ -304,10 +318,12 @@ pub fn handoff(prepared: &Prepared, arguments: Vec<String>) -> Result<()> {
         if ready.exists() {
             return Ok(());
         }
-        ensure!(
-            child.try_wait()?.is_none(),
-            "The update helper exited before it was ready"
-        );
+        if let Some(status) = child.try_wait()? {
+            bail!(
+                "The update helper exited before it was ready ({status}). See {}",
+                prepared.directory.join("helper.log").display()
+            );
+        }
         std::thread::sleep(Duration::from_millis(50));
     }
     let _ = child.kill();

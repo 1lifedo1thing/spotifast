@@ -21,7 +21,8 @@ See [spotifast.rocks](https://spotifast.rocks/) for installation, setup,
 everyday use, and connection details.
 
 `spotifast` is the main command and `fastpotify` remains available
-for existing scripts. Settings and credential stores keep their established paths.
+for existing scripts. Starting with 0.9.1, the existing profile and protected
+sign-ins migrate to Spotifast's names. Existing destination profiles are preserved.
 AUR and Homebrew packages now use the Spotifast name. See [rename compatibility](docs/_reference/renaming.md).
 
 ## What it does
@@ -191,7 +192,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   instead of starting a second copy, on every platform.
 - **Desktop integration.** MPRIS on Linux, so media keys, the shell, and
   `playerctl` see Spotifast like any other player. On macOS and Windows,
-  `fastpotify next` and its siblings drive the running app from a terminal,
+  `spotifast next` and its siblings drive the running app from a terminal,
   a launcher, or a hotkey. On Windows, since 0.8.0, hover the taskbar button
   for Previous, Play/Pause, and Next under the window preview.
 
@@ -243,6 +244,9 @@ Everywhere else, build the single binary with Rust 1.95 or newer:
 ```bash
 cargo install --path . --locked
 ```
+
+Upgrading a previous Cargo installation requires `--force` once to transfer
+the existing commands to the renamed package.
 
 MilkDrop uses libprojectM, which is built from source. This needs CMake, a C++
 compiler, and libclang. To build without MilkDrop or those tools, run
@@ -414,24 +418,24 @@ It works automatically, with no Settings toggle. See [autoscroll](docs/_guide/us
 
 ## Controlling it from outside
 
-On Linux, Spotifast is an MPRIS player, so `playerctl --player=fastpotify
-play-pause` already works. `fastpotify like` adds or removes the playing
+On Linux, Spotifast is an MPRIS player, so `playerctl --player=spotifast
+play-pause` already works. `spotifast like` adds or removes the playing
 track from your library.
 
 macOS and Windows have no such bus, so the same verbs are subcommands. They
 talk to the instance already running and print nothing on success:
 
 ```
-fastpotify play-pause          fastpotify volume 40
-fastpotify play                fastpotify volume-up [percent]
-fastpotify pause               fastpotify volume-down [percent]
-fastpotify next                fastpotify mute
-fastpotify previous            fastpotify shuffle [on|off]
-fastpotify seek 15             fastpotify repeat [off|context|track]
-fastpotify seek -- -15         fastpotify like
-fastpotify seek-to 90          fastpotify play-uri spotify:playlist:37i9…
-fastpotify show                fastpotify transfer <device-id>
-fastpotify now-playing [--raw] fastpotify devices [--raw]
+spotifast play-pause          spotifast volume 40
+spotifast play                spotifast volume-up [percent]
+spotifast pause               spotifast volume-down [percent]
+spotifast next                spotifast mute
+spotifast previous            spotifast shuffle [on|off]
+spotifast seek 15             spotifast repeat [off|context|track]
+spotifast seek -- -15         spotifast like
+spotifast seek-to 90          spotifast play-uri spotify:playlist:37i9…
+spotifast show                spotifast transfer <device-id>
+spotifast now-playing [--raw] spotifast devices [--raw]
 ```
 
 `shuffle` and `repeat` toggle when used without an argument. Pass a state to
@@ -459,7 +463,7 @@ if signed out, the search waits for sign-in. For example:
 ```sh
 spotifast 'https://open.spotify.com/search/here%20comes%20the%20sun'
 # Linux, with Spotifast already running:
-playerctl --player=fastpotify open 'https://open.spotify.com/search/here%20comes%20the%20sun'
+playerctl --player=spotifast open 'https://open.spotify.com/search/here%20comes%20the%20sun'
 ```
 
 Use `spotify:search:here%20comes%20the%20sun` for the equivalent Spotify URI,
@@ -472,7 +476,7 @@ plugin uses the same interface.
 
 ## Settings
 
-Settings live in one readable JSON file (`~/.config/fastpotify/settings.json`
+Settings live in one readable JSON file (`~/.config/spotifast/settings.json`
 on Linux). They include the Connect device name, bitrate, normalisation,
 autoplay, gapless playback, the audio backend (PulseAudio/PipeWire or ALSA on
 Linux), audio cache size, theme, sidebar state, whether pages take colour
@@ -511,7 +515,7 @@ for the technical details.
 Package-managed installations continue to update through their package manager,
 including Homebrew, Flatpak, apt, dnf, pacman, Nix, and Cargo. Unrecognized
 installations use the download page. Portable archives identify themselves with
-`fastpotify-portable.txt`; older archives need one manual upgrade to an
+`spotifast-portable.txt`; older archives need one manual upgrade to an
 update-enabled build.
 
 On `main`, after 0.8.0, Off and System proxies apply immediately. HTTP and SOCKS5 apply
@@ -530,7 +534,7 @@ being saved to the cache. Visible cards and collection covers use sharper
 in addition to the existing artwork-cache budget. These previews reuse decoded
 artwork, so keeping a collection open does not repeatedly reload its cover.
 
-For blank or incorrectly drawn windows, include `fastpotify.log` in the bug
+For blank or incorrectly drawn windows, include `spotifast.log` in the bug
 report. On `main`, after 0.8.0, it records the app version, platform and active
 OpenGL renderer, plus window-creation errors even when launched without a console.
 

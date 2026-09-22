@@ -142,7 +142,7 @@ mod host {
     ) -> Result<u32, String> {
         let (ready_tx, ready_rx) = std::sync::mpsc::channel();
         let spawned = std::thread::Builder::new()
-            .name("fastpotify-tray".to_owned())
+            .name("spotifast-tray".to_owned())
             .spawn(move || {
                 let item = match build(sender, wake) {
                     Ok(item) => item,

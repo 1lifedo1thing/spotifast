@@ -37,6 +37,10 @@ impl Setup {
     }
 
     pub(super) fn install(&self, themes: &Path) -> io::Result<()> {
+        // Keep the old hook and profile together during an updater trial.
+        if themes == crate::paths::AppDirs::legacy().config.join("themes") {
+            return Ok(());
+        }
         let config = self.home.join(".config/omarchy");
         let current = self.home.join(".local/state/omarchy/current/theme");
         // Only an installed package on a configured Omarchy desktop opts in.
@@ -46,13 +50,26 @@ impl Setup {
         }
         let template = read_small(&self.assets.join("spotifast.json.tpl"))?;
         let hook = read_small(&self.assets.join("spotifast-theme"))?;
+        let hook_path = config.join("hooks/theme-set.d/spotifast-theme");
+        // Upgrade only our exact previous hook. Preserve any user edits.
+        let previous = hook.replace("/spotifast/themes", "/fastpotify/themes");
+        if fs::symlink_metadata(&hook_path).is_ok_and(|metadata| metadata.is_file())
+            && read_small(&hook_path).is_ok_and(|installed| installed == previous)
+        {
+            let temporary =
+                hook_path.with_extension(format!("migration-{}.tmp", rand::random::<u64>()));
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o755)
+                .open(&temporary)?;
+            file.write_all(hook.as_bytes())?;
+            file.sync_all()?;
+            fs::rename(temporary, &hook_path)?;
+        }
         let template_path = config.join("themed/spotifast.json.tpl");
         create_only(&template_path, template.as_bytes(), 0o644)?;
-        create_only(
-            &config.join("hooks/theme-set.d/spotifast-theme"),
-            hook.as_bytes(),
-            0o755,
-        )?;
+        create_only(&hook_path, hook.as_bytes(), 0o755)?;
 
         let destination = themes.join("omarchy.json");
         if fs::symlink_metadata(&destination).is_ok() {
@@ -260,6 +277,13 @@ mod tests {
         let template = config.join("themed/spotifast.json.tpl");
         let hook = config.join("hooks/theme-set.d/spotifast-theme");
         assert_eq!(fs::read_to_string(&template).unwrap(), TEMPLATE);
+        assert_eq!(fs::read_to_string(&hook).unwrap(), HOOK);
+        fs::write(
+            &hook,
+            HOOK.replace("/spotifast/themes", "/fastpotify/themes"),
+        )
+        .unwrap();
+        setup.install(&themes).unwrap();
         assert_eq!(fs::read_to_string(&hook).unwrap(), HOOK);
         assert_ne!(fs::metadata(&hook).unwrap().permissions().mode() & 0o100, 0);
         assert_eq!(

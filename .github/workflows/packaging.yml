@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Published version (empty tests the pinned v0.8.0 fixture)
+        description: Published version (empty tests the pinned v0.9.0 fixture)
         type: string
         default: ''
       publish:
@@ -44,7 +44,7 @@ jobs:
       targets: linux-amd64,linux-arm64
       # Packaging changes exercise real release binaries on both architectures.
       # Update this fixture deliberately; releases use their own tag instead.
-      version: ${{ inputs.version || 'v0.8.0' }}
+      version: ${{ inputs.version || 'v0.9.0' }}
       publish: ${{ inputs.publish == true && inputs.version != '' }}
     secrets: inherit
 
@@ -90,7 +90,7 @@ jobs:
       - name: Install and check runtime libraries in a clean container
         env:
           IMAGE: ${{ matrix.image }}
-          PACKAGE_VERSION: ${{ inputs.version || 'v0.8.0' }}
+          PACKAGE_VERSION: ${{ inputs.version || 'v0.9.0' }}
         run: |
           # The immutable 0.8.0 fixture still has its original window identity.
           case "$PACKAGE_VERSION" in

@@ -51,7 +51,7 @@ or the date in `YYYY-MM-DD` form. Interface text outside the pilot remains Engli
 
 ## Edit and preview
 
-The repository's `assets/i18n/fastpotify.pot` is the English source template.
+The repository's `assets/i18n/spotifast.pot` is the English source template.
 Open the PO for your language, such as `assets/i18n/es.po`, in your translation editor. Edit `msgstr` values;
 keep `msgid`, `msgid_plural`, `msgctxt`, and placeholders such as `{count}`, `{date}`,
 `{track}` and `{error}` unchanged.

@@ -1,8 +1,8 @@
 ; The Windows installer, built with Inno Setup 6.3 or later from a release
 ; binary (the release workflow does this on every tag):
 ;
-;   iscc /DVersion=0.1.4 /DArch=x86_64 /DBinary=...\fastpotify.exe ^
-;        /DOutputDir=dist packaging\windows\fastpotify.iss
+;   iscc /DVersion=0.9.1 /DArch=x86_64 /DBinary=...\spotifast.exe ^
+;        /DOutputDir=dist packaging\windows\spotifast.iss
 ;
 ; Arch is x86_64 or aarch64, as in the Rust target triple, so the installer
 ; is named like the zip next to it. It needs no administrator rights: the
@@ -29,9 +29,8 @@
 
 #define AppName "Spotifast"
 #define AppExeName "spotifast.exe"
-; Keep the previous registry identity and installation directory on upgrade.
-#define AppIdentity "Fastpotify"
-#define SpotifastBinary ExtractFileDir(Binary) + "\spotifast.exe"
+#define AppIdentity "Spotifast"
+#define LegacyBinary ExtractFileDir(Binary) + "\fastpotify.exe"
 
 [Setup]
 ; Never change: this is how Windows tells an update from a new program.
@@ -43,7 +42,7 @@ AppPublisher=Carmine Paolino
 AppPublisherURL=https://spotifast.rocks
 AppSupportURL=https://github.com/crmne/spotifast/issues
 AppUpdatesURL=https://spotifast.rocks/download/
-DefaultDirName={localappdata}\Programs\{#AppIdentity}
+DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
@@ -53,7 +52,7 @@ MinVersion=10.0
 LicenseFile=..\..\LICENSE
 OutputDir={#OutputDir}
 OutputBaseFilename=spotifast-v{#Version}-{#Arch}-pc-windows-msvc-setup
-SetupIconFile=fastpotify.ico
+SetupIconFile=spotifast.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -74,16 +73,31 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Files]
 Source: "{#Binary}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SpotifastBinary}"; DestDir: "{app}"; Flags: ignoreversion
+#if Version == "0.9.1"
+Source: "{#LegacyBinary}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "fastpotify-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
+#endif
 Source: "..\..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
-Source: "fastpotify-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "spotifast-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
+[InstallDelete]
+Type: files; Name: "{autoprograms}\Fastpotify.lnk"
+Type: files; Name: "{autodesktop}\Fastpotify.lnk"
+#if Version != "0.9.1"
+Type: files; Name: "{app}\fastpotify.exe"
+Type: files; Name: "{app}\fastpotify-installer.txt"
+#endif
+
 [Registry]
+; Retire only the old application's registrations, not the shared Spotify scheme.
+Root: HKCU; Subkey: "Software\Classes\Fastpotify.spotify"; Flags: deletekey
+Root: HKCU; Subkey: "Software\Fastpotify\Capabilities"; Flags: deletekey
+Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueName: "Fastpotify"; Flags: deletevalue
 ; Spotify links (spotify:track:…) open in Spotifast. Registered for this
 ; user only, like the program itself. The official client registers the same
 ; scheme when it is installed; whichever was set up last has the links, and
@@ -93,13 +107,13 @@ Root: HKCU; Subkey: "Software\Classes\spotify"; ValueType: string; ValueName: ""
 Root: HKCU; Subkey: "Software\Classes\spotify"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
 Root: HKCU; Subkey: "Software\Classes\spotify\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"",0"
 Root: HKCU; Subkey: "Software\Classes\spotify\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
-Root: HKCU; Subkey: "Software\Classes\Fastpotify.spotify"; ValueType: string; ValueName: ""; ValueData: "URL:Spotify link"; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\Fastpotify.spotify"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
-Root: HKCU; Subkey: "Software\Classes\Fastpotify.spotify\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"",0"
-Root: HKCU; Subkey: "Software\Classes\Fastpotify.spotify\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
+Root: HKCU; Subkey: "Software\Classes\Spotifast.spotify"; ValueType: string; ValueName: ""; ValueData: "URL:Spotify link"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Spotifast.spotify"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\Spotifast.spotify\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"",0"
+Root: HKCU; Subkey: "Software\Classes\Spotifast.spotify\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExeName}"" ""%1"""
 Root: HKCU; Subkey: "Software\{#AppIdentity}\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\{#AppIdentity}\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "A native Spotify client"
-Root: HKCU; Subkey: "Software\{#AppIdentity}\Capabilities\URLAssociations"; ValueType: string; ValueName: "spotify"; ValueData: "Fastpotify.spotify"
+Root: HKCU; Subkey: "Software\{#AppIdentity}\Capabilities\URLAssociations"; ValueType: string; ValueName: "spotify"; ValueData: "Spotifast.spotify"
 Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "{#AppIdentity}"; ValueData: "Software\{#AppIdentity}\Capabilities"; Flags: uninsdeletevalue
 
 [Run]

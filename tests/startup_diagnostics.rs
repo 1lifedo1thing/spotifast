@@ -20,7 +20,7 @@ fn an_unavailable_display_leaves_a_useful_log_without_a_console() {
         .env("XDG_RUNTIME_DIR", &directory)
         .output()
         .unwrap();
-    let log = std::fs::read_to_string(directory.join("state/fastpotify.log")).unwrap();
+    let log = std::fs::read_to_string(directory.join("state/spotifast.log")).unwrap();
     std::fs::remove_dir_all(directory).unwrap();
 
     assert!(!output.status.success(), "the unavailable display opened");

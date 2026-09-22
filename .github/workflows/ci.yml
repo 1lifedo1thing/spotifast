@@ -48,6 +48,8 @@ jobs:
         run: python3 packaging/flatpak/test-metainfo.py
       - name: Linux launcher packaging regressions
         run: python3 packaging/test-launchers.py
+      - name: Release name migration regressions
+        run: python3 packaging/test-release-names.py
       - name: Clippy (default features)
         run: cargo clippy --locked --all-targets -- -D warnings
       - name: Clippy (all features)
@@ -111,9 +113,37 @@ jobs:
         shell: pwsh
         run: |
           cargo build --locked
-          $imports = & dumpbin /dependents target\debug\fastpotify.exe | Out-String
+          $imports = & dumpbin /dependents target\debug\spotifast.exe | Out-String
           $runtime = $imports | Select-String -Pattern 'MSVCP[0-9_]*\.dll|VCRUNTIME[0-9_]*\.dll'
           if ($runtime) { throw "Spotifast imports an MSVC runtime:`n$runtime" }
+
+      - name: Windows installer syntax and renamed inputs
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages[0].version
+          $iscc = (Get-Command iscc -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" }
+          & $iscc "/DVersion=$version" /DArch=x86_64 "/DBinary=$PWD\target\debug\spotifast.exe" "/DOutputDir=$env:RUNNER_TEMP\spotifast-installer-check" packaging\windows\spotifast.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: macOS bundle identity and helper startup
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cargo build --locked
+          version=$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print(json.load(sys.stdin)["packages"][0]["version"])')
+          app="$RUNNER_TEMP/spotifast-bundle-check/Spotifast.app"
+          bash packaging/macos/bundle.sh target/debug/spotifast "$app" "$version"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app/Contents/Info.plist")
+          "$app/Contents/MacOS/$executable" --version
+          # A missing job must reach our error handler, not die during launch.
+          set +e
+          "$app/Contents/MacOS/$executable" --apply-update "$RUNNER_TEMP/spotifast-missing-job.json" 2> "$RUNNER_TEMP/spotifast-helper-check.log"
+          status=$?
+          set -e
+          test "$status" -eq 1
+          test -s "$RUNNER_TEMP/spotifast-helper-check.log"
 
   nix:
     name: Nix package
@@ -167,4 +197,4 @@ jobs:
         env:
           JEKYLL_ENV: production
         run: |
-          bundle exec jekyll build --destination "$RUNNER_TEMP/fastpotify-site"
+          bundle exec jekyll build --destination "$RUNNER_TEMP/spotifast-site"

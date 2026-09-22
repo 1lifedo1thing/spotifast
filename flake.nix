@@ -88,7 +88,7 @@
       packages = forAllSystems (
         pkgs:
         let
-          fastpotify =
+          spotifast =
             let
               toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
               rustPlatform = pkgs.makeRustPlatform {
@@ -117,10 +117,10 @@
               # The lock file contains git dependencies. fetchCargoVendor includes
               # them in the fixed-output dependency tree, unlike cargoLock alone.
               cargoDeps = pkgs.rustPlatform.fetchCargoVendor {
-                pname = "fastpotify";
+                pname = "spotifast";
                 version = (pkgs.lib.importTOML ./Cargo.toml).package.version;
                 src = self;
-                hash = "sha256-nR59n0U6p4m3PytLdipsq4AnQv3+hFB8ClnG4gkFLw0=";
+                hash = "sha256-olM+ZviIIH3lnS2w/RXB9s2I9aoXn/xjqGSew2liNcE=";
               };
               # projectm-sys only searches lib, while CMake may otherwise install to lib64.
               postPatch = ''
@@ -195,11 +195,19 @@
                 + pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
                   app="$out/Applications/Spotifast.app/Contents"
                   mkdir -p "$app/MacOS" "$app/Resources"
-                  cp "$out/bin/fastpotify" "$app/MacOS/fastpotify"
-                  icnsify packaging/macos/icon-1024.png -o "$app/Resources/fastpotify.icns"
+                  executable=Spotifast
+                  identifier=rocks.spotifast.Spotifast
+                  if [ "${version}" = "0.9.1" ]; then
+                    executable=fastpotify
+                    identifier=me.paolino.fastpotify
+                  fi
+                  cp "$out/bin/spotifast" "$app/MacOS/$executable"
+                  icnsify packaging/macos/icon-1024.png -o "$app/Resources/spotifast.icns"
                   substitute packaging/macos/Info.plist "$app/Info.plist" \
                     --replace-fail __VERSION__ "${version}" \
-                    --replace-fail __BUILD__ "${pkgs.lib.head (pkgs.lib.splitString "-" version)}"
+                    --replace-fail __BUILD__ "${pkgs.lib.head (pkgs.lib.splitString "-" version)}" \
+                    --replace-fail __EXECUTABLE__ "$executable" \
+                    --replace-fail __IDENTIFIER__ "$identifier"
                 '';
 
               meta = {
@@ -212,13 +220,13 @@
 
         in
         {
-          default = fastpotify;
-          inherit fastpotify;
-          spotifast = fastpotify;
+          default = spotifast;
+          inherit spotifast;
+          fastpotify = spotifast;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-          fastpotify-app = fastpotify;
-          spotifast-app = fastpotify;
+          fastpotify-app = spotifast;
+          spotifast-app = spotifast;
         }
       );
 
