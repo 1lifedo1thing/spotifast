@@ -20,19 +20,20 @@ nfpm:
   replaces: [fastpotify]
   conflicts: [fastpotify]
   contents:
+  # A glob source makes nFPM append its basename to the destination directory.
   - src: "@PAYLOAD@/*-v@VERSION@-@TARGET@/spotifast"
-    dst: "/usr/bin/spotifast"
+    dst: "/usr/bin/"
     file_info:
       mode: 493
   - src: spotifast
     dst: /usr/bin/fastpotify
     type: symlink
   - src: "@PAYLOAD@/*-v@VERSION@-@TARGET@/LICENSE"
-    dst: "/usr/share/licenses/spotifast/LICENSE"
+    dst: "/usr/share/licenses/spotifast/"
     file_info:
       mode: 420
   - src: "@PAYLOAD@/*-v@VERSION@-@TARGET@/README.md"
-    dst: "/usr/share/doc/spotifast/README.md"
+    dst: "/usr/share/doc/spotifast/"
     file_info:
       mode: 420
   # Retain the input release's launcher identity: current builds use Spotifast,

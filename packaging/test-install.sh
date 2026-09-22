@@ -66,6 +66,11 @@ docker run --rm \
     # without installing a desktop, compiler, interpreter or test dependencies.
     fastpotify --version
     spotifast --version
+    test -f /usr/bin/spotifast
+    test ! -L /usr/bin/spotifast
+    test "$(readlink /usr/bin/fastpotify)" = spotifast
+    test -f /usr/share/licenses/spotifast/LICENSE
+    test -f /usr/share/doc/spotifast/README.md
     /checks/check-runtime-libs
     test -s "/usr/share/applications/$DESKTOP_ID.desktop"
     test -s "/usr/share/icons/hicolor/scalable/apps/$DESKTOP_ID.svg"
