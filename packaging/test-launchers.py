@@ -45,6 +45,17 @@ def payload(root, desktop):
 
 
 class LauncherInstallTest(unittest.TestCase):
+    def test_generated_aur_versions_start_at_the_requested_release(self):
+        for package in ["spotifast", "spotifast-bin", "spotifast-git"]:
+            with self.subTest(package=package), tempfile.TemporaryDirectory() as directory:
+                recipe = Path(directory) / "PKGBUILD"
+                template = (ROOT / f"packaging/arch/{package}/PKGBUILD.in").read_text()
+                recipe.write_text(template.replace("@VERSION@", "9.8.7"))
+                version = subprocess.check_output([
+                    "bash", "-c", 'source "$1"; printf "%s" "$pkgver"', "check", str(recipe),
+                ], text=True)
+                self.assertEqual(version, "9.8.7")
+
     def check_launcher(self, prefix, desktop, window_class, icon):
         entries = list((prefix / "share/applications").glob("*.desktop"))
         self.assertEqual([p.name for p in entries], [desktop + ".desktop"])
