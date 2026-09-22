@@ -4,9 +4,12 @@ description: Download the app for macOS, Windows, or Linux, with install instruc
 nav_order: 1
 ---
 
-Spotifast was previously called **Fastpotify**. Version 0.8.0 introduces the
-new name. Choose Spotifast when installing or updating. Your settings and
-sign-ins carry over, except when [switching the Flatpak installation](/renaming/#flatpak).
+Spotifast was previously called **Fastpotify**. Version 0.9.1 completes the
+profile and package rename. Choose Spotifast when installing or updating.
+Your settings and sign-ins carry over, except when
+[switching the Flatpak installation](/renaming/#flatpak).
+This is the final release with old-named compatibility downloads for older
+updaters. See the [upgrade guide](/renaming/) before skipping this release.
 
 {% assign v = site.spotifast_version %}
 {% assign base = "https://github.com/crmne/spotifast/releases/download/v" | append: v %}
@@ -38,8 +41,10 @@ open an app downloaded from the internet, choose **Open**.
 Starting with 0.8.0, the Mac download passes Apple's security checks. You do
 not need to change security settings or run commands in Terminal to open it.
 
-When upgrading from 0.7.1, quit Fastpotify before opening Spotifast. Both use
-the same saved settings and sign-ins.
+Quit the old app before opening Spotifast. Your saved settings and sign-ins
+carry over. If an older version reports that its update helper exited before
+it was ready, install the DMG above manually once. The helper changes take
+effect for updates started from 0.9.1 onward.
 
 ## Windows
 
