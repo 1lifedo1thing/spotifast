@@ -64,6 +64,8 @@ docker run --rm \
     fi
     # --version exercises linked libraries; the probe checks dlopen libraries
     # without installing a desktop, compiler, interpreter or test dependencies.
+    # Trace the isolated fixture assertions so a failed check identifies itself.
+    set -x
     fastpotify --version
     spotifast --version
     test -f /usr/bin/spotifast
