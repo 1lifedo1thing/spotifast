@@ -72,7 +72,13 @@ docker run --rm \
     test ! -L /usr/bin/spotifast
     test "$(readlink /usr/bin/fastpotify)" = spotifast
     test -f /usr/share/licenses/spotifast/LICENSE
-    test -f /usr/share/doc/spotifast/README.md
+    if [ "$FORMAT" = deb ]; then
+      # Slim Debian/Ubuntu images exclude /usr/share/doc at installation time.
+      # Verify the regular file in the package, not the intentionally stripped root.
+      dpkg-deb --contents "$1" | grep -E "^-.* ./usr/share/doc/spotifast/README.md$"
+    else
+      test -f /usr/share/doc/spotifast/README.md
+    fi
     /checks/check-runtime-libs
     test -s "/usr/share/applications/$DESKTOP_ID.desktop"
     test -s "/usr/share/icons/hicolor/scalable/apps/$DESKTOP_ID.svg"
