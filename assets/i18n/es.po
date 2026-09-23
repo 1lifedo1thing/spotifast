@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-23 20:35+0200\n"
+"POT-Creation-Date: 2026-09-23 20:46+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Spanish\n"
@@ -562,23 +562,23 @@ msgstr "Seleccionar todo"
 msgid "Clear"
 msgstr "Borrar"
 
-#: src/ui/widgets.rs:2804
+#: src/ui/widgets.rs:2827
 msgid "Host"
 msgstr "Host"
 
-#: src/ui/widgets.rs:2821
+#: src/ui/widgets.rs:2844
 msgid "Port"
 msgstr "Puerto"
 
-#: src/ui/widgets.rs:2839
+#: src/ui/widgets.rs:2862
 msgid "Username"
 msgstr "Usuario"
 
-#: src/ui/widgets.rs:2850
+#: src/ui/widgets.rs:2873
 msgid "Password"
 msgstr "Contraseña"
 
-#: src/ui/widgets.rs:2868
+#: src/ui/widgets.rs:2891
 msgid ""
 "Proxy login applies to Web requests. Local playback uses this proxy only "
 "without a login."
@@ -586,7 +586,7 @@ msgstr ""
 "El inicio de sesión del proxy se aplica a las peticiones web. La "
 "reproducción local usa este proxy solo sin inicio de sesión."
 
-#: src/ui/widgets.rs:2872
+#: src/ui/widgets.rs:2895
 msgid ""
 "Spotify hostnames are resolved by the proxy. Local playback connects "
 "directly."

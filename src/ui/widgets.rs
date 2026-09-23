@@ -2726,11 +2726,21 @@ pub fn setting_row(
     description: &str,
     control: impl FnOnce(&mut Ui),
 ) {
+    // The text wraps beside the control. Most controls fit in 260 points;
+    // a wider one, such as a row of choices, is measured as it is drawn so
+    // a longer description (or a longer translation) wraps before it
+    // instead of running underneath.
+    // Keyed by the row's place rather than its label: two rows can share a
+    // title, and sharing one width would make them take turns.
+    let control_id = ui.next_auto_id().with("setting-row-control");
+    let reserved = ui
+        .data(|data| data.get_temp::<f32>(control_id))
+        .map_or(260.0, |width| (width + 16.0).max(260.0));
     ui.horizontal(|ui| {
         ui.vertical(|ui| {
             // A frame can arrive before the window has its size (a fullscreen
             // request on Wayland answers a frame late), so never go negative.
-            ui.set_width((ui.available_width() - 260.0).max(0.0));
+            ui.set_width((ui.available_width() - reserved).max(0.0));
             theme::text(ui, label, theme::medium(14.0), palette.text);
             if !description.is_empty() {
                 ui.add(
@@ -2743,7 +2753,20 @@ pub fn setting_row(
                 );
             }
         });
-        ui.with_layout(Layout::right_to_left(Align::Center), control);
+        let width = ui
+            .with_layout(Layout::right_to_left(Align::Center), |ui| {
+                let start = ui.cursor().right();
+                control(ui);
+                start - ui.min_rect().left()
+            })
+            .inner;
+        let known = ui.data(|data| data.get_temp::<f32>(control_id));
+        if known.is_none_or(|known| (known - width).abs() > 0.5) {
+            ui.data_mut(|data| data.insert_temp(control_id, width));
+            // Lay the row out again at the width just measured rather than
+            // show one frame of overlapping text.
+            ui.ctx().request_discard("a settings control changed width");
+        }
     });
     ui.add_space(10.0);
 }
@@ -3698,6 +3721,64 @@ mod tests {
         assert!(
             child_rendered,
             "menu_submenu must open child contents when Enter is pressed while focused"
+        );
+    }
+
+    /// A settings row whose control is wider than the usual 260 points,
+    /// like the audio quality choices, wraps its description before the
+    /// control instead of running underneath it.
+    #[test]
+    fn a_setting_row_wraps_its_description_before_a_wide_control() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        crate::theme::install(&ctx);
+        let palette = crate::theme::Palette::dark();
+        // Long enough to wrap, as a translation of a short English line can be.
+        let description = "Höhere Bitraten verbrauchen mehr Daten und Cache-Speicher, \
+            besonders unterwegs, und brauchen länger, bis die Wiedergabe beginnt, wenn die \
+            Verbindung langsam ist.";
+        let frame = || {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1000.0, 400.0),
+                    )),
+                    ..Default::default()
+                },
+                |ui| {
+                    super::setting_row(ui, &palette, "Audioqualität", description, |ui| {
+                        let _ = ui.button("Sehr hoch · 320 kbps");
+                        let _ = ui.button("Hoch · 160 kbps");
+                        let _ = ui.button("Normal · 96 kbps");
+                        ui.add_space(300.0);
+                    });
+                },
+            );
+            output.textures_delta.clear();
+            output.platform_output.accesskit_update.unwrap()
+        };
+        frame();
+        let tree = frame();
+        let bounds = |label: &str| {
+            tree.nodes
+                .iter()
+                .find(|(_, node)| {
+                    [node.label(), node.value()]
+                        .into_iter()
+                        .flatten()
+                        .any(|text| text.starts_with(label))
+                })
+                .and_then(|(_, node)| node.bounds())
+                .unwrap_or_else(|| panic!("{label} is drawn"))
+        };
+        let text = bounds("Höhere Bitraten");
+        let control = bounds("Normal · 96 kbps");
+        assert!(
+            text.x1 <= control.x0,
+            "the description ends at {} but the controls start at {}",
+            text.x1,
+            control.x0
         );
     }
 }
