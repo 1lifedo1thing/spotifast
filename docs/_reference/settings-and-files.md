@@ -337,7 +337,10 @@ Create a `themes` folder beside `settings.json` and put JSON files in it.
 Run `spotifast reload-themes` if the app is already open, then select the
 filename under **Settings → Appearance → Theme**.
 The default is **Follow system**. It uses your desktop’s light/dark appearance,
-or the current Omarchy palette on a packaged Omarchy installation. Saved Dark,
+or the current Omarchy palette on a packaged Omarchy installation. On Linux,
+the light/dark appearance comes from the desktop portal's `color-scheme`
+setting (GNOME, KDE and Flatpak), and on `main`, after 0.9.1, the app follows
+it when it changes. Saved Dark,
 Light and custom choices are preserved when updating. The picker starts with
 **Follow system**, **Light**, and **Dark**, then a separator. **Omarchy** comes
 next when the integration is available, followed by the other local palettes.

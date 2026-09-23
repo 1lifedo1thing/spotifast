@@ -168,7 +168,8 @@ struct PendingQueueAdd {
 pub struct AppOptions {
     /// Demo and isolated tests must not read or migrate real Spotify grants.
     pub restore_sign_in: bool,
-    /// Register the MPRIS media-control service (Linux).
+    /// Register the MPRIS media-control service and follow the desktop's
+    /// light or dark preference (Linux).
     pub media_controls: bool,
     /// Register the system-tray item (Linux).
     pub tray: bool,
@@ -211,6 +212,9 @@ pub struct App {
     last_settings_save: Instant,
     pub backend: Backend,
     media_controls: Option<MediaService>,
+    /// The desktop's light or dark preference, for "Follow system".
+    #[cfg(target_os = "linux")]
+    system_appearance: Option<crate::appearance::SystemAppearance>,
     /// The artwork the media controls were last given, and the URL it came
     /// from. Finding the file touches the disk and the controls are synced
     /// every frame, so the answer is kept until the artwork changes.
@@ -577,6 +581,13 @@ impl App {
         let media_controls = options
             .media_controls
             .then(|| MediaService::spawn(move || wake.wake()));
+        #[cfg(target_os = "linux")]
+        let system_appearance = {
+            let wake = waker.clone();
+            options
+                .media_controls
+                .then(|| crate::appearance::SystemAppearance::spawn(move || wake.wake()))
+        };
         #[cfg(target_os = "macos")]
         let media_controls = {
             let mut media_controls = media_controls;
@@ -615,6 +626,8 @@ impl App {
             last_settings_save: Instant::now(),
             backend,
             media_controls,
+            #[cfg(target_os = "linux")]
+            system_appearance,
             media_art: None,
             tray,
             window_hidden: false,
@@ -2942,6 +2955,23 @@ impl App {
     }
 
     fn apply_theme(&mut self, ctx: &egui::Context) {
+        // winit reports no system theme on Linux, so "Follow system" falls
+        // back to what the desktop portal says.
+        #[cfg(target_os = "linux")]
+        if let Some(dark) = self
+            .system_appearance
+            .as_ref()
+            .and_then(crate::appearance::SystemAppearance::dark)
+        {
+            let theme = if dark {
+                egui::Theme::Dark
+            } else {
+                egui::Theme::Light
+            };
+            if ctx.options(|options| options.fallback_theme) != theme {
+                ctx.options_mut(|options| options.fallback_theme = theme);
+            }
+        }
         let dark = ctx.theme() == egui::Theme::Dark;
         let palette = self.custom_palette().unwrap_or_else(|| {
             if dark {
@@ -13348,6 +13378,31 @@ mod tests {
         assert_eq!(app.resume_track.as_deref(), Some("spotify:track:playing"));
         assert_eq!(app.resume_position_ms, 123_000);
         std::fs::remove_dir_all(app.dirs.config.parent().unwrap()).unwrap();
+    }
+
+    /// winit reports no system theme on Linux, so "Follow system" takes
+    /// the desktop portal's preference, and a fixed choice ignores it.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn follow_system_uses_the_desktops_preference_on_linux() {
+        let mut app = headless_app();
+        let ctx = egui::Context::default();
+        app.settings.theme = ThemeChoice::System;
+        ctx.set_theme(app.theme_preference());
+        app.system_appearance = Some(crate::appearance::SystemAppearance::fixed(false));
+        app.apply_theme(&ctx);
+        assert_eq!(ctx.theme(), egui::Theme::Light);
+        assert_eq!(app.palette, Palette::light());
+
+        app.system_appearance = Some(crate::appearance::SystemAppearance::fixed(true));
+        app.apply_theme(&ctx);
+        assert_eq!(ctx.theme(), egui::Theme::Dark);
+
+        app.settings.theme = ThemeChoice::Dark;
+        ctx.set_theme(app.theme_preference());
+        app.system_appearance = Some(crate::appearance::SystemAppearance::fixed(false));
+        app.apply_theme(&ctx);
+        assert_eq!(ctx.theme(), egui::Theme::Dark, "a chosen theme wins");
     }
 
     #[test]
