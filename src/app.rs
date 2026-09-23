@@ -163,6 +163,26 @@ struct PendingQueueAdd {
     write: Option<(u64, usize)>,
 }
 
+/// Song links pasted into a playlist, in clipboard order, while some of
+/// the songs are still being looked up.
+struct PendingPaste {
+    playlist_id: String,
+    playlist_name: String,
+    uris: Vec<String>,
+    /// The songs known so far, by the pasted URI.
+    found: HashMap<String, PlayableItem>,
+    /// Links Spotify had no song for, or that name an unknown episode.
+    missing: HashSet<String>,
+}
+
+impl PendingPaste {
+    fn settled(&self) -> bool {
+        self.uris
+            .iter()
+            .all(|uri| self.found.contains_key(uri) || self.missing.contains(uri))
+    }
+}
+
 /// How the application is being started.
 #[derive(Clone, Copy, Debug)]
 pub struct AppOptions {
@@ -512,6 +532,12 @@ pub struct App {
     /// A Spotify link handed over from outside, waiting for the account
     /// to be signed in and, for a song, for its album to be known.
     pending_link: Option<String>,
+    /// The songs behind the links last copied from a track table, so a
+    /// paste of those links adds rows with their names straight away.
+    copied_songs: Vec<PlayableItem>,
+    /// Pasted song links waiting for Spotify to describe the songs this
+    /// app has not seen, before they are added to their playlist.
+    pending_pastes: Vec<PendingPaste>,
     /// Sidebar folders rolled up, by their rootlist ids.
     pub collapsed_folders: Vec<String>,
     /// A newer release than this build, once GitHub has said so.
@@ -827,6 +853,8 @@ impl App {
             rootlist_cache: session.rootlist.clone(),
             editable_by_grant: std::collections::BTreeSet::new(),
             pending_link: None,
+            copied_songs: Vec::new(),
+            pending_pastes: Vec::new(),
             collapsed_folders: session.collapsed_folders.clone(),
             update: None,
             last_update_check: None,
@@ -1988,6 +2016,8 @@ impl App {
         self.table_rows.clear();
         self.page_used.clear();
         self.track_used.clear();
+        self.copied_songs.clear();
+        self.pending_pastes.clear();
     }
 
     /// Drop table-row caches whose pages are gone, and cap what remains.
@@ -5653,10 +5683,15 @@ impl App {
                         if self.liked_songs.update_track(&track) {
                             self.sync_liked_songs();
                         }
+                        self.resolve_pasted_song(
+                            &format!("spotify:track:{id}"),
+                            Some(PlayableItem::Track(track.clone())),
+                        );
                         self.track_cache.insert(id.clone(), track);
                         self.track_used.insert(id, Instant::now());
                     }
                     Err(error) => {
+                        self.resolve_pasted_song(&format!("spotify:track:{id}"), None);
                         if self.pending_link.as_deref()
                             == Some(format!("spotify:track:{id}").as_str())
                         {
@@ -7332,6 +7367,110 @@ impl App {
         });
     }
 
+    /// Appends the songs linked in pasted text to an editable playlist.
+    /// Songs this app already knows add their rows at once; the rest are
+    /// asked of Spotify first, so that every row has its name.
+    fn paste_songs(&mut self, playlist_id: String, text: &str) {
+        let Some(playlist_name) = self
+            .playlist_pages
+            .get(&playlist_id)
+            .and_then(|page| page.playlist.get())
+            .filter(|playlist| self.can_edit_playlist(playlist))
+            .map(|playlist| playlist.name.clone())
+        else {
+            return;
+        };
+        let uris: Vec<String> = text
+            .split(|c: char| c.is_whitespace() || c == ',')
+            .filter_map(crate::link::parse)
+            .filter(|uri| matches!(util::uri_kind(uri), Some("track" | "episode")))
+            .collect();
+        if uris.is_empty() {
+            self.toast("The clipboard has no Spotify song links");
+            return;
+        }
+        let mut paste = PendingPaste {
+            playlist_id,
+            playlist_name,
+            uris,
+            found: HashMap::new(),
+            missing: HashSet::new(),
+        };
+        for uri in paste.uris.clone() {
+            if paste.found.contains_key(&uri) || paste.missing.contains(&uri) {
+                continue;
+            }
+            if let Some(item) = self.known_song(&uri) {
+                paste.found.insert(uri, item);
+            } else if let Some(id) = uri.strip_prefix("spotify:track:").map(str::to_string) {
+                if self.track_requests.insert(id.clone()) {
+                    self.backend.api(ApiRequest::Track { id });
+                }
+            } else {
+                // Episodes are only added from what this app has shown.
+                paste.missing.insert(uri);
+            }
+        }
+        self.pending_pastes.push(paste);
+        self.finish_pastes();
+    }
+
+    /// A song this app has already shown, by its URI.
+    fn known_song(&mut self, uri: &str) -> Option<PlayableItem> {
+        if let Some(item) = self.copied_songs.iter().find(|item| item.uri() == uri) {
+            return Some(item.clone());
+        }
+        let id = uri.strip_prefix("spotify:track:")?;
+        self.read_cached_track(id).map(PlayableItem::Track)
+    }
+
+    /// Records Spotify's answer for a pasted song link: the song, or `None`
+    /// when there is no such song.
+    fn resolve_pasted_song(&mut self, uri: &str, item: Option<PlayableItem>) {
+        if self.pending_pastes.is_empty() {
+            return;
+        }
+        for paste in &mut self.pending_pastes {
+            if !paste.uris.iter().any(|pasted| pasted == uri) {
+                continue;
+            }
+            match &item {
+                Some(item) => {
+                    paste.found.insert(uri.to_string(), item.clone());
+                }
+                None => {
+                    paste.missing.insert(uri.to_string());
+                }
+            }
+        }
+        self.finish_pastes();
+    }
+
+    /// Adds every paste whose songs are all known, or known to be missing.
+    fn finish_pastes(&mut self) {
+        let mut index = 0;
+        while index < self.pending_pastes.len() {
+            if !self.pending_pastes[index].settled() {
+                index += 1;
+                continue;
+            }
+            let paste = self.pending_pastes.remove(index);
+            let items: Vec<PlayableItem> = paste
+                .uris
+                .iter()
+                .filter_map(|uri| paste.found.get(uri).cloned())
+                .collect();
+            match paste.uris.len() - items.len() {
+                0 => {}
+                1 => self.toast_error("1 pasted link could not be added"),
+                skipped => self.toast_error(format!("{skipped} pasted links could not be added")),
+            }
+            if !items.is_empty() {
+                self.request_playlist_add(paste.playlist_id, paste.playlist_name, items, None);
+            }
+        }
+    }
+
     fn set_saved(&mut self, uri: String, saved: bool) {
         if uri.starts_with("spotify:playlist:") {
             self.saved.insert(uri.clone(), saved);
@@ -7883,6 +8022,21 @@ impl App {
                     self.toast("Link copied");
                 }
             }
+            Action::CopySongs(items) => {
+                let links: Vec<String> = items
+                    .iter()
+                    .filter_map(|item| util::open_spotify_url(item.uri()))
+                    .collect();
+                if !links.is_empty() {
+                    ctx.copy_text(links.join("\n"));
+                    self.toast(match links.len() {
+                        1 => "Link copied".to_string(),
+                        count => format!("{count} links copied"),
+                    });
+                    self.copied_songs = items;
+                }
+            }
+            Action::PasteSongs { playlist_id, text } => self.paste_songs(playlist_id, &text),
             Action::OpenInSpotify(uri) => {
                 if let Some(url) = util::open_spotify_url(&uri) {
                     ctx.open_url(egui::OpenUrl::new_tab(url));
@@ -8594,6 +8748,23 @@ impl App {
         } else {
             self.selection = Some((page.clone(), view.to_string(), selection));
         }
+    }
+
+    /// Picks exactly `rows` of the page's list as it looks in `view`: every
+    /// song it shows, for Select all.
+    pub fn pick_rows(&mut self, page: &Page, view: &str, rows: std::collections::BTreeSet<usize>) {
+        let Some(&first) = rows.first() else {
+            self.selection = None;
+            return;
+        };
+        self.selection = Some((
+            page.clone(),
+            view.to_string(),
+            RowSelection {
+                rows,
+                anchor: Some(first),
+            },
+        ));
     }
 
     /// Clears the current row selection.
@@ -16558,6 +16729,168 @@ mod tests {
                 ..
             }]
         ));
+    }
+
+    /// Copying picked songs puts their links on the clipboard, one per
+    /// line. Pasting links into an editable playlist appends the songs:
+    /// ones this app has shown get their rows at once, and the rest wait
+    /// only for Spotify to name them. Links that are not songs are left out.
+    #[test]
+    fn copied_and_pasted_song_links_append_to_an_editable_playlist() {
+        // #given an editable playlist with one song
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+        app.playlist_pages.insert(
+            "target".into(),
+            PlaylistPage {
+                playlist: Loadable::Loaded(Playlist {
+                    id: "target".into(),
+                    name: "Target".into(),
+                    collaborative: true,
+                    ..Default::default()
+                }),
+                items: PagedList {
+                    items: vec![cached_playlist_row("spotify:track:old")],
+                    total: Some(1),
+                    next_offset: None,
+                    loaded_once: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        );
+        let track = |id: &str| Track {
+            id: Some(id.into()),
+            uri: format!("spotify:track:{id}"),
+            name: format!("Song {id}"),
+            ..Default::default()
+        };
+        let song = |id: &str| PlayableItem::Track(track(id));
+        let rows = |app: &App| {
+            app.playlist_pages["target"]
+                .items
+                .items
+                .iter()
+                .map(|row| row.playable().unwrap().name().to_string())
+                .collect::<Vec<_>>()
+        };
+        let ctx = egui::Context::default();
+
+        // #when two songs are copied
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            app.apply(Action::CopySongs(vec![song("aaa"), song("bbb")]), ui.ctx());
+        });
+        output.textures_delta.clear();
+
+        // #then their links are on the clipboard, one per line
+        assert!(
+            output
+                .platform_output
+                .commands
+                .contains(&egui::OutputCommand::CopyText(
+                    "https://open.spotify.com/track/aaa\nhttps://open.spotify.com/track/bbb".into()
+                ))
+        );
+
+        // #when those links are pasted into the playlist
+        app.apply(
+            Action::PasteSongs {
+                playlist_id: "target".into(),
+                text: "https://open.spotify.com/track/aaa?si=x\r\nspotify:track:bbb\n".into(),
+            },
+            &ctx,
+        );
+
+        // #then their rows appear at once, named, and Spotify is asked to add them
+        assert_eq!(rows(&app), ["", "Song aaa", "Song bbb"]);
+        assert!(matches!(
+            app.backend.take_playlist_add_requests().as_slice(),
+            [ApiRequest::AddToPlaylist { uris, position: None, .. }]
+                if uris == &["spotify:track:aaa", "spotify:track:bbb"]
+        ));
+        app.handle_api(ApiResponse::PlaylistItemsChanged {
+            id: "target".into(),
+            message: String::new(),
+            result: Ok(Some("after-paste".into())),
+        });
+
+        // #when links to songs this app has not seen are pasted, with an album
+        app.apply(
+            Action::PasteSongs {
+                playlist_id: "target".into(),
+                text: "spotify:track:ccc https://open.spotify.com/album/xyz, spotify:track:ddd"
+                    .into(),
+            },
+            &ctx,
+        );
+
+        // #then Spotify is asked about the songs, and nothing is added yet
+        assert!(app.track_requests.contains("ccc"));
+        assert!(app.track_requests.contains("ddd"));
+        assert_eq!(rows(&app).len(), 3);
+        assert!(app.backend.take_playlist_add_requests().is_empty());
+
+        // #when Spotify names one song and has no other
+        app.handle_api(ApiResponse::Track {
+            id: "ccc".into(),
+            result: Ok(track("ccc")),
+        });
+        assert!(app.backend.take_playlist_add_requests().is_empty());
+        app.handle_api(ApiResponse::Track {
+            id: "ddd".into(),
+            result: Err(crate::api::client::ApiError::Status {
+                status: 404,
+                message: "not found".into(),
+            }),
+        });
+
+        // #then the named song is appended and the other is reported
+        assert_eq!(rows(&app), ["", "Song aaa", "Song bbb", "Song ccc"]);
+        assert!(matches!(
+            app.backend.take_playlist_add_requests().as_slice(),
+            [ApiRequest::AddToPlaylist { uris, .. }] if uris == &["spotify:track:ccc"]
+        ));
+        assert!(
+            app.toasts
+                .iter()
+                .any(|toast| toast.message == "1 pasted link could not be added")
+        );
+        assert!(app.pending_pastes.is_empty());
+
+        // #when the clipboard holds no song links
+        app.apply(
+            Action::PasteSongs {
+                playlist_id: "target".into(),
+                text: "just some words".into(),
+            },
+            &ctx,
+        );
+
+        // #then nothing is added, and the user is told why
+        assert!(app.backend.take_playlist_add_requests().is_empty());
+        assert!(
+            app.toasts
+                .iter()
+                .any(|toast| toast.message == "The clipboard has no Spotify song links")
+        );
+
+        // #when the playlist cannot be edited
+        if let Loadable::Loaded(playlist) =
+            &mut app.playlist_pages.get_mut("target").unwrap().playlist
+        {
+            playlist.collaborative = false;
+        }
+        app.apply(
+            Action::PasteSongs {
+                playlist_id: "target".into(),
+                text: "spotify:track:aaa".into(),
+            },
+            &ctx,
+        );
+
+        // #then nothing is added to it
+        assert_eq!(rows(&app).len(), 4);
+        assert!(app.backend.take_playlist_add_requests().is_empty());
     }
 
     #[test]

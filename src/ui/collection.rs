@@ -763,6 +763,7 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
     if let Some((row, asked)) = pick {
         app.pick_row(&table.page, &view, row, asked, rows);
     }
+    list_shortcuts(ui, app, &table, &view, rows, &item_index, picked_songs);
     // Escape clears the current selection.
     if !picked.is_empty() && ui.input(|input| input.key_pressed(egui::Key::Escape)) {
         app.clear_picked_rows();
@@ -838,6 +839,71 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
             table.page,
             table.can_load_more && !table.loading,
         );
+    }
+}
+
+/// Select all, Copy and Paste on a song list. A focused text field keeps
+/// these keys for its own text, and an open dialog keeps them from the
+/// list behind it.
+fn list_shortcuts(
+    ui: &egui::Ui,
+    app: &mut App,
+    table: &Table<'_>,
+    view: &str,
+    rows: usize,
+    item_index: &dyn Fn(usize) -> Option<usize>,
+    picked_songs: Vec<PlayableItem>,
+) {
+    if ui.ctx().text_edit_focused() || app.dialog.is_some() {
+        return;
+    }
+    let paste_into = match &table.context {
+        RowContext::Context {
+            editable_playlist: Some((id, _)),
+            ..
+        }
+        | RowContext::View {
+            editable_playlist: Some((id, _)),
+            ..
+        } => Some(id.clone()),
+        _ => None,
+    };
+    let (select_all, copy, pasted) = ui.input_mut(|input| {
+        // The platform's Copy and Paste keys arrive as these events, not
+        // as key presses.
+        let copy = !picked_songs.is_empty() && input.events.contains(&egui::Event::Copy);
+        let pasted = paste_into.as_ref().and_then(|_| {
+            input.events.iter().find_map(|event| match event {
+                egui::Event::Paste(text) => Some(text.clone()),
+                _ => None,
+            })
+        });
+        input.events.retain(|event| match event {
+            egui::Event::Copy => !copy,
+            egui::Event::Paste(_) => pasted.is_none(),
+            _ => true,
+        });
+        (
+            input.consume_key(egui::Modifiers::COMMAND, egui::Key::A),
+            copy,
+            pasted,
+        )
+    });
+    if select_all {
+        let all = (0..rows)
+            .filter(|row| {
+                item_index(*row)
+                    .and_then(|index| table.items.get(index))
+                    .is_some_and(|(item, _, _)| !item.uri().is_empty())
+            })
+            .collect();
+        app.pick_rows(&table.page, view, all);
+    }
+    if copy {
+        app.actions.push(Action::CopySongs(picked_songs));
+    }
+    if let (Some(playlist_id), Some(text)) = (paste_into, pasted) {
+        app.actions.push(Action::PasteSongs { playlist_id, text });
     }
 }
 
@@ -2276,6 +2342,7 @@ mod tests {
         items: Vec<TableItem>,
         filter: String,
         height: f32,
+        editable: bool,
     }
 
     impl KeyboardTable {
@@ -2289,6 +2356,7 @@ mod tests {
                 items: make_test_tracks(),
                 filter: String::new(),
                 height: 600.0,
+                editable: false,
             }
         }
 
@@ -2321,7 +2389,9 @@ mod tests {
                                 pagination: None,
                                 context: RowContext::Context {
                                     uri: "spotify:playlist:test".into(),
-                                    editable_playlist: None,
+                                    editable_playlist: self
+                                        .editable
+                                        .then(|| ("test".to_string(), None)),
                                 },
                                 show_album: true,
                                 show_cover: true,
@@ -2388,6 +2458,124 @@ mod tests {
                 .unwrap()
                 .to_string()
         }
+    }
+
+    /// Select all takes every song the list shows, Copy hands the picked
+    /// songs on in the list's order, and Paste offers an editable playlist
+    /// the clipboard's text. A focused text field keeps all three keys.
+    #[test]
+    fn select_all_copy_and_paste_act_on_the_song_list() {
+        // The modifiers as the platform reports its command key.
+        let command = if cfg!(target_os = "macos") {
+            egui::Modifiers::MAC_CMD | egui::Modifiers::COMMAND
+        } else {
+            egui::Modifiers::CTRL | egui::Modifiers::COMMAND
+        };
+        let select_all = || {
+            vec![egui::Event::Key {
+                key: egui::Key::A,
+                physical_key: None,
+                pressed: true,
+                repeat: false,
+                modifiers: command,
+            }]
+        };
+        let page = Page::Playlist("test".into());
+        let copied = |table: &KeyboardTable| match table.app.actions.as_slice() {
+            [Action::CopySongs(items)] => items
+                .iter()
+                .map(|item| item.uri().to_string())
+                .collect::<Vec<_>>(),
+            other => panic!("expected one copy, got {other:?}"),
+        };
+
+        // #given a filtered list
+        let mut table = KeyboardTable::new();
+        table.editable = true;
+        table.filter = "Queen".into();
+        table.frame(vec![]);
+
+        // #when every row is selected
+        table.frame(select_all());
+
+        // #then only the rows the filter shows are picked
+        assert_eq!(
+            table.app.picked_rows(&page).cloned(),
+            Some([0].into_iter().collect())
+        );
+        table.app.actions.clear();
+        table.frame(vec![egui::Event::Copy]);
+        assert_eq!(copied(&table), ["spotify:track:t_0"]);
+
+        // #when the filter is cleared and every row is selected again
+        table.filter.clear();
+        table.frame(vec![]);
+        assert_eq!(table.app.picked_rows(&page), None);
+        table.frame(select_all());
+        table.app.actions.clear();
+        table.frame(vec![egui::Event::Copy]);
+
+        // #then every song is copied, in the list's order
+        let every: Vec<String> = table
+            .items
+            .iter()
+            .map(|(item, _, _)| item.uri().to_string())
+            .collect();
+        assert_eq!(copied(&table), every);
+
+        // #when links are pasted into the editable playlist
+        table.app.actions.clear();
+        let links = "https://open.spotify.com/track/abc\nspotify:track:def";
+        table.frame(vec![egui::Event::Paste(links.into())]);
+
+        // #then the playlist is offered the pasted text
+        assert!(matches!(
+            table.app.actions.as_slice(),
+            [Action::PasteSongs { playlist_id, text }] if playlist_id == "test" && text == links
+        ));
+
+        // #when a text field has focus
+        table.app.actions.clear();
+        table
+            .ctx
+            .memory_mut(|memory| memory.request_focus(egui::Id::new("keyboard-filter")));
+        table.frame(vec![]);
+        table.frame(vec![egui::Event::Copy]);
+        table.frame(vec![egui::Event::Paste("Queen".into())]);
+
+        // #then the keys edit the text instead of the list
+        assert!(table.app.actions.is_empty());
+        assert_eq!(table.filter, "Queen");
+        table
+            .ctx
+            .memory_mut(|memory| memory.surrender_focus(egui::Id::new("keyboard-filter")));
+        table.frame(vec![]);
+        table.app.clear_picked_rows();
+        table
+            .ctx
+            .memory_mut(|memory| memory.request_focus(egui::Id::new("keyboard-filter")));
+        table.frame(vec![]);
+        table.frame(select_all());
+        assert_eq!(table.app.picked_rows(&page), None);
+
+        // #when a dialog is open over the list
+        table
+            .ctx
+            .memory_mut(|memory| memory.surrender_focus(egui::Id::new("keyboard-filter")));
+        table.frame(vec![]);
+        table.app.dialog = Some(Dialog::Shortcuts);
+        table.frame(select_all());
+
+        // #then the list behind it is left alone
+        assert_eq!(table.app.picked_rows(&page), None);
+        table.app.dialog = None;
+
+        // #when the list is not an editable playlist
+        table.editable = false;
+        table.frame(vec![egui::Event::Paste(links.into())]);
+
+        // #then nothing is pasted into it
+        assert!(table.app.actions.is_empty());
     }
 
     #[test]

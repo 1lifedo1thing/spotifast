@@ -51,6 +51,24 @@ the row highlight without an extra outline.
 Dragging an unselected row copies just that song. Reordering within a
 playlist still moves one song at a time.
 
+## Copying and pasting songs
+
+On `main`, after 0.9.2, press `Ctrl+A` (`Cmd+A` on macOS) in a playlist,
+album or Liked Songs to select every song the list shows. A
+filter narrows the selection to the matching songs. In a long playlist that
+is still loading, it selects the songs loaded so far.
+
+`Ctrl+C` (`Cmd+C`) copies the selected songs' `open.spotify.com` links, one
+per line, ready to paste into another playlist, a message, or Spotify's own
+apps. `Ctrl+V` (`Cmd+V`) in a playlist you can edit adds every song link on
+the clipboard to its end. Links copied from Spotifast add their rows at
+once; links from elsewhere appear as soon as Spotify names the songs. Songs
+already in the playlist ask before being added twice, and links that are
+not songs, such as albums, are skipped.
+
+These keys edit the text instead while a search, filter or other text field
+has focus.
+
 Clear any playlist filter or sort before placing songs between rows, so the
 visible positions match Spotify's order. A duplicate confirmation keeps the
 chosen position when you select **Add anyway**. Dragging near the top or bottom

@@ -972,6 +972,14 @@ pub enum Action {
     SaveRadio(String),
     RefreshQueue,
     CopyLink(String),
+    /// Copy picked songs' links, one per line, and remember the songs so a
+    /// paste of the same links can show their rows at once.
+    CopySongs(Vec<PlayableItem>),
+    /// Append the Spotify song links in pasted text to an editable playlist.
+    PasteSongs {
+        playlist_id: String,
+        text: String,
+    },
     /// Open a web page in the browser.
     OpenUrl(String),
     OpenInSpotify(String),
