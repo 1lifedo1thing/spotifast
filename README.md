@@ -546,6 +546,11 @@ and follow the current palette. Existing theme choices and custom files stay
 intact. The picker lists Follow system, Light and Dark first, then the available Omarchy
 integration and local palettes. The **Open themes folder** button in Settings
 opens the local JSON palette directory.
+The interface follows the operating system's language when Spotifast has a
+translation for it, and English otherwise. **Settings → Appearance → Language**
+picks another one, listed by its own name, and applies it at once; **System**
+follows the computer again. Anything a translation does not cover yet appears
+in English.
 Playback settings apply when you press **Apply and restart playback**.
 The Settings page has its own search: type under the title to narrow the
 rows, clear the field to see everything again.
@@ -626,11 +631,10 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or pull
 request. It covers project scope and required checks.
 
 Translations use standard gettext `.po` files in `assets/i18n/`, with an English
-`.pot` template. The current pilot translates navigation, Library labels,
-player-bar controls, Queue and Lyrics panels, and shared loading/retry labels
-in 12 languages, including
-Portuguese and Chinese variants, in demo mode; the
-production interface remains English. See
+`.pot` template. The interface is marked for translation throughout and ships
+with 13 translations, including Portuguese and Chinese variants.
+Spanish is complete; the others cover the earlier navigation, player and panel
+labels and fall back to English for the rest. See
 [Translating Spotifast](docs/_reference/translating.md) for editing with existing
 translation tools, previewing, and reporting translation problems.
 
