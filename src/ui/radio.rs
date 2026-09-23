@@ -37,6 +37,7 @@ pub fn radio(app: &mut App, ui: &mut egui::Ui, seed: &str) {
         images.clone_from(&page.images);
     }
     let generation = page.generation;
+    let refreshing = page.refreshing;
     let state = match &page.songs {
         Loadable::Loaded(songs) => Ok(Some((
             songs.len(),
@@ -146,7 +147,7 @@ pub fn radio(app: &mut App, ui: &mut egui::Ui, seed: &str) {
     actions_row(
         app,
         ui,
-        radio_actions(seed, &station, &name, Some(Arc::clone(&uris)), true),
+        radio_actions(seed, &station, &name, Some(Arc::clone(&uris)), !refreshing),
         None,
     );
     table(

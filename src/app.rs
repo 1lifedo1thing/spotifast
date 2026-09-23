@@ -3952,6 +3952,10 @@ impl App {
                 self.show_pages.remove(id);
             }
             Page::Radio(seed) => {
+                // A new mix replaces the songs on screen when it arrives.
+                if self.refresh_radio(seed) {
+                    return;
+                }
                 self.radio_pages.remove(seed);
             }
             Page::Queue => self.queue = Loadable::NotLoaded,
@@ -15139,6 +15143,57 @@ mod tests {
         let songs = app.radio_pages[seed].songs.get().expect("the latest mix");
         assert_eq!(songs[0].uri, "spotify:track:new");
         assert!(app.track_cache.contains_key("new"));
+    }
+
+    /// Refresh keeps the mix on screen until the new one arrives, shows the
+    /// new songs once it does, and keeps the old ones if it fails.
+    #[test]
+    fn refreshing_a_radio_keeps_its_songs_until_the_new_mix_arrives() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        crate::theme::install(&ctx);
+        let mut app = headless_app();
+        app.auth = AuthStatus::Connected {
+            username: "test".into(),
+        };
+        let seed = "spotify:artist:art1";
+        app.apply(Action::Open(Page::Radio(seed.into())), &ctx);
+        let generation = app.radio_pages[seed].generation;
+        app.receive_radio(seed, generation, Ok(vec![radio_song("old", "Old")]));
+        let rows = |app: &mut App| {
+            draw_radio(&ctx, app, seed, Vec::new());
+            app.table_rows[&Page::Radio(seed.into())].items[0]
+                .0
+                .uri()
+                .to_string()
+        };
+        assert_eq!(rows(&mut app), "spotify:track:old");
+
+        app.apply(Action::Reload(Page::Radio(seed.into())), &ctx);
+        assert!(app.radio_pages[seed].refreshing);
+        assert_eq!(rows(&mut app), "spotify:track:old", "the old mix stays");
+        let asked = app.radio_pages[seed].generation;
+        app.receive_radio(seed, asked, Ok(vec![radio_song("new", "New")]));
+        assert!(!app.radio_pages[seed].refreshing);
+        assert_eq!(
+            rows(&mut app),
+            "spotify:track:new",
+            "the table shows the new mix"
+        );
+
+        app.apply(Action::Reload(Page::Radio(seed.into())), &ctx);
+        let asked = app.radio_pages[seed].generation;
+        app.receive_radio(
+            seed,
+            asked,
+            Err("Couldn't load this radio. Try again.".into()),
+        );
+        assert_eq!(
+            rows(&mut app),
+            "spotify:track:new",
+            "a failed refresh keeps the songs"
+        );
+        app.backend.shutdown();
     }
 
     /// Save as playlist keeps the mix on screen, in order, under the

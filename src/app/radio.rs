@@ -96,6 +96,28 @@ impl App {
         });
     }
 
+    /// Asks for a new mix while the page keeps showing its songs. False
+    /// when there are no songs to keep, so the page loads afresh.
+    pub(super) fn refresh_radio(&mut self, seed: &str) -> bool {
+        let Some(page) = self
+            .radio_pages
+            .get_mut(seed)
+            .filter(|page| page.songs.get().is_some())
+        else {
+            return false;
+        };
+        if !page.refreshing {
+            self.load_generation = self.load_generation.wrapping_add(1);
+            page.generation = self.load_generation;
+            page.refreshing = true;
+            self.backend.send(Command::Radio {
+                seed: seed.to_string(),
+                generation: page.generation,
+            });
+        }
+        true
+    }
+
     pub(super) fn receive_radio(
         &mut self,
         seed: &str,
@@ -109,6 +131,7 @@ impl App {
         else {
             return;
         };
+        let refreshing = std::mem::take(&mut page.refreshing);
         match result {
             Ok(songs) => {
                 let uris = songs.iter().map(|track| track.uri.clone()).collect();
@@ -120,8 +143,13 @@ impl App {
                     }
                 }
                 page.songs = Loadable::Loaded(songs);
+                // The table's cached rows follow the new songs.
+                self.load_generation = self.load_generation.wrapping_add(1);
+                page.generation = self.load_generation;
                 self.request_contains(uris);
             }
+            // A failed refresh keeps the mix on screen and says why.
+            Err(error) if refreshing => self.toast(error),
             Err(error) => page.songs = Loadable::Failed(error),
         }
     }

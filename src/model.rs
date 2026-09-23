@@ -741,6 +741,8 @@ pub struct RadioPage {
     pub images: Vec<crate::api::models::Image>,
     /// Identifies the request whose answer may fill `songs`.
     pub generation: u64,
+    /// A new mix is on its way; the songs shown stay until it arrives.
+    pub refreshing: bool,
 }
 
 #[derive(Default)]
