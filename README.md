@@ -57,6 +57,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   separators between its name, artists and added date.
   Since 0.8.0, choose name, recent plays, or saved-date order where
   available. Follow Spotify’s playlist order or keep a separate local arrangement.
+  Spotify doesn't let apps change its order, so on `main`, after 0.9.1,
+  dragging a playlist while following it switches to the local arrangement
+  and says so.
   Move Liked Songs among your pins or unpin it and choose its local position;
   the placement survives restarts.
   With local playback enabled, releases that the Web API groups as singles

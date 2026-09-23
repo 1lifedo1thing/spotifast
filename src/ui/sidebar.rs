@@ -79,7 +79,7 @@ fn liked_entry(app: &App) -> Entry {
     }
 }
 
-fn selected_sort(app: &App, shelf: Filter) -> LibrarySort {
+pub(crate) fn selected_sort(app: &App, shelf: Filter) -> LibrarySort {
     if let Some(sort) = app.settings.library_sort.get(&shelf).copied()
         && sort.supports(shelf)
     {

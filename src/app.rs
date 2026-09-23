@@ -8076,6 +8076,17 @@ impl App {
                     .any(|key| key == crate::settings::LIKED_SONGS_KEY);
                 self.settings.pinned_contexts = pinned;
                 if let Some(order) = playlist_order {
+                    // Spotify doesn't let apps change the playlist order it
+                    // keeps, so a drag in that order starts a local one.
+                    if crate::ui::sidebar::selected_sort(
+                        self,
+                        crate::settings::LibraryShelf::Playlists,
+                    ) == crate::settings::LibrarySort::Spotify
+                    {
+                        self.toast(
+                            "Spotify doesn't let apps reorder your playlists, so this order is saved on this computer",
+                        );
+                    }
                     self.settings.sidebar_order = order;
                     self.settings.library_sort.insert(
                         crate::settings::LibraryShelf::Playlists,
@@ -10104,6 +10115,45 @@ mod tests {
     /// Saving sends only what the dialog changed. Spotify refuses an empty
     /// description, so clearing one keeps it and says why instead of
     /// failing a rename saved at the same time.
+    /// Spotify's playlist order can't be changed by apps, so dragging a
+    /// playlist in it switches to the local order and says why, once.
+    #[test]
+    fn dragging_in_spotify_order_switches_to_a_local_order_and_says_why() {
+        use crate::settings::{LibraryShelf, LibrarySort};
+        let mut app = headless_app();
+        let ctx = egui::Context::default();
+        app.settings
+            .library_sort
+            .insert(LibraryShelf::Playlists, LibrarySort::Spotify);
+        let arrange = |app: &mut App| {
+            app.apply(
+                Action::ArrangeLibrary {
+                    pinned: Vec::new(),
+                    playlist_order: Some(vec![
+                        "spotify:playlist:b".into(),
+                        "spotify:playlist:a".into(),
+                    ]),
+                },
+                &ctx,
+            );
+        };
+        let toasts = app.toasts.len();
+        arrange(&mut app);
+        assert_eq!(
+            app.settings.library_sort.get(&LibraryShelf::Playlists),
+            Some(&LibrarySort::Local)
+        );
+        assert_eq!(app.toasts.len(), toasts + 1);
+        assert!(app.toasts.last().unwrap().message.contains("Spotify"));
+
+        arrange(&mut app);
+        assert_eq!(
+            app.toasts.len(),
+            toasts + 1,
+            "already local, nothing to explain"
+        );
+    }
+
     #[test]
     fn saving_playlist_details_sends_only_what_changed() {
         let mut app = headless_app();
