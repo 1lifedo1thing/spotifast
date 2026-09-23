@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-23 17:34+0300\n"
+"POT-Creation-Date: 2026-09-23 20:43+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -27,11 +27,11 @@ msgstr ""
 msgid "Play"
 msgstr ""
 
-#: src/ui/sidebar.rs:290 src/app.rs:2223 src/app.rs:14499
+#: src/ui/sidebar.rs:290 src/app.rs:2277 src/app.rs:15140
 msgid "Playlist"
 msgstr ""
 
-#: src/ui/sidebar.rs:300 src/app.rs:2197 src/app.rs:14504
+#: src/ui/sidebar.rs:300 src/app.rs:2251 src/app.rs:15145
 msgid "Liked Songs"
 msgstr ""
 
@@ -63,7 +63,7 @@ msgstr ""
 msgid "Folder"
 msgstr ""
 
-#: src/ui/sidebar.rs:807 src/i18n.rs:154 src/i18n.rs:157
+#: src/ui/sidebar.rs:807 src/i18n.rs:302 src/i18n.rs:305
 msgid "Home"
 msgstr ""
 
@@ -119,7 +119,7 @@ msgstr ""
 msgid "Search in Your Library"
 msgstr ""
 
-#: src/ui/sidebar.rs:1070 src/app.rs:2258
+#: src/ui/sidebar.rs:1070 src/app.rs:2312
 msgid "Artist"
 msgstr ""
 
@@ -136,7 +136,7 @@ msgid "Pin to top"
 msgstr ""
 
 #. Translators: Keep {count} exactly as written. It becomes the number of liked songs.
-#: src/i18n.rs:66
+#: src/i18n.rs:195
 #, rust-format
 msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
@@ -144,7 +144,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: Keep {count} exactly as written. It becomes a number of songs.
-#: src/i18n.rs:77
+#: src/i18n.rs:206
 #, rust-format
 msgid "{count} song"
 msgid_plural "{count} songs"
@@ -152,7 +152,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: Keep {count} exactly as written. It becomes a number of playlists.
-#: src/i18n.rs:88
+#: src/i18n.rs:217
 #, rust-format
 msgid "{count} playlist"
 msgid_plural "{count} playlists"
@@ -160,19 +160,19 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: Keep {count} exactly as written. It becomes the number of playlists a folder holds.
-#: src/i18n.rs:99
+#: src/i18n.rs:228
 #, rust-format
 msgid "Folder • {count} playlist"
 msgid_plural "Folder • {count} playlists"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/i18n.rs:109
+#: src/i18n.rs:238
 #, rust-format
 msgid "{name}, folder, collapsed"
 msgstr ""
 
-#: src/i18n.rs:111
+#: src/i18n.rs:240
 #, rust-format
 msgid "{name}, folder, expanded"
 msgstr ""
@@ -285,7 +285,7 @@ msgstr ""
 msgid "Next up"
 msgstr ""
 
-#: src/ui/queue.rs:339 src/ui/queue.rs:372 src/ui/widgets.rs:2140
+#: src/ui/queue.rs:339 src/ui/queue.rs:372 src/ui/widgets.rs:2152
 msgid "Retry"
 msgstr ""
 
@@ -343,30 +343,43 @@ msgstr ""
 msgid "Leave full screen (Esc)"
 msgstr ""
 
-#: src/ui/widgets.rs:2125
+#: src/ui/widgets.rs:2137
 msgid "Loading…"
 msgstr ""
 
-#: src/app.rs:2205
+#: src/app.rs:2259
 msgid "Radio"
 msgstr ""
 
-#: src/app.rs:2239
+#: src/app.rs:2293
 msgid "Album"
 msgstr ""
 
-#: src/app.rs:2277
+#: src/app.rs:2331
 msgid "Podcast"
 msgstr ""
 
-#. Translators: Keep {track} unchanged. The song title itself is not translated.
-#: src/app.rs:2295 src/app.rs:14509
+#. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
+#: src/app.rs:4200 src/app.rs:15130
+#, rust-format
+msgid "Queue {date}"
+msgstr ""
+
+#: src/app.rs:15150
 #, rust-format
 msgid "{track} Radio"
 msgstr ""
 
-#. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
-#: src/app.rs:4078 src/app.rs:14489
-#, rust-format
-msgid "Queue {date}"
+#: src/ui/settings.rs:661 src/ui/settings.rs:1563
+msgid "Language"
+msgstr ""
+
+#: src/ui/settings.rs:664
+msgid ""
+"System follows your computer's language. Untranslated text stays in English."
+msgstr ""
+
+#: src/ui/settings.rs:1536
+msgctxt "language"
+msgid "System"
 msgstr ""

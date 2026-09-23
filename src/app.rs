@@ -264,7 +264,8 @@ pub struct App {
     /// Sample data is loaded; Spotify requests are disabled.
     pub offline: bool,
     pub palette: Palette,
-    /// Translation pilot selected by demo mode. Production stays in English.
+    /// The language the interface is drawn in: [`Settings::language`]
+    /// resolved against the operating system's preferred languages.
     pub locale: crate::i18n::Locale,
     /// Whether this window's native backend can keep it above other windows.
     pub window_level_supported: bool,
@@ -663,6 +664,7 @@ impl App {
             .unwrap_or(Page::Home);
 
         let palette = settings.cached_palette().unwrap_or_else(Palette::dark);
+        let locale = settings.language.resolve();
         let mut app = Self {
             custom_themes: theme::custom::Catalog::default(),
             dirs,
@@ -691,7 +693,7 @@ impl App {
             control_devices_stale: true,
             offline: false,
             palette,
-            locale: crate::i18n::Locale::English,
+            locale,
             window_level_supported: true,
             taskbar_hiding_supported: cfg!(windows),
             #[cfg(any(test, feature = "demo"))]
@@ -8558,6 +8560,12 @@ impl App {
                 ctx.set_theme(self.theme_preference());
                 self.apply_theme(ctx);
             }
+            Action::SetLanguage(choice) => {
+                self.settings.language = choice;
+                self.locale = choice.resolve();
+                self.mark_settings_dirty();
+                ctx.request_repaint();
+            }
             Action::SetCustomTheme(filename) => {
                 if let Some(theme) = self.custom_themes.find(&filename) {
                     self.settings.custom_theme_cache = Some(theme.clone());
@@ -14536,6 +14544,36 @@ mod tests {
             restored.save_settings();
             assert_eq!(Settings::load(&restored.dirs.settings_file()), accepted);
         }
+        std::fs::remove_dir_all(app.dirs.config.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn a_chosen_language_applies_at_once_and_survives_a_restart() {
+        use crate::i18n::Locale;
+        use crate::settings::LanguageChoice;
+        let mut app = test_app("language-choice");
+        app.backend.shutdown();
+        let ctx = egui::Context::default();
+        assert_eq!(app.locale, Locale::English);
+        let choice = LanguageChoice::Locale(Locale::PortugueseBrazil);
+        app.apply(Action::SetLanguage(choice), &ctx);
+        assert_eq!(app.locale, Locale::PortugueseBrazil);
+        assert!(app.settings_dirty);
+        app.save_settings();
+        let saved = Settings::load(&app.dirs.settings_file());
+        assert_eq!(saved.language, choice);
+        let mut restarted = App::new(
+            &Waker::default(),
+            app.dirs.clone(),
+            saved,
+            AppOptions {
+                media_controls: false,
+                restore_sign_in: false,
+                tray: false,
+            },
+        );
+        restarted.backend.shutdown();
+        assert_eq!(restarted.locale, Locale::PortugueseBrazil);
         std::fs::remove_dir_all(app.dirs.config.parent().unwrap()).unwrap();
     }
 

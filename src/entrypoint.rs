@@ -59,7 +59,8 @@ struct Cli {
     #[arg(long)]
     demo_show: Option<String>,
 
-    /// Language for the navigation translation pilot. Requires demo mode.
+    /// Interface language, in place of the saved setting and the system's.
+    /// Requires demo mode.
     #[cfg(feature = "demo")]
     #[arg(long, value_enum)]
     demo_language: Option<spotifast::i18n::Locale>,
@@ -561,6 +562,7 @@ pub(crate) fn run() -> eframe::Result<()> {
             app.actions.push(spotifast::model::Action::CheckForUpdates);
         }
         if let Some(locale) = cli.demo_language {
+            app.settings.language = spotifast::settings::LanguageChoice::Locale(locale);
             app.locale = locale;
         }
     }

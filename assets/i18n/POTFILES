@@ -5,3 +5,4 @@ src/ui/queue.rs
 src/ui/lyrics.rs
 src/ui/widgets.rs
 src/app.rs
+src/ui/settings.rs

@@ -775,7 +775,11 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                     &egui::Context::default(),
                 );
             }
-            "german" => app.locale = crate::i18n::Locale::German,
+            "german" => {
+                app.settings.language =
+                    crate::settings::LanguageChoice::Locale(crate::i18n::Locale::German);
+                app.locale = crate::i18n::Locale::German;
+            }
             "update" => {
                 app.update = Some(crate::updates::Release {
                     version: "0.7.1".into(),
@@ -3813,6 +3817,84 @@ mod tests {
             walk(&shape.shape, &mut text);
         }
         text
+    }
+
+    #[test]
+    fn choosing_a_language_redraws_the_interface_at_once_and_is_saved() {
+        use crate::i18n::{Locale, gettext};
+        use crate::settings::LanguageChoice;
+        use egui::accesskit::Role;
+        let (ctx, mut app) = accessible_app("language-picker");
+        app.open(Page::Settings);
+        ctx.data_mut(|data| {
+            data.insert_temp(egui::Id::new("settings-filter"), "Language".to_string())
+        });
+        assert_eq!(app.settings.language, LanguageChoice::System);
+        for _ in 0..3 {
+            view_frame(&ctx, &mut app, vec![], App::frame_ui);
+        }
+        let painted = view_frame(&ctx, &mut app, vec![], App::frame_ui);
+        let picker = sidebar_text(&painted, "System").center();
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(picker, egui::PointerButton::Primary),
+            App::frame_ui,
+        );
+        let painted = view_frame(&ctx, &mut app, vec![], App::frame_ui);
+        let menu_y = |name: &str| {
+            painted
+                .iter()
+                .filter(|(text, rect)| text == name && rect.center().y > picker.y)
+                .map(|(_, rect)| rect.center().y)
+                .next()
+        };
+        // System first, then each language under its own name. The menu
+        // scrolls, so only the entries above its fold are painted.
+        let mut previous = menu_y("System").expect("System heads the menu");
+        let shown = crate::i18n::LOCALES
+            .iter()
+            .map_while(|locale| menu_y(locale.native_name()))
+            .inspect(|&y| {
+                assert!(previous < y, "languages are listed in order");
+                previous = y;
+            })
+            .count();
+        assert!(shown >= 8, "only {shown} languages fit before scrolling");
+        view_frame(
+            &ctx,
+            &mut app,
+            pointer_click(
+                sidebar_text(&painted, "Español").center(),
+                egui::PointerButton::Primary,
+            ),
+            App::frame_ui,
+        );
+        assert_eq!(
+            app.settings.language,
+            LanguageChoice::Locale(Locale::Spanish)
+        );
+        assert_eq!(app.locale, Locale::Spanish);
+        // The English search text no longer matches the Spanish row.
+        crate::ui::settings::clear_search(&ctx);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        accessible_node(&tree, &gettext(Locale::Spanish, "Home"), Role::Button);
+        let id = accessible_node(&tree, &gettext(Locale::Spanish, "Language"), Role::ComboBox);
+        let node = &tree
+            .nodes
+            .iter()
+            .find(|(node_id, _)| *node_id == id)
+            .unwrap()
+            .1;
+        assert_eq!(node.value(), Some("Español"));
+
+        app.apply(Action::SetLanguage(LanguageChoice::System), &ctx);
+        assert_eq!(app.settings.language, LanguageChoice::System);
+        assert_eq!(app.locale, Locale::English, "tests read an English system");
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        accessible_node(&tree, "Home", Role::Button);
+        app.backend.shutdown();
     }
 
     #[test]

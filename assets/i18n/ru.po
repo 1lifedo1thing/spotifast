@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-23 17:34+0300\n"
+"POT-Creation-Date: 2026-09-23 20:43+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Russian\n"
@@ -25,11 +25,11 @@ msgstr "Пауза"
 msgid "Play"
 msgstr "Воспроизвести"
 
-#: src/ui/sidebar.rs:290 src/app.rs:2223 src/app.rs:14499
+#: src/ui/sidebar.rs:290 src/app.rs:2277 src/app.rs:15140
 msgid "Playlist"
 msgstr "Плейлист"
 
-#: src/ui/sidebar.rs:300 src/app.rs:2197 src/app.rs:14504
+#: src/ui/sidebar.rs:300 src/app.rs:2251 src/app.rs:15145
 msgid "Liked Songs"
 msgstr "Любимые треки"
 
@@ -61,7 +61,7 @@ msgstr "Свой порядок Spotify"
 msgid "Folder"
 msgstr "Папка"
 
-#: src/ui/sidebar.rs:807 src/i18n.rs:154 src/i18n.rs:157
+#: src/ui/sidebar.rs:807 src/i18n.rs:302 src/i18n.rs:305
 msgid "Home"
 msgstr "Главная"
 
@@ -117,7 +117,7 @@ msgstr "Подкасты"
 msgid "Search in Your Library"
 msgstr "Искать в медиатеке"
 
-#: src/ui/sidebar.rs:1070 src/app.rs:2258
+#: src/ui/sidebar.rs:1070 src/app.rs:2312
 msgid "Artist"
 msgstr "Исполнитель"
 
@@ -134,7 +134,7 @@ msgid "Pin to top"
 msgstr "Закрепить сверху"
 
 #. Translators: Keep {count} exactly as written. It becomes the number of liked songs.
-#: src/i18n.rs:66
+#: src/i18n.rs:195
 #, rust-format
 msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
@@ -143,7 +143,7 @@ msgstr[1] "Плейлист • {count} трека"
 msgstr[2] "Плейлист • {count} треков"
 
 #. Translators: Keep {count} exactly as written. It becomes a number of songs.
-#: src/i18n.rs:77
+#: src/i18n.rs:206
 #, rust-format
 msgid "{count} song"
 msgid_plural "{count} songs"
@@ -152,7 +152,7 @@ msgstr[1] "{count} трека"
 msgstr[2] "{count} треков"
 
 #. Translators: Keep {count} exactly as written. It becomes a number of playlists.
-#: src/i18n.rs:88
+#: src/i18n.rs:217
 #, rust-format
 msgid "{count} playlist"
 msgid_plural "{count} playlists"
@@ -161,7 +161,7 @@ msgstr[1] "{count} плейлиста"
 msgstr[2] "{count} плейлистов"
 
 #. Translators: Keep {count} exactly as written. It becomes the number of playlists a folder holds.
-#: src/i18n.rs:99
+#: src/i18n.rs:228
 #, rust-format
 msgid "Folder • {count} playlist"
 msgid_plural "Folder • {count} playlists"
@@ -169,12 +169,12 @@ msgstr[0] "Папка • {count} плейлист"
 msgstr[1] "Папка • {count} плейлиста"
 msgstr[2] "Папка • {count} плейлистов"
 
-#: src/i18n.rs:109
+#: src/i18n.rs:238
 #, rust-format
 msgid "{name}, folder, collapsed"
 msgstr "{name}, папка, свернута"
 
-#: src/i18n.rs:111
+#: src/i18n.rs:240
 #, rust-format
 msgid "{name}, folder, expanded"
 msgstr "{name}, папка, развернута"
@@ -287,7 +287,7 @@ msgstr "Добавлено в очередь"
 msgid "Next up"
 msgstr "Далее"
 
-#: src/ui/queue.rs:339 src/ui/queue.rs:372 src/ui/widgets.rs:2140
+#: src/ui/queue.rs:339 src/ui/queue.rs:372 src/ui/widgets.rs:2152
 msgid "Retry"
 msgstr "Повторить"
 
@@ -345,33 +345,46 @@ msgstr "Для этого трека нет синхронизированног
 msgid "Leave full screen (Esc)"
 msgstr "Выйти из полноэкранного режима (Esc)"
 
-#: src/ui/widgets.rs:2125
+#: src/ui/widgets.rs:2137
 msgid "Loading…"
 msgstr "Загрузка…"
 
-#: src/app.rs:2205
+#: src/app.rs:2259
 msgid "Radio"
 msgstr "Радио"
 
-#: src/app.rs:2239
+#: src/app.rs:2293
 msgid "Album"
 msgstr "Альбом"
 
-#: src/app.rs:2277
+#: src/app.rs:2331
 msgid "Podcast"
 msgstr "Подкаст"
 
-#. Translators: Keep {track} unchanged. The song title itself is not translated.
-#: src/app.rs:2295 src/app.rs:14509
+#. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
+#: src/app.rs:4200 src/app.rs:15130
+#, rust-format
+msgid "Queue {date}"
+msgstr "Очередь {date}"
+
+#: src/app.rs:15150
 #, rust-format
 msgid "{track} Radio"
 msgstr "Радио по треку «{track}»"
 
-#. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
-#: src/app.rs:4078 src/app.rs:14489
-#, rust-format
-msgid "Queue {date}"
-msgstr "Очередь {date}"
+#: src/ui/settings.rs:661 src/ui/settings.rs:1563
+msgid "Language"
+msgstr ""
+
+#: src/ui/settings.rs:664
+msgid ""
+"System follows your computer's language. Untranslated text stays in English."
+msgstr ""
+
+#: src/ui/settings.rs:1536
+msgctxt "language"
+msgid "System"
+msgstr ""
 
 #~ msgid "Enable lyrics motion"
 #~ msgstr "Включить анимацию текста"
