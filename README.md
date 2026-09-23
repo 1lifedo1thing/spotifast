@@ -303,7 +303,9 @@ language order set in System Settings, so Chinese titles follow the
 Traditional or Simplified preference set there. Windows includes common
 fonts. On Linux, install `noto-fonts` and `noto-fonts-cjk` (Arch) or
 `fonts-noto` and `fonts-noto-cjk` (Debian or Ubuntu) if titles appear as
-empty boxes.
+empty boxes. On `main`, after 0.9.1, Spotifast also looks in every font
+directory named in fontconfig's configuration, so fonts installed through
+NixOS's `fonts.packages` are found too.
 
 Since 0.8.0, long right-to-left titles in song rows and the player
 bar end with an ellipsis inside their text area, including joined Arabic letters.
