@@ -8108,7 +8108,9 @@ impl App {
                     .filter_map(|item| util::open_spotify_url(item.uri()))
                     .collect();
                 if !links.is_empty() {
-                    ctx.copy_text(links.join("\n"));
+                    // One link a line, in the platform's own line breaks.
+                    let newline = if cfg!(windows) { "\r\n" } else { "\n" };
+                    ctx.copy_text(links.join(newline));
                     self.toast(match links.len() {
                         1 => "Link copied".to_string(),
                         count => format!("{count} links copied"),
@@ -17077,7 +17079,11 @@ mod tests {
                 .platform_output
                 .commands
                 .contains(&egui::OutputCommand::CopyText(
-                    "https://open.spotify.com/track/aaa\nhttps://open.spotify.com/track/bbb".into()
+                    [
+                        "https://open.spotify.com/track/aaa",
+                        "https://open.spotify.com/track/bbb"
+                    ]
+                    .join(if cfg!(windows) { "\r\n" } else { "\n" })
                 ))
         );
 

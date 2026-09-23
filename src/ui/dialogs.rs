@@ -247,7 +247,7 @@ fn duplicate_message(
     let question = if items.len() == 1 {
         "Add it again?"
     } else {
-        "Add all selected songs anyway?"
+        "Add them anyway?"
     };
     format!("{named} {verb} already in “{playlist_name}”. {question}")
 }
@@ -512,7 +512,7 @@ mod tests {
 
         assert_eq!(
             message,
-            "“Honey” is already in “The best music ever”. Add all selected songs anyway?"
+            "“Honey” is already in “The best music ever”. Add them anyway?"
         );
     }
 }
