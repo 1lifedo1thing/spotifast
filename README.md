@@ -51,10 +51,12 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   combines entries with the same device ID.
 - **Library.** Browse playlists, Liked Songs, saved albums, followed artists,
   podcasts, and saved episodes. Filter, pin, and reorder sidebar items.
+  On `main`, after 0.9.1, the Library header switches between a list and a
+  responsive cover grid.
   On `main`, after 0.9.1, with local playback enabled, audiobooks saved in
   Spotify stay out of Podcasts, since they can't be played here.
-  Since 0.8.0, double-click a playlist in Library to start playback;
-  a single click opens it.
+  Since 0.8.0, double-click a playlist row in Library to start playback;
+  a single click opens it. In the grid, a card's corner button plays it.
   Settings offers a compact track list with one line per song and spaced
   separators between its name, artists and added date.
   Since 0.8.0, choose name, recent plays, or saved-date order where

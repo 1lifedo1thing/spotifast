@@ -228,6 +228,7 @@ main fields are:
 | `pinned_contexts` | `[]` | Local Library pin order; Liked Songs uses `spotifast:liked-songs`, a local key never sent to Spotify |
 | `liked_songs_pinned` | `true` | Keep Liked Songs in the pin block; older settings place it first until moved |
 | `sidebar_compact` | `false` | Names only in the library sidebar, no covers |
+| `sidebar_grid` | `false` | Library entries as responsive cover cards instead of rows |
 | `tracklist_compact` | `false` | One-line track rows without covers |
 | `middle_click_autoscroll` | `false` | Linux only: middle-click a list to autoscroll it. Windows always autoscrolls and macOS never does |
 | `winamp_window` | `false` | The window is the Winamp mini player |
@@ -292,10 +293,14 @@ settings.
 and `--demo-show` adds surfaces on top of it: a comma separated list of
 `queue`, `playing-next`, `devices`, `shortcuts`, `premium`, `create`, `duplicate`, `light`,
 `focus`, `winamp`, `playlist`, `eq`, `eq-shade`, `compact`, `update`, `personal-app`,
-`collection-loading`, `shuffle-selected`, and `shuffle-started`. The last two
-capture the selected-mode and playback-started outcomes of a collection Shuffle
-click. `update` shows a sample update badge for checking its layout. `personal-app`
-shows the personal Spotify app introduction.
+`collection-loading`, `shuffle-selected`, `shuffle-started`, `library-list`,
+`library-list-narrow`, `library-list-wide`, `library-grid`, `library-grid-narrow`,
+and `library-grid-wide`. The Library variants show the list or cover grid with
+a normal, narrow, or wide sidebar and collapsed artwork for matching captures.
+`shuffle-selected` and `shuffle-started` capture the selected-mode and
+playback-started outcomes of a collection Shuffle click. `update` shows a sample
+update badge for checking its layout. `personal-app` shows the personal Spotify
+app introduction.
 `collection-loading` keeps known collection metadata and placeholder artwork
 visible while replacing the page content, with unfinished controls disabled.
 
