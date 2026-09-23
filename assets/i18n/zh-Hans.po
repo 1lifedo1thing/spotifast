@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-23 20:46+0200\n"
+"POT-Creation-Date: 2026-09-23 20:39+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -36,7 +36,7 @@ msgstr "歌单"
 #: src/ui/collection.rs:1712 src/ui/home.rs:49 src/ui/keys.rs:249
 #: src/ui/winamp/playlist.rs:653
 msgid "Liked Songs"
-msgstr "喜欢的歌曲"
+msgstr "已点赞的歌曲"
 
 #: src/ui/sidebar.rs:340
 msgid "Library order"
@@ -71,7 +71,7 @@ msgstr "文件夹"
 #: src/ui/sidebar.rs:755 src/ui/search.rs:214
 #, rust-format
 msgid "Playlist • {owner}"
-msgstr ""
+msgstr "歌单 • {owner}"
 
 #: src/ui/sidebar.rs:811 src/i18n.rs:302 src/i18n.rs:305 src/ui/keys.rs:245
 #: src/ui/topbar.rs:214
@@ -143,15 +143,15 @@ msgstr "艺人"
 #: src/ui/sidebar.rs:1111 src/ui/search.rs:239
 #, rust-format
 msgid "Podcast • {publisher}"
-msgstr ""
+msgstr "播客 • {publisher}"
 
 #: src/ui/sidebar.rs:1169
 msgid "Nothing here yet."
-msgstr ""
+msgstr "这里还没有内容。"
 
 #: src/ui/sidebar.rs:1171
 msgid "No matches."
-msgstr ""
+msgstr "没有匹配项。"
 
 #: src/ui/sidebar.rs:1797
 msgid "Sort by recently played"
@@ -216,12 +216,12 @@ msgstr "选择歌曲、专辑或歌单"
 #: src/ui/player_bar.rs:255 src/ui/widgets.rs:541 src/ui/widgets.rs:703
 #: src/ui/widgets.rs:1595
 msgid "Remove from Liked Songs"
-msgstr "从喜欢的歌曲中移除"
+msgstr "从已点赞的歌曲中移除"
 
 #: src/ui/player_bar.rs:261 src/ui/widgets.rs:544 src/ui/widgets.rs:706
 #: src/ui/widgets.rs:1597
 msgid "Save to Liked Songs"
-msgstr "保存到喜欢的歌曲"
+msgstr "保存到已点赞的歌曲"
 
 #: src/ui/player_bar.rs:343 src/ui/player_bar.rs:350 src/ui/collection.rs:259
 msgid "Shuffle"
@@ -380,159 +380,159 @@ msgstr "退出全屏 (Esc)"
 
 #: src/ui/widgets.rs:527 src/ui/widgets.rs:691 src/ui/widgets.rs:895
 msgid "Add to queue"
-msgstr ""
+msgstr "添加到播放队列"
 
 #: src/ui/widgets.rs:560 src/ui/widgets.rs:767
 msgid "Remove from this playlist"
-msgstr ""
+msgstr "从此歌单中移除"
 
 #: src/ui/widgets.rs:578
 msgid "Add to playlist"
-msgstr ""
+msgstr "添加到歌单"
 
 #: src/ui/widgets.rs:617
 msgid "Filter playlists"
-msgstr ""
+msgstr "筛选歌单"
 
 #: src/ui/widgets.rs:625 src/ui/dialogs.rs:350
 msgid "New playlist"
-msgstr ""
+msgstr "新建歌单"
 
 #: src/ui/widgets.rs:645
 msgid "No editable playlists"
-msgstr ""
+msgstr "没有可编辑的歌单"
 
 #: src/ui/widgets.rs:647
 msgid "No matching playlists"
-msgstr ""
+msgstr "没有匹配的歌单"
 
 #: src/ui/widgets.rs:716
 msgid "Save episode"
-msgstr ""
+msgstr "保存单集"
 
 #: src/ui/widgets.rs:741
 msgid "Move up"
-msgstr ""
+msgstr "上移"
 
 #: src/ui/widgets.rs:754
 msgid "Move down"
-msgstr ""
+msgstr "下移"
 
 #: src/ui/widgets.rs:782
 msgid "Go to song radio"
-msgstr ""
+msgstr "前往歌曲电台"
 
 #: src/ui/widgets.rs:796 src/ui/widgets.rs:803
 msgid "Go to artist"
-msgstr ""
+msgstr "前往艺人"
 
 #: src/ui/widgets.rs:821
 msgid "Go to album"
-msgstr ""
+msgstr "前往专辑"
 
 #: src/ui/widgets.rs:834
 msgid "Go to podcast"
-msgstr ""
+msgstr "前往播客"
 
 #: src/ui/widgets.rs:846 src/ui/widgets.rs:958
 msgid "Copy link"
-msgstr ""
+msgstr "复制链接"
 
 #: src/ui/widgets.rs:854 src/ui/widgets.rs:966
 msgid "Open in Spotify"
-msgstr ""
+msgstr "在 Spotify 中打开"
 
 #: src/ui/widgets.rs:885
 msgid "Shuffle play"
-msgstr ""
+msgstr "随机播放"
 
 #: src/ui/widgets.rs:905
 msgctxt "artist"
 msgid "Unfollow"
-msgstr ""
+msgstr "取消关注"
 
 #: src/ui/widgets.rs:906 src/ui/artist.rs:345
 msgctxt "artist"
 msgid "Follow"
-msgstr ""
+msgstr "关注"
 
 #: src/ui/widgets.rs:907 src/ui/collection.rs:1590 src/ui/collection.rs:1612
 #: src/ui/show.rs:177
 msgid "Remove from Your Library"
-msgstr ""
+msgstr "从音乐库中移除"
 
 #: src/ui/widgets.rs:908 src/ui/collection.rs:1589
 msgid "Add to Your Library"
-msgstr ""
+msgstr "添加到音乐库"
 
 #: src/ui/widgets.rs:918 src/ui/dialogs.rs:449
 msgid "Edit details"
-msgstr ""
+msgstr "编辑详情"
 
 #: src/ui/widgets.rs:932 src/ui/dialogs.rs:94
 msgid "Delete"
-msgstr ""
+msgstr "删除"
 
 #: src/ui/widgets.rs:943
 msgid "Go to playlist radio"
-msgstr ""
+msgstr "前往歌单电台"
 
 #: src/ui/widgets.rs:944
 msgid "Go to album radio"
-msgstr ""
+msgstr "前往专辑电台"
 
 #: src/ui/widgets.rs:945
 msgid "Go to artist radio"
-msgstr ""
+msgstr "前往艺人电台"
 
 #. Translators: {title} is a song or episode name, {subtitle} its artists or podcast.
 #: src/ui/widgets.rs:1145
 #, rust-format
 msgid "Play {title}, {subtitle}"
-msgstr ""
+msgstr "播放 {title}，{subtitle}"
 
 #: src/ui/widgets.rs:1642 src/ui/artist.rs:359 src/ui/collection.rs:305
 #: src/ui/show.rs:195 src/ui/show.rs:397
 msgid "More"
-msgstr ""
+msgstr "更多"
 
 #. Translators: {column} is a column heading of a song list, such as Title.
 #: src/ui/widgets.rs:1887
 #, rust-format
 msgid "Sort by {column}"
-msgstr ""
+msgstr "按{column}排序"
 
 #: src/ui/widgets.rs:1937
 msgid "Sort by playlist order"
-msgstr ""
+msgstr "按歌单顺序排序"
 
 #: src/ui/widgets.rs:1972
 msgid "Original order, reversed"
-msgstr ""
+msgstr "原始顺序，倒序"
 
 #: src/ui/widgets.rs:1985
 msgctxt "column heading"
 msgid "TITLE"
-msgstr ""
+msgstr "标题"
 
 #: src/ui/widgets.rs:2008
 msgctxt "column heading"
 msgid "ALBUM"
-msgstr ""
+msgstr "专辑"
 
 #: src/ui/widgets.rs:2017
 msgctxt "column heading"
 msgid "ADDED BY"
-msgstr ""
+msgstr "添加者"
 
 #: src/ui/widgets.rs:2026
 msgctxt "column heading"
 msgid "DATE ADDED"
-msgstr ""
+msgstr "添加日期"
 
 #: src/ui/widgets.rs:2047 src/ui/widgets.rs:2077
 msgid "Sort by duration"
-msgstr ""
+msgstr "按时长排序"
 
 #: src/ui/widgets.rs:2303 src/app.rs:9674 src/ui/collection.rs:721
 msgid "Loading…"
@@ -540,61 +540,61 @@ msgstr "加载中…"
 
 #: src/ui/widgets.rs:2549
 msgid "Cut"
-msgstr ""
+msgstr "剪切"
 
 #: src/ui/widgets.rs:2554
 msgid "Copy"
-msgstr ""
+msgstr "复制"
 
 #: src/ui/widgets.rs:2559
 msgid "Paste"
-msgstr ""
+msgstr "粘贴"
 
 #: src/ui/widgets.rs:2576
 msgid "Select all"
-msgstr ""
+msgstr "全选"
 
 #: src/ui/widgets.rs:2677
 msgid "Clear"
-msgstr ""
+msgstr "清除"
 
 #: src/ui/widgets.rs:2827
 msgid "Host"
-msgstr ""
+msgstr "主机"
 
 #: src/ui/widgets.rs:2844
 msgid "Port"
-msgstr ""
+msgstr "端口"
 
 #: src/ui/widgets.rs:2862
 msgid "Username"
-msgstr ""
+msgstr "用户名"
 
 #: src/ui/widgets.rs:2873
 msgid "Password"
-msgstr ""
+msgstr "密码"
 
 #: src/ui/widgets.rs:2891
 msgid ""
 "Proxy login applies to Web requests. Local playback uses this proxy only "
 "without a login."
-msgstr ""
+msgstr "代理登录信息仅用于 Web 请求。本地播放仅在不需要登录时使用此代理。"
 
 #: src/ui/widgets.rs:2895
 msgid ""
 "Spotify hostnames are resolved by the proxy. Local playback connects "
 "directly."
-msgstr ""
+msgstr "Spotify 主机名由代理解析。本地播放直接连接。"
 
 #: src/app.rs:627
 msgid "Restoring proxy settings"
-msgstr ""
+msgstr "正在恢复代理设置"
 
 #. Translators: {name} is the name of a speaker or other playback device.
 #: src/app.rs:1769
 #, rust-format
 msgid "{name} is ready"
-msgstr ""
+msgstr "{name} 已就绪"
 
 #. Translators: {error} is a sentence saying why the proxy password could not be stored.
 #: src/app.rs:1795
@@ -602,33 +602,33 @@ msgstr ""
 msgid ""
 "{error} The original settings file is kept intact; changed preferences are "
 "not saved yet."
-msgstr ""
+msgstr "{error}原始设置文件保持不变，更改的偏好设置尚未保存。"
 
 #. Translators: {version} is a version number such as 1.4.0.
 #: src/app.rs:1904
 #, rust-format
 msgid "Spotifast {version} is available"
-msgstr ""
+msgstr "Spotifast {version} 已推出"
 
 #: src/app.rs:1921
 msgid "Spotifast is up to date"
-msgstr ""
+msgstr "Spotifast 已是最新版本"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:1929
 #, rust-format
 msgid "Couldn't check for updates: {error}"
-msgstr ""
+msgstr "无法检查更新：{error}"
 
 #. Translators: {error} is an error message from the playback engine.
 #: src/app.rs:2002
 #, rust-format
 msgid "Local playback: {error}"
-msgstr ""
+msgstr "本地播放：{error}"
 
 #: src/app.rs:2175
 msgid "Spotify audio disconnected. Reconnecting local playback"
-msgstr ""
+msgstr "Spotify 音频已断开，正在重新连接本地播放"
 
 #: src/app.rs:2282 src/app/radio.rs:169 src/ui/radio.rs:35 src/ui/radio.rs:77
 msgid "Radio"
@@ -647,33 +647,33 @@ msgstr "播客"
 #, rust-format
 msgid "Added {count} MilkDrop preset"
 msgid_plural "Added {count} MilkDrop presets"
-msgstr[0] ""
+msgstr[0] "已添加 {count} 个 MilkDrop 预设"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:2784
 #, rust-format
 msgid "Couldn't fetch presets: {error}"
-msgstr ""
+msgstr "无法获取预设：{error}"
 
 #. Translators: {folder} is a folder path and {error} is an error message.
 #: src/app.rs:2895
 #, rust-format
 msgid "Couldn't open {folder}: {error}"
-msgstr ""
+msgstr "无法打开 {folder}：{error}"
 
 #. Translators: {skin} is the name of a Winamp skin.
 #: src/app.rs:2911
 #, rust-format
 msgid "Added {skin} skin"
-msgstr ""
+msgstr "已添加皮肤“{skin}”"
 
 #: src/app.rs:3008
 msgid "Proxy applied. Restarting local playback."
-msgstr ""
+msgstr "代理已应用，正在重启本地播放。"
 
 #: src/app.rs:3010
 msgid "Proxy settings applied"
-msgstr ""
+msgstr "代理设置已应用"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:3017
@@ -681,11 +681,11 @@ msgstr ""
 msgid ""
 "Proxy could not be applied: {error}. Previous connection settings are still "
 "in use."
-msgstr ""
+msgstr "无法应用代理：{error}。仍在使用之前的连接设置。"
 
 #: src/app.rs:4222
 msgid "Queue cleared"
-msgstr ""
+msgstr "播放队列已清空"
 
 #. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
 #: src/app.rs:4252 src/app.rs:15353
@@ -695,303 +695,303 @@ msgstr "队列 {date}"
 
 #: src/app.rs:4679
 msgid "Your Spotify sign-in expired. Please sign in again."
-msgstr ""
+msgstr "你的 Spotify 登录已过期，请重新登录。"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:4686
 #, rust-format
 msgid "Couldn't load your profile: {error}"
-msgstr ""
+msgstr "无法加载你的个人资料：{error}"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:4725
 #, rust-format
 msgid "Couldn't list devices: {error}"
-msgstr ""
+msgstr "无法列出设备：{error}"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5047
 #, rust-format
 msgid "Couldn't load more playlists: {error}"
-msgstr ""
+msgstr "无法加载更多歌单：{error}"
 
 #: src/app.rs:5093
 msgid ""
 "Spotify hasn't confirmed your playlist changes yet. Try refreshing again."
-msgstr ""
+msgstr "Spotify 尚未确认你的歌单更改，请再次刷新。"
 
 #. Translators: {name} is a playlist name.
 #: src/app.rs:5251
 #, rust-format
 msgid "Created {name}"
-msgstr ""
+msgstr "已创建 {name}"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5273
 #, rust-format
 msgid "Couldn't create the playlist: {error}"
-msgstr ""
+msgstr "无法创建歌单：{error}"
 
 #: src/app.rs:5327
 msgid "Playlist cover updated"
-msgstr ""
+msgstr "歌单封面已更新"
 
 #: src/app.rs:5336
 msgid "Playlist updated"
-msgstr ""
+msgstr "歌单已更新"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5346 src/app.rs:5461
 #, rust-format
 msgid "Couldn't update the playlist: {error}"
-msgstr ""
+msgstr "无法更新歌单：{error}"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5420
 #, rust-format
 msgid "Playlist change failed: {error}"
-msgstr ""
+msgstr "歌单更改失败：{error}"
 
 #: src/app.rs:5446
 msgid "Added to Your Library"
-msgstr ""
+msgstr "已添加到音乐库"
 
 #: src/app.rs:5448 src/app.rs:5640
 msgid "Removed from Your Library"
-msgstr ""
+msgstr "已从音乐库中移除"
 
 #: src/app.rs:5633
 msgid "Added to Liked Songs"
-msgstr ""
+msgstr "已添加到已点赞的歌曲"
 
 #: src/app.rs:5635
 msgid "Removed from Liked Songs"
-msgstr ""
+msgstr "已从已点赞的歌曲中移除"
 
 #: src/app.rs:5637
 msgid "Following artist"
-msgstr ""
+msgstr "已关注艺人"
 
 #: src/app.rs:5638
 msgid "Unfollowed artist"
-msgstr ""
+msgstr "已取消关注艺人"
 
 #: src/app.rs:5639
 msgid "Saved to Your Library"
-msgstr ""
+msgstr "已保存到音乐库"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5654
 #, rust-format
 msgid "Couldn't update your library: {error}"
-msgstr ""
+msgstr "无法更新你的音乐库：{error}"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5906
 #, rust-format
 msgid "Cannot open this song: {error}"
-msgstr ""
+msgstr "无法打开这首歌曲：{error}"
 
 #: src/app.rs:5920
 msgid "This episode's podcast is not on Spotify"
-msgstr ""
+msgstr "这个单集所属的播客不在 Spotify 上"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5925
 #, rust-format
 msgid "Cannot open this episode: {error}"
-msgstr ""
+msgstr "无法打开这个单集：{error}"
 
 #: src/app.rs:5962
 msgid "Choose a device from the devices menu first."
-msgstr ""
+msgstr "请先在设备菜单中选择一个设备。"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5985
 #, rust-format
 msgid "Couldn't switch device: {error}"
-msgstr ""
+msgstr "无法切换设备：{error}"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:5996 src/app.rs:6020
 #, rust-format
 msgid "Couldn't add to queue: {error}"
-msgstr ""
+msgstr "无法添加到播放队列：{error}"
 
 #: src/app.rs:6096
 msgid "This song's album is not on Spotify"
-msgstr ""
+msgstr "这首歌曲所属的专辑不在 Spotify 上"
 
 #: src/app.rs:6113
 msgid "Spotifast cannot open this kind of Spotify link"
-msgstr ""
+msgstr "Spotifast 无法打开这类 Spotify 链接"
 
 #: src/app.rs:6276
 msgid "Nothing is playing. Pick something first"
-msgstr ""
+msgstr "当前没有播放内容，请先选择要播放的内容"
 
 #: src/app.rs:6636
 msgid "Choose a device, or enable playback on this computer"
-msgstr ""
+msgstr "请选择一个设备，或在这台电脑上启用播放"
 
 #: src/app.rs:6890 src/app.rs:6895
 msgid "Pick something to play"
-msgstr ""
+msgstr "选择要播放的内容"
 
 #. Translators: {name} is an album name.
 #: src/app.rs:7160
 #, rust-format
 msgid "Loading {name} to queue…"
-msgstr ""
+msgstr "正在将 {name} 添加到播放队列…"
 
 #: src/app.rs:7179
 msgid "Playback device changed. Add the album to queue again"
-msgstr ""
+msgstr "播放设备已更改，请重新将专辑添加到播放队列"
 
 #: src/app.rs:7188 src/app.rs:7206 src/app.rs:7215
 msgid "Couldn't load the album's songs in order. Try again"
-msgstr ""
+msgstr "无法按顺序加载专辑中的歌曲，请重试"
 
 #. Translators: {name} is an album name and {error} is an error message.
 #: src/app.rs:7195
 #, rust-format
 msgid "Couldn't add {name} to queue: {error}"
-msgstr ""
+msgstr "无法将 {name} 添加到播放队列：{error}"
 
 #: src/app.rs:7253
 msgid "This album has no playable songs to queue"
-msgstr ""
+msgstr "这张专辑没有可添加到播放队列的歌曲"
 
 #. Translators: {count} is a number of songs and {name} is an album name.
 #: src/app.rs:7262
 #, rust-format
 msgid "{count} song from {name} added to queue"
 msgid_plural "{count} songs from {name} added to queue"
-msgstr[0] ""
+msgstr[0] "已将 {name} 中的 {count} 首歌曲添加到播放队列"
 
 #. Translators: {name} is a song, episode, album, or playlist name.
 #: src/app.rs:7287
 #, rust-format
 msgid "{name} added to queue"
-msgstr ""
+msgstr "已将 {name} 添加到播放队列"
 
 #: src/app.rs:7667
 msgid "The clipboard has no Spotify song links"
-msgstr ""
+msgstr "剪贴板中没有 Spotify 歌曲链接"
 
 #. Translators: {count} is the number of pasted links that failed.
 #: src/app.rs:7748
 #, rust-format
 msgid "{count} pasted link could not be added"
 msgid_plural "{count} pasted links could not be added"
-msgstr[0] ""
+msgstr[0] "有 {count} 个粘贴的链接无法添加"
 
 #. Translators: {count} is a number of songs.
 #: src/app.rs:8041
 #, rust-format
 msgid "{count} song added to queue"
 msgid_plural "{count} songs added to queue"
-msgstr[0] ""
+msgstr[0] "已将 {count} 首歌曲添加到播放队列"
 
 #: src/app.rs:8272
 msgid "Spotify doesn't let apps remove a playlist description, so it was kept"
-msgstr ""
+msgstr "Spotify 不允许应用删除歌单简介，因此简介已保留"
 
 #: src/app.rs:8316 src/app.rs:8329
 msgid "Link copied"
-msgstr ""
+msgstr "链接已复制"
 
 #. Translators: {count} is a number of song links, always more than one.
 #: src/app.rs:8333
 #, rust-format
 msgid "{count} link copied"
 msgid_plural "{count} links copied"
-msgstr[0] ""
+msgstr[0] "已复制 {count} 个链接"
 
 #: src/app.rs:8583
 msgid ""
 "Spotify doesn't let apps reorder your playlists, so this order is saved on "
 "this computer"
-msgstr ""
+msgstr "Spotify 不允许应用调整歌单顺序，因此此顺序保存在这台电脑上"
 
 #: src/app.rs:8643
 msgid "Restarting local playback"
-msgstr ""
+msgstr "正在重启本地播放"
 
 #: src/app.rs:8672
 msgid "Local playback needs Spotify Premium"
-msgstr ""
+msgstr "本地播放需要 Spotify Premium"
 
 #: src/app.rs:8684
 msgid "Opening your browser to set up local playback"
-msgstr ""
+msgstr "正在打开浏览器以设置本地播放"
 
 #: src/app.rs:8701
 msgid "Play history cleared"
-msgstr ""
+msgstr "播放记录已清除"
 
 #. Translators: {size} is a size in megabytes, such as 12.5.
 #: src/app.rs:8712
 #, rust-format
 msgid "Cleared {size} MB of artwork"
-msgstr ""
+msgstr "已清除 {size} MB 封面图片"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:8718
 #, rust-format
 msgid "Couldn't clear artwork: {error}"
-msgstr ""
+msgstr "无法清除封面图片：{error}"
 
 #: src/app.rs:8874
 msgid "Downloading MilkDrop preset packs"
-msgstr ""
+msgstr "正在下载 MilkDrop 预设包"
 
 #. Translators: {name} is the name of a visualizer preset pack.
 #: src/app.rs:8908
 #, rust-format
 msgid "Downloading {name} presets"
-msgstr ""
+msgstr "正在下载 {name} 预设"
 
 #: src/app.rs:9786
 msgid "Couldn't start playback"
-msgstr ""
+msgstr "无法开始播放"
 
 #: src/app.rs:9787
 msgid "Couldn't pause"
-msgstr ""
+msgstr "无法暂停"
 
 #: src/app.rs:9788
 msgid "Couldn't skip"
-msgstr ""
+msgstr "无法跳过"
 
 #: src/app.rs:9789
 msgid "Couldn't go back"
-msgstr ""
+msgstr "无法返回上一首"
 
 #: src/app.rs:9790
 msgid "Couldn't seek"
-msgstr ""
+msgstr "无法调整播放进度"
 
 #: src/app.rs:9791
 msgid "Couldn't change the volume"
-msgstr ""
+msgstr "无法调整音量"
 
 #: src/app.rs:9792
 msgid "Couldn't change shuffle"
-msgstr ""
+msgstr "无法切换随机播放"
 
 #: src/app.rs:9793
 msgid "Couldn't change repeat"
-msgstr ""
+msgstr "无法切换循环模式"
 
 #: src/app.rs:9834
 msgid ""
 "Spotify doesn't make this playlist's songs available to third-party apps."
-msgstr ""
+msgstr "Spotify 不向第三方应用提供此歌单中的歌曲。"
 
 #: src/app.rs:9964
 msgid "Spotify sign-in expired. Sign in again, then retry the cover upload."
-msgstr ""
+msgstr "Spotify 登录已过期。请重新登录，然后重试上传封面。"
 
 #: src/app.rs:9969
 msgid ""
@@ -999,16 +999,18 @@ msgid ""
 "again to grant image upload permission. If using a personal app, reconnect "
 "it in Settings too."
 msgstr ""
+"Spotify 拒绝了此封面。请确认你是歌单的所有者，然后重新登录以授予上传图片的权"
+"限。如果使用个人应用，也请在设置中重新连接它。"
 
 #: src/app.rs:9973
 msgid "Spotify rejected the image size. Choose a smaller image."
-msgstr ""
+msgstr "Spotify 拒绝了此图片尺寸，请选择更小的图片。"
 
 #. Translators: {error} is an error message.
 #: src/app.rs:9976
 #, rust-format
 msgid "Couldn't upload the cover: {error}. Try again."
-msgstr ""
+msgstr "无法上传封面：{error}。请重试。"
 
 #. Translators: Keep {track} unchanged. It is the name of the song,
 #. playlist, album, or artist the radio is based on, not translated.
@@ -1020,470 +1022,478 @@ msgstr "{track} 电台"
 #: src/ui/settings.rs:118 src/ui/keys.rs:281 src/ui/topbar.rs:406
 #: src/ui/topbar.rs:436
 msgid "Settings"
-msgstr ""
+msgstr "设置"
 
 #: src/ui/settings.rs:132
 msgid "Search settings"
-msgstr ""
+msgstr "搜索设置"
 
 #: src/ui/settings.rs:148
 msgid "Open folder"
-msgstr ""
+msgstr "打开文件夹"
 
 #: src/ui/settings.rs:160
 msgid "Account"
-msgstr ""
+msgstr "账户"
 
 #: src/ui/settings.rs:161 src/ui/topbar.rs:424
 msgid "Sign out"
-msgstr ""
+msgstr "退出登录"
 
 #: src/ui/settings.rs:164
 msgid "Personal Spotify app"
-msgstr ""
+msgstr "个人 Spotify 应用"
 
 #: src/ui/settings.rs:167
 msgid ""
 "Use a personal Development Mode app for a separate API quota. The shared app "
 "stays active."
-msgstr ""
+msgstr "使用个人开发模式应用可获得独立的 API 配额。共享应用仍保持可用。"
 
 #: src/ui/settings.rs:171
 msgid "Create an app"
-msgstr ""
+msgstr "创建应用"
 
 #: src/ui/settings.rs:174
 msgid "Create one for free in Spotify's developer dashboard."
-msgstr ""
+msgstr "在 Spotify 开发者控制台中免费创建。"
 
 #: src/ui/settings.rs:179
 msgid "Personal app ready"
-msgstr ""
+msgstr "个人应用已就绪"
 
 #: src/ui/settings.rs:182
 msgid "Supported requests use your app. Other requests use the shared app."
-msgstr ""
+msgstr "支持的请求使用你的应用，其他请求使用共享应用。"
 
 #: src/ui/settings.rs:187
 msgid "Authorize your personal app"
-msgstr ""
+msgstr "授权你的个人应用"
 
 #: src/ui/settings.rs:190
 msgid "Spotify opens in your browser to verify the account."
-msgstr ""
+msgstr "Spotify 会在浏览器中打开以验证账户。"
 
 #: src/ui/settings.rs:195
 msgid "Remove personal app"
-msgstr ""
+msgstr "移除个人应用"
 
 #: src/ui/settings.rs:196
 msgid "Shared access remains signed in."
-msgstr ""
+msgstr "共享访问将保持登录状态。"
 
 #: src/ui/settings.rs:226
 msgid "Spotify Free, local playback needs Premium"
-msgstr ""
+msgstr "Spotify Free，本地播放需要 Premium"
 
 #. Translators: {username} is the Spotify account's user name.
 #: src/ui/settings.rs:240
 #, rust-format
 msgid "Connected as {username}"
-msgstr ""
+msgstr "已连接为 {username}"
 
 #: src/ui/settings.rs:268
 msgid "Client ID"
-msgstr ""
+msgstr "客户端 ID"
 
 #: src/ui/settings.rs:291
 msgid "Setup guide"
-msgstr ""
+msgstr "设置指南"
 
 #: src/ui/settings.rs:301 src/ui/settings.rs:317 src/ui/dialogs.rs:96
 msgid "Remove"
-msgstr ""
+msgstr "移除"
 
 #: src/ui/settings.rs:309
 msgid "Authorize"
-msgstr ""
+msgstr "授权"
 
 #: src/ui/settings.rs:328
 msgctxt "playback status"
 msgid "Ready"
-msgstr ""
+msgstr "就绪"
 
 #: src/ui/settings.rs:329
 msgid "This computer is a Spotify Connect device."
-msgstr ""
+msgstr "这台电脑是一个 Spotify Connect 设备。"
 
 #: src/ui/settings.rs:333
 msgctxt "playback status"
 msgid "Setting up"
-msgstr ""
+msgstr "正在设置"
 
 #: src/ui/settings.rs:334
 msgid "Finish authorizing in your browser."
-msgstr ""
+msgstr "请在浏览器中完成授权。"
 
 #: src/ui/settings.rs:338
 msgctxt "playback status"
 msgid "Connecting"
-msgstr ""
+msgstr "正在连接"
 
 #: src/ui/settings.rs:339 src/ui/login.rs:97
 msgid "Connecting to Spotify…"
-msgstr ""
+msgstr "正在连接 Spotify…"
 
 #: src/ui/settings.rs:343
 msgctxt "playback status"
 msgid "Unavailable"
-msgstr ""
+msgstr "不可用"
 
 #: src/ui/settings.rs:348
 msgctxt "playback status"
 msgid "Not set up"
-msgstr ""
+msgstr "未设置"
 
 #: src/ui/settings.rs:351
 msgid "Requires Spotify Premium and a one-time browser sign-in."
-msgstr ""
+msgstr "需要 Spotify Premium，并在浏览器中登录一次。"
 
 #: src/ui/settings.rs:353
 msgid "Enable playback here"
-msgstr ""
+msgstr "在此启用播放"
 
 #: src/ui/settings.rs:356
 msgid "Playback on this computer"
-msgstr ""
+msgstr "在这台电脑上播放"
 
 #: src/ui/settings.rs:357
 msgid "Normalize volume"
-msgstr ""
+msgstr "音量均衡"
 
 #: src/ui/settings.rs:358
 msgid "Autoplay"
-msgstr ""
+msgstr "自动播放"
 
 #: src/ui/settings.rs:359
 msgid "Gapless playback"
-msgstr ""
+msgstr "无缝播放"
 
 #: src/ui/settings.rs:360
 msgid "Keep music playing when the window closes"
-msgstr ""
+msgstr "关闭窗口后继续播放音乐"
 
 #: src/ui/settings.rs:361
 msgid "Automatic update checks"
-msgstr ""
+msgstr "自动检查更新"
 
 #: src/ui/settings.rs:362
 msgid "Audio cache"
-msgstr ""
+msgstr "音频缓存"
 
 #: src/ui/settings.rs:363
 msgid "Apply and restart playback"
-msgstr ""
+msgstr "应用并重启播放"
 
 #: src/ui/settings.rs:364
 msgid "Restart local playback to apply these settings."
-msgstr ""
+msgstr "重启本地播放以应用这些设置。"
 
 #: src/ui/settings.rs:365
 msgid "Download updates automatically"
-msgstr ""
+msgstr "自动下载更新"
 
 #. Translators: {status} is a playback state such as Ready or Not set up.
 #: src/ui/settings.rs:369
 #, rust-format
 msgid "Status: {status}"
-msgstr ""
+msgstr "状态：{status}"
 
 #: src/ui/settings.rs:373
 msgid "Device name"
-msgstr ""
+msgstr "设备名称"
 
 #: src/ui/settings.rs:374
 msgid "How this computer appears in Spotify Connect."
-msgstr ""
+msgstr "这台电脑在 Spotify Connect 中显示的名称。"
 
 #: src/ui/settings.rs:377
 msgid "Audio quality"
-msgstr ""
+msgstr "音质"
 
 #: src/ui/settings.rs:378
 msgid "Higher bitrates use more data and cache space."
-msgstr ""
+msgstr "比特率越高，占用的流量和缓存空间越多。"
 
 #: src/ui/settings.rs:382
 msgid "Keep loud and quiet tracks at a similar level."
-msgstr ""
+msgstr "让响亮和安静的歌曲保持相近的音量。"
 
 #: src/ui/settings.rs:386
 msgid "Keep playing similar songs when your music ends."
-msgstr ""
+msgstr "你的音乐播放完后，继续播放相似的歌曲。"
 
 #: src/ui/settings.rs:390
 msgid "Play tracks without silence between them."
-msgstr ""
+msgstr "歌曲之间不插入静音。"
 
 #: src/ui/settings.rs:397
 msgid ""
 "Spotifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
-msgstr ""
+msgstr "Spotifast 会隐藏到系统托盘。可通过托盘菜单或 Ctrl+Q 退出。"
 
 #: src/ui/settings.rs:401
 msgid ""
 "Spotifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
-msgstr ""
+msgstr "Spotifast 会隐藏到系统托盘。可通过托盘菜单或 Cmd+Q 退出。"
 
 #: src/ui/settings.rs:408
 msgid "Checks GitHub once a day. No personal data is sent."
-msgstr ""
+msgstr "每天检查一次 GitHub，不会发送任何个人数据。"
 
 #: src/ui/settings.rs:411
 msgid "Audio output"
-msgstr ""
+msgstr "音频输出"
 
 #: src/ui/settings.rs:414
 msgid "PulseAudio also covers PipeWire. Rodio talks to ALSA directly."
-msgstr ""
+msgstr "PulseAudio 也支持 PipeWire。Rodio 直接与 ALSA 通信。"
 
 #: src/ui/settings.rs:419
 msgid "Output buffer"
-msgstr ""
+msgstr "输出缓冲"
 
 #: src/ui/settings.rs:422
 msgid ""
 "More buffering can prevent clicks on busy computers. Less buffering makes "
 "controls respond sooner."
-msgstr ""
+msgstr "增加缓冲可以避免繁忙的电脑出现爆音，减少缓冲可以让控制响应更快。"
 
 #: src/ui/settings.rs:428
 msgid "Save downloaded audio for later playback."
-msgstr ""
+msgstr "保存已下载的音频，以便之后播放。"
 
 #: src/ui/settings.rs:431
 msgid "Playback settings applied"
-msgstr ""
+msgstr "播放设置已应用"
 
 #: src/ui/settings.rs:436
 msgid "Downloads in the background. You choose when to restart."
-msgstr ""
+msgstr "在后台下载，由你决定何时重启。"
 
 #: src/ui/settings.rs:453
 msgid "Reconnect"
-msgstr ""
+msgstr "重新连接"
 
 #: src/ui/settings.rs:486
 msgid "Very high · 320 kbps"
-msgstr ""
+msgstr "极高 · 320 kbps"
 
 #: src/ui/settings.rs:487
 msgid "High · 160 kbps"
-msgstr ""
+msgstr "高 · 160 kbps"
 
 #: src/ui/settings.rs:488
 msgid "Normal · 96 kbps"
-msgstr ""
+msgstr "普通 · 96 kbps"
 
 #: src/ui/settings.rs:655
 msgid "Playback settings applied."
-msgstr ""
+msgstr "播放设置已应用。"
 
 #: src/ui/settings.rs:662
 msgid "Appearance"
-msgstr ""
+msgstr "外观"
 
 #: src/ui/settings.rs:663
 msgid "Theme"
-msgstr ""
+msgstr "主题"
 
 #: src/ui/settings.rs:664
 msgid "Colour from album art"
-msgstr ""
+msgstr "使用专辑封面颜色"
 
 #: src/ui/settings.rs:665
 msgid "Compact library sidebar"
-msgstr ""
+msgstr "紧凑的音乐库侧边栏"
 
 #: src/ui/settings.rs:666
 msgid "Compact track list"
-msgstr ""
+msgstr "紧凑的歌曲列表"
 
 #: src/ui/settings.rs:667
 msgid "Middle-click autoscroll"
-msgstr ""
+msgstr "中键自动滚动"
 
 #: src/ui/settings.rs:668
 msgid "Custom title bar"
-msgstr ""
+msgstr "自定义标题栏"
 
 #: src/ui/settings.rs:677
 msgid "Follow system uses your Omarchy colours."
-msgstr ""
+msgstr "“跟随系统”会使用你的 Omarchy 配色。"
 
 #: src/ui/settings.rs:681
 msgid "Follow system uses your desktop's light or dark appearance."
-msgstr ""
+msgstr "“跟随系统”会使用桌面的浅色或深色外观。"
 
 #: src/ui/settings.rs:686 src/ui/settings.rs:1697
 msgid "Language"
-msgstr ""
+msgstr "语言"
 
 #: src/ui/settings.rs:689
 msgid ""
 "System follows your computer's language. Untranslated text stays in English."
-msgstr ""
+msgstr "“系统”会跟随电脑的语言。未翻译的文字将以英语显示。"
 
 #: src/ui/settings.rs:696
 msgid "Use the current cover's colour on pages and the player bar."
-msgstr ""
+msgstr "在页面和播放栏中使用当前封面的颜色。"
 
 #: src/ui/settings.rs:701
 msgid "Show names without covers in the sidebar."
-msgstr ""
+msgstr "在侧边栏中只显示名称，不显示封面。"
 
 #: src/ui/settings.rs:705
 msgid "Show each track on one line without a cover."
-msgstr ""
+msgstr "每首歌曲显示为一行，不显示封面。"
 
 #: src/ui/settings.rs:708
 msgid "Interface zoom"
-msgstr ""
+msgstr "界面缩放"
 
 #: src/ui/settings.rs:712
 msgid "Ctrl+Plus and Ctrl+Minus work anywhere; Ctrl+0 resets."
-msgstr ""
+msgstr "Ctrl+加号和 Ctrl+减号随处可用，Ctrl+0 可重置。"
 
 #: src/ui/settings.rs:716
 msgid "Cmd+Plus and Cmd+Minus work anywhere; Cmd+0 resets."
-msgstr ""
+msgstr "Cmd+加号和 Cmd+减号随处可用，Cmd+0 可重置。"
 
 #: src/ui/settings.rs:725
 msgid ""
 "Middle-click a list, then move the pointer to scroll it. Off by default, "
 "because a middle click usually pastes on Linux."
 msgstr ""
+"在列表上点击鼠标中键，然后移动指针即可滚动。默认关闭，因为在 Linux 上中键点击"
+"通常用于粘贴。"
 
 #: src/ui/settings.rs:733
 msgid ""
 "Draw Spotifast's own title bar and window buttons instead of the standard "
 "Windows ones."
-msgstr ""
+msgstr "使用 Spotifast 自己的标题栏和窗口按钮，而不是 Windows 标准样式。"
 
 #: src/ui/settings.rs:801
 msgid "Open themes folder"
-msgstr ""
+msgstr "打开主题文件夹"
 
 #: src/ui/settings.rs:945
 msgid "Proxy"
-msgstr ""
+msgstr "代理"
 
 #: src/ui/settings.rs:947
 msgid "Mode, host, port, username and password"
-msgstr ""
+msgstr "模式、主机、端口、用户名和密码"
 
 #: src/ui/settings.rs:950
 msgid "Off, System, HTTP or SOCKS5 proxy for network requests."
-msgstr ""
+msgstr "网络请求的代理：关闭、系统、HTTP 或 SOCKS5。"
 
 #: src/ui/settings.rs:960
 msgctxt "proxy"
 msgid "Mode"
-msgstr ""
+msgstr "模式"
 
 #: src/ui/settings.rs:963
 msgid ""
 "Off ignores environment variables. System uses them, and the OS proxy on "
 "macOS and Windows."
 msgstr ""
+"“关闭”会忽略环境变量。“系统”会使用环境变量，在 macOS 和 Windows 上还会使用操"
+"作系统代理。"
 
 #: src/ui/settings.rs:1015 src/ui/login.rs:249
 msgid "Apply settings"
-msgstr ""
+msgstr "应用设置"
 
 #: src/ui/settings.rs:1027
 msgid "Not using a proxy."
-msgstr ""
+msgstr "未使用代理。"
 
 #: src/ui/settings.rs:1028
 msgid "Using the system proxy."
-msgstr ""
+msgstr "正在使用系统代理。"
 
 #: src/ui/settings.rs:1039
 msgid "Winamp skins"
-msgstr ""
+msgstr "Winamp 皮肤"
 
 #: src/ui/settings.rs:1040 src/ui/winamp/mod.rs:709 src/ui/winamp/mod.rs:855
 msgid "Always on top"
-msgstr ""
+msgstr "窗口置顶"
 
 #: src/ui/settings.rs:1041
 msgid "Show Winamp in taskbar"
-msgstr ""
+msgstr "在任务栏中显示 Winamp"
 
 #: src/ui/settings.rs:1044
 msgid "Mini player"
-msgstr ""
+msgstr "迷你播放器"
 
 #: src/ui/settings.rs:1048
 msgid ""
 "Use classic Winamp .wsz skins. Press Ctrl+M or click the skin logo to "
 "return. Drop a skin on either window to add it."
 msgstr ""
+"使用经典的 Winamp .wsz 皮肤。按 Ctrl+M 或点击皮肤标志即可返回。将皮肤拖放到任"
+"一窗口即可添加。"
 
 #: src/ui/settings.rs:1052
 msgid ""
 "Use classic Winamp .wsz skins. Press Cmd+Shift+M or click the skin logo to "
 "return. Drop a skin on either window to add it."
 msgstr ""
+"使用经典的 Winamp .wsz 皮肤。按 Cmd+Shift+M 或点击皮肤标志即可返回。将皮肤拖"
+"放到任一窗口即可添加。"
 
 #: src/ui/settings.rs:1058
 msgid "Skin"
-msgstr ""
+msgstr "皮肤"
 
 #. Translators: {folder} is the path of the skins folder.
 #: src/ui/settings.rs:1062
 #, rust-format
 msgid "Installed skins are in {folder}. Find more at the Winamp Skin Museum."
-msgstr ""
+msgstr "已安装的皮肤位于 {folder}。可在 Winamp Skin Museum 中找到更多皮肤。"
 
 #: src/ui/settings.rs:1067 src/ui/winamp/mod.rs:696
 msgid "Size"
-msgstr ""
+msgstr "大小"
 
 #: src/ui/settings.rs:1068
 msgid "Whole-number scaling keeps skin pixels sharp."
-msgstr ""
+msgstr "按整数倍缩放可使皮肤像素保持清晰。"
 
 #: src/ui/settings.rs:1073
 msgid "Keep the Winamp window above everything else."
-msgstr ""
+msgstr "让 Winamp 窗口始终位于其他窗口之上。"
 
 #: src/ui/settings.rs:1079 src/ui/winamp/mod.rs:719
 msgid "Show in taskbar"
-msgstr ""
+msgstr "在任务栏中显示"
 
 #: src/ui/settings.rs:1082
 msgid ""
 "Keep a taskbar button for the mini player. The tray icon stays available "
 "when hidden."
-msgstr ""
+msgstr "在任务栏中保留迷你播放器的按钮。隐藏后，托盘图标仍然可用。"
 
 #: src/ui/settings.rs:1087
 msgid "Installed skins"
-msgstr ""
+msgstr "已安装的皮肤"
 
 #: src/ui/settings.rs:1100
 msgid "Switch to it"
-msgstr ""
+msgstr "切换到此皮肤"
 
 #: src/ui/settings.rs:1113
 msgid "Skin Museum"
-msgstr ""
+msgstr "Skin Museum"
 
 #: src/ui/settings.rs:1207
 msgid "MilkDrop window"
-msgstr ""
+msgstr "MilkDrop 窗口"
 
 #: src/ui/settings.rs:1215
 msgid ""
@@ -1491,6 +1501,8 @@ msgid ""
 "with Ctrl+Shift+K, or from the mini player's V menu. Press ? or F1 for its "
 "shortcuts."
 msgstr ""
+"用于本地播放的 projectM 可视化效果。可在此处、顶部栏、按 Ctrl+Shift+K 或通过"
+"迷你播放器的 V 菜单打开。按 ? 或 F1 查看快捷键。"
 
 #: src/ui/settings.rs:1219
 msgid ""
@@ -1498,10 +1510,12 @@ msgid ""
 "with Cmd+Shift+K, or from the mini player's V menu. Press ? or F1 for its "
 "shortcuts."
 msgstr ""
+"用于本地播放的 projectM 可视化效果。可在此处、顶部栏、按 Cmd+Shift+K 或通过迷"
+"你播放器的 V 菜单打开。按 ? 或 F1 查看快捷键。"
 
 #: src/ui/settings.rs:1225 src/ui/settings.rs:1440
 msgid "Presets"
-msgstr ""
+msgstr "预设"
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
 #: src/ui/settings.rs:1230
@@ -1510,6 +1524,8 @@ msgid ""
 "None yet in {folder}. Add .milk files here. Spotifast downloads presets when "
 "MilkDrop first opens with an empty folder."
 msgstr ""
+"{folder} 中还没有预设。请将 .milk 文件添加到此处。首次打开 MilkDrop 时如果文"
+"件夹为空，Spotifast 会下载预设。"
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
 #: src/ui/settings.rs:1236
@@ -1518,6 +1534,8 @@ msgid ""
 "One preset in {folder}. Add .milk files here. Spotifast downloads presets "
 "when MilkDrop first opens with an empty folder."
 msgstr ""
+"{folder} 中有 1 个预设。请将 .milk 文件添加到此处。首次打开 MilkDrop 时如果文"
+"件夹为空，Spotifast 会下载预设。"
 
 #. Translators: {count} is the number of presets, {folder} the path of the MilkDrop presets folder.
 #: src/ui/settings.rs:1242
@@ -1529,22 +1547,24 @@ msgid_plural ""
 "{count} presets in {folder}. Add .milk files here. Spotifast downloads "
 "presets when MilkDrop first opens with an empty folder."
 msgstr[0] ""
+"{folder} 中有 {count} 个预设。请将 .milk 文件添加到此处。首次打开 MilkDrop 时"
+"如果文件夹为空，Spotifast 会下载预设。"
 
 #: src/ui/settings.rs:1251
 msgid "Time per preset"
-msgstr ""
+msgstr "每个预设的时长"
 
 #: src/ui/settings.rs:1254
 msgid "How long each preset plays before the next fades in."
-msgstr ""
+msgstr "每个预设播放多长时间后淡入下一个。"
 
 #: src/ui/settings.rs:1258
 msgid "Frame rate"
-msgstr ""
+msgstr "帧率"
 
 #: src/ui/settings.rs:1262
 msgid "Lower rates use fewer resources. Uncapped draws as fast as possible."
-msgstr ""
+msgstr "帧率越低占用资源越少。“不限制”会尽可能快地绘制。"
 
 #. Translators: {hz} is the screen's refresh rate in hertz.
 #: src/ui/settings.rs:1267
@@ -1553,345 +1573,348 @@ msgid ""
 "Your screen refreshes at {hz} Hz. Higher rates do not add visible frames. "
 "Uncapped draws as fast as possible."
 msgstr ""
+"你的屏幕刷新率为 {hz} Hz，更高的帧率不会增加可见帧数。“不限制”会尽可能快地绘"
+"制。"
 
 #: src/ui/settings.rs:1274
 msgid "Resolution"
-msgstr ""
+msgstr "分辨率"
 
 #: src/ui/settings.rs:1277
 msgid "Half and Quarter use fewer resources and scale the image back up."
-msgstr ""
+msgstr "“一半”和“四分之一”占用资源更少，并会将图像放大显示。"
 
 #. Translators: search keywords for the MilkDrop preset download buttons.
 #: src/ui/settings.rs:1284
 msgid "Get presets"
-msgstr ""
+msgstr "获取预设"
 
 #: src/ui/settings.rs:1322
 msgid "Fetching..."
-msgstr ""
+msgstr "正在获取..."
 
 #. Translators: {pack} is the name of a MilkDrop preset pack.
 #: src/ui/settings.rs:1325
 #, rust-format
 msgid "Get {pack}"
-msgstr ""
+msgstr "获取 {pack}"
 
 #: src/ui/settings.rs:1412
 msgctxt "resolution"
 msgid "Full"
-msgstr ""
+msgstr "完整"
 
 #: src/ui/settings.rs:1413
 msgctxt "resolution"
 msgid "Half"
-msgstr ""
+msgstr "一半"
 
 #: src/ui/settings.rs:1414
 msgctxt "resolution"
 msgid "Quarter"
-msgstr ""
+msgstr "四分之一"
 
 #: src/ui/settings.rs:1428
 msgid "Equalizer"
-msgstr ""
+msgstr "均衡器"
 
 #: src/ui/settings.rs:1434
 msgid ""
 "A ten-band equalizer for playback on this computer. It does not affect other "
 "devices."
-msgstr ""
+msgstr "用于这台电脑上播放的十段均衡器，不影响其他设备。"
 
 #. Translators: a search keyword for the equalizer's preamplifier slider.
 #: src/ui/settings.rs:1442
 msgid "Preamp"
-msgstr ""
+msgstr "前置放大"
 
 #. Translators: a search keyword for the equalizer's frequency band sliders.
 #: src/ui/settings.rs:1444
 msgid "Bands"
-msgstr ""
+msgstr "频段"
 
 #. Translators: short label under the equalizer's preamplifier slider.
 #: src/ui/settings.rs:1494
 msgctxt "equalizer"
 msgid "Pre"
-msgstr ""
+msgstr "前置"
 
 #: src/ui/settings.rs:1511
 msgid "Storage"
-msgstr ""
+msgstr "存储"
 
 #: src/ui/settings.rs:1514
 msgid "Artwork cache"
-msgstr ""
+msgstr "封面图片缓存"
 
 #. Translators: {folder} is the path of a cache folder.
 #: src/ui/settings.rs:1516 src/ui/settings.rs:1522
 #, rust-format
 msgid "Stored in {folder}"
-msgstr ""
+msgstr "存储于 {folder}"
 
 #: src/ui/settings.rs:1528
 msgid "Play history"
-msgstr ""
+msgstr "播放记录"
 
 #. Translators: {file} is the path of the play history file.
 #: src/ui/settings.rs:1532
 #, rust-format
 msgid "Tracks played here are stored in {file}. This file is never uploaded."
-msgstr ""
+msgstr "在此播放的歌曲会保存在 {file} 中。此文件永远不会上传。"
 
 #: src/ui/settings.rs:1537
 msgid "Sign-in"
-msgstr ""
+msgstr "登录"
 
 #: src/ui/settings.rs:1540
 msgid "Sign-ins are saved in the system credential store when available."
-msgstr ""
+msgstr "登录信息会在可用时保存在系统凭据存储中。"
 
 #: src/ui/settings.rs:1552
 msgid "Clear artwork"
-msgstr ""
+msgstr "清除封面图片"
 
 #: src/ui/settings.rs:1566
 msgid "Clear history"
-msgstr ""
+msgstr "清除记录"
 
 #: src/ui/settings.rs:1578 src/ui/show.rs:42
 msgid "About"
-msgstr ""
+msgstr "关于"
 
 #: src/ui/settings.rs:1581
 msgid "Built with Rust, egui, and librespot. Not affiliated with Spotify."
-msgstr ""
+msgstr "使用 Rust、egui 和 librespot 构建。与 Spotify 无关。"
 
 #: src/ui/settings.rs:1583
 msgid "Check for updates"
-msgstr ""
+msgstr "检查更新"
 
 #: src/ui/settings.rs:1584
 msgid "Checking…"
-msgstr ""
+msgstr "正在检查…"
 
 #: src/ui/settings.rs:1585 src/ui/dialogs.rs:153 src/ui/keys.rs:291
 #: src/ui/topbar.rs:414
 msgid "Keyboard shortcuts"
-msgstr ""
+msgstr "键盘快捷键"
 
 #: src/ui/settings.rs:1586
 msgid "Source code"
-msgstr ""
+msgstr "源代码"
 
 #. Translators: {query} is the text typed into the settings search field.
 #: src/ui/settings.rs:1653
 #, rust-format
 msgid "No settings for “{query}”"
-msgstr ""
+msgstr "没有与“{query}”相关的设置"
 
 #: src/ui/settings.rs:1654
 msgid "Try fewer words, or check the spelling."
-msgstr ""
+msgstr "请减少字词，或检查拼写。"
 
 #: src/ui/settings.rs:1670
 msgctxt "language"
 msgid "System"
-msgstr ""
+msgstr "系统"
 
 #: src/api/models.rs:256
 msgid "Single"
-msgstr ""
+msgstr "单曲"
 
 #: src/api/models.rs:257
 msgid "Compilation"
-msgstr ""
+msgstr "合辑"
 
 #: src/api/models.rs:258 src/model.rs:718
 msgid "Appears On"
-msgstr ""
+msgstr "参与作品"
 
 #: src/milkdrop.rs:52
 msgid "Uncapped"
-msgstr ""
+msgstr "不限制"
 
 #. Translators: A frame rate that matches the display. Keep {rate}.
 #: src/milkdrop.rs:56
 #, rust-format
 msgid "{rate} fps, your screen"
-msgstr ""
+msgstr "{rate} fps，与屏幕一致"
 
 #: src/model.rs:618 src/model.rs:715
 msgctxt "filter"
 msgid "All"
-msgstr ""
+msgstr "全部"
 
 #: src/model.rs:619 src/ui/search.rs:425
 msgid "Songs"
-msgstr ""
+msgstr "歌曲"
 
 #: src/model.rs:624 src/ui/library.rs:32 src/ui/search.rs:272
 msgid "Episodes"
-msgstr ""
+msgstr "单集"
 
 #: src/model.rs:717
 msgid "Singles & EPs"
-msgstr ""
+msgstr "单曲和 EP"
 
 #: src/settings.rs:138
 msgctxt "theme"
 msgid "Dark"
-msgstr ""
+msgstr "深色"
 
 #: src/settings.rs:139
 msgctxt "theme"
 msgid "Light"
-msgstr ""
+msgstr "浅色"
 
 #: src/settings.rs:140
 msgid "Follow system"
-msgstr ""
+msgstr "跟随系统"
 
 #: src/settings.rs:166
 msgctxt "proxy"
 msgid "Off"
-msgstr ""
+msgstr "关闭"
 
 #: src/settings.rs:167
 msgctxt "proxy"
 msgid "System"
-msgstr ""
+msgstr "系统"
 
 #: src/theme/custom.rs:42
 msgid "The themes folder could not be read. See the log for details."
-msgstr ""
+msgstr "无法读取主题文件夹，详情请查看日志。"
 
 #: src/theme/custom.rs:46
 msgid ""
 "The themes folder has more than 512 entries. Keep fewer files there to list "
 "the custom palettes."
-msgstr ""
+msgstr "主题文件夹中的项目超过 512 个。请减少其中的文件以列出自定义配色。"
 
 #: src/theme/custom.rs:50
 msgid ""
 "Only 128 custom palettes can be listed. Keep fewer JSON files in the themes "
 "folder to see the rest."
 msgstr ""
+"最多只能列出 128 个自定义配色。请减少主题文件夹中的 JSON 文件以查看其余配色。"
 
 #: src/theme/custom.rs:54
 msgid ""
 "Custom themes could not be loaded. Run spotifast reload-themes to try again."
-msgstr ""
+msgstr "无法加载自定义主题。请运行 spotifast reload-themes 重试。"
 
 #: src/theme/custom.rs:387
 msgid "Loading local themes…"
-msgstr ""
+msgstr "正在加载本地主题…"
 
 #: src/theme/custom.rs:392
 msgid ""
 "The selected theme is unavailable. Keeping the last usable appearance. See "
 "the log for details."
-msgstr ""
+msgstr "所选主题不可用，将保留上次可用的外观。详情请查看日志。"
 
 #: src/ui/artist.rs:32
 msgid "Popular"
-msgstr ""
+msgstr "热门"
 
 #: src/ui/artist.rs:74
 msgid "Show less"
-msgstr ""
+msgstr "收起"
 
 #: src/ui/artist.rs:76
 msgid "See more"
-msgstr ""
+msgstr "查看更多"
 
 #: src/ui/artist.rs:87
 msgid "No popular songs to show."
-msgstr ""
+msgstr "没有可显示的热门歌曲。"
 
 #: src/ui/artist.rs:100
 msgid "Discography"
-msgstr ""
+msgstr "音乐作品"
 
 #: src/ui/artist.rs:172
 msgid "Nothing in this category."
-msgstr ""
+msgstr "此类别中没有内容。"
 
 #: src/ui/artist.rs:198
 msgid "Fans also like"
-msgstr ""
+msgstr "粉丝也喜欢"
 
 #. Translators: {count} is the number of people who follow an artist.
 #: src/ui/artist.rs:268
 #, rust-format
 msgid "{count} follower"
 msgid_plural "{count} followers"
-msgstr[0] ""
+msgstr[0] "{count} 位关注者"
 
 #: src/ui/artist.rs:320 src/ui/collection.rs:199 src/ui/show.rs:154
 #: src/ui/show.rs:306
 msgid "Starting…"
-msgstr ""
+msgstr "正在启动…"
 
 #: src/ui/artist.rs:343
 msgctxt "artist"
 msgid "Following"
-msgstr ""
+msgstr "已关注"
 
 #: src/ui/collection.rs:218
 msgid "No playable songs in this view"
-msgstr ""
+msgstr "此视图中没有可播放的歌曲"
 
 #: src/ui/collection.rs:257
 msgid "Shuffle off"
-msgstr ""
+msgstr "关闭随机播放"
 
 #: src/ui/collection.rs:292 src/ui/collection.rs:318
 msgid "Save as playlist"
-msgstr ""
+msgstr "保存为歌单"
 
 #: src/ui/collection.rs:340
 msgid "Refreshing…"
-msgstr ""
+msgstr "正在刷新…"
 
 #: src/ui/collection.rs:342 src/ui/devices.rs:206
 msgid "Refresh"
-msgstr ""
+msgstr "刷新"
 
 #: src/ui/collection.rs:361
 msgid "Filter"
-msgstr ""
+msgstr "筛选"
 
 #: src/ui/collection.rs:715 src/ui/collection.rs:741
 msgid "Unavailable"
-msgstr ""
+msgstr "不可用"
 
 #: src/ui/collection.rs:857
 msgid "Nothing here yet"
-msgstr ""
+msgstr "这里还没有内容"
 
 #: src/ui/collection.rs:858
 msgid "Added songs appear here."
-msgstr ""
+msgstr "添加的歌曲会显示在这里。"
 
 #: src/ui/collection.rs:1125 src/ui/home.rs:653
 msgid "Your top songs"
-msgstr ""
+msgstr "你的热门歌曲"
 
 #: src/ui/collection.rs:1134
 msgid "Your most-played tracks from the last four weeks."
-msgstr ""
+msgstr "过去四周你播放最多的歌曲。"
 
 #: src/ui/collection.rs:1538
 msgid "Collaborative Playlist"
-msgstr ""
+msgstr "协作歌单"
 
 #: src/ui/collection.rs:1540
 msgid "Public Playlist"
-msgstr ""
+msgstr "公开歌单"
 
 #: src/ui/collection.rs:1611
 msgid "Save to Your Library"
-msgstr ""
+msgstr "保存到音乐库"
 
 #. Translators: {count} is a number of songs and {duration} their total
 #. length, such as "2 hr 13 min".
@@ -1899,68 +1922,68 @@ msgstr ""
 #, rust-format
 msgid "{count} song, {duration}"
 msgid_plural "{count} songs, {duration}"
-msgstr[0] ""
+msgstr[0] "{count} 首歌曲，{duration}"
 
 #. Translators: {name} is the name of someone who added songs to the playlist.
 #: src/ui/collection.rs:1833
 #, rust-format
 msgid "with {name}"
-msgstr ""
+msgstr "与 {name} 合作"
 
 #. Translators: {first} and {second} are names of people who added songs.
 #: src/ui/collection.rs:1837
 #, rust-format
 msgid "with {first} and {second}"
-msgstr ""
+msgstr "与 {first} 和 {second} 合作"
 
 #. Translators: {count} is how many other people added songs to the playlist.
 #: src/ui/collection.rs:1844
 #, rust-format
 msgid "and {count} other"
 msgid_plural "and {count} others"
-msgstr[0] ""
+msgstr[0] "及其他 {count} 人"
 
 #. Translators: {name} is the name this computer uses in Spotify Connect.
 #: src/ui/devices.rs:72 src/ui/devices.rs:289
 #, rust-format
 msgid "{name} (this computer)"
-msgstr ""
+msgstr "{name}（这台电脑）"
 
 #: src/ui/devices.rs:80
 msgid "Setting up…"
-msgstr ""
+msgstr "正在设置…"
 
 #: src/ui/devices.rs:82
 msgid "Set up playback here"
-msgstr ""
+msgstr "在此设置播放"
 
 #: src/ui/devices.rs:142
 msgid "Connecting…"
-msgstr ""
+msgstr "正在连接…"
 
 #: src/ui/devices.rs:144
 msgid "On your network, click to connect"
-msgstr ""
+msgstr "在你的网络中，点击即可连接"
 
 #: src/ui/devices.rs:278
 msgid "No devices found. Open Spotify on another device, then refresh."
-msgstr ""
+msgstr "未找到设备。请在其他设备上打开 Spotify，然后刷新。"
 
 #: src/ui/devices.rs:324
 msgid "Listening on this device"
-msgstr ""
+msgstr "正在此设备上收听"
 
 #: src/ui/devices.rs:326
 msgid "Restricted"
-msgstr ""
+msgstr "受限"
 
 #: src/ui/devices.rs:328
 msgid "Play here"
-msgstr ""
+msgstr "在此播放"
 
 #: src/ui/dialogs.rs:38
 msgid "Spend less time waiting for Spotify"
-msgstr ""
+msgstr "减少等待 Spotify 的时间"
 
 #: src/ui/dialogs.rs:41
 msgid ""
@@ -1968,6 +1991,8 @@ msgid ""
 "listeners. When it gets busy, loading music and using playback controls can "
 "take longer."
 msgstr ""
+"Spotifast 的默认连接与其他听众共享 Spotify 的请求限额。繁忙时，加载音乐和使用"
+"播放控制可能需要更长时间。"
 
 #: src/ui/dialogs.rs:42
 msgid ""
@@ -1975,101 +2000,105 @@ msgid ""
 "here to give supported requests your own allowance. Some pages still use the "
 "shared connection."
 msgstr ""
+"你的 Premium 账户可以免费创建个人 Spotify 应用。在此连接后，支持的请求将使用"
+"你自己的配额。部分页面仍会使用共享连接。"
 
 #: src/ui/dialogs.rs:43
 msgid ""
 "Setup takes a few minutes. You can also find it later in Settings under "
 "Personal Spotify app."
-msgstr ""
+msgstr "设置只需几分钟。之后也可以在“设置”的“个人 Spotify 应用”中找到。"
 
 #: src/ui/dialogs.rs:50
 msgid "Set up personal app"
-msgstr ""
+msgstr "设置个人应用"
 
 #: src/ui/dialogs.rs:53
 msgid "Keep shared app"
-msgstr ""
+msgstr "继续使用共享应用"
 
 #: src/ui/dialogs.rs:64
 msgid "Delete playlist?"
-msgstr ""
+msgstr "要删除歌单吗？"
 
 #: src/ui/dialogs.rs:66
 msgid "Remove from Your Library?"
-msgstr ""
+msgstr "要从音乐库中移除吗？"
 
 #. Translators: {name} is a playlist name.
 #: src/ui/dialogs.rs:74
 #, rust-format
 msgid "Delete “{name}”? You can recover it from Spotify for 90 days."
-msgstr ""
+msgstr "要删除“{name}”吗？你可以在 90 天内通过 Spotify 恢复它。"
 
 #. Translators: {name} is a playlist name.
 #: src/ui/dialogs.rs:77
 #, rust-format
 msgid "“{name}” will no longer appear in Your Library."
-msgstr ""
+msgstr "“{name}”将不再显示在你的音乐库中。"
 
 #: src/ui/dialogs.rs:104 src/ui/dialogs.rs:147 src/ui/dialogs.rs:416
 #: src/ui/dialogs.rs:595 src/ui/login.rs:89
 msgid "Cancel"
-msgstr ""
+msgstr "取消"
 
 #: src/ui/dialogs.rs:120
 msgid "Songs already in this playlist"
-msgstr ""
+msgstr "歌单中已有这些歌曲"
 
 #: src/ui/dialogs.rs:122
 msgid "Song already in this playlist"
-msgstr ""
+msgstr "歌单中已有这首歌曲"
 
 #: src/ui/dialogs.rs:139
 msgid "Add anyway"
-msgstr ""
+msgstr "仍然添加"
 
 #: src/ui/dialogs.rs:196
 msgid "Done"
-msgstr ""
+msgstr "完成"
 
 #: src/ui/dialogs.rs:204
 msgid "This account cannot play music here"
-msgstr ""
+msgstr "此账户无法在此播放音乐"
 
 #: src/ui/dialogs.rs:213
 msgid ""
 "Playback needs Spotify Premium. Free accounts can browse and search, but "
 "cannot play music through Spotifast."
 msgstr ""
+"播放需要 Spotify Premium。免费账户可以浏览和搜索，但无法通过 Spotifast 播放音"
+"乐。"
 
 #: src/ui/dialogs.rs:222
 msgid "OK"
-msgstr ""
+msgstr "确定"
 
 #: src/ui/dialogs.rs:254
 #, rust-format
 msgid "This song is already in “{playlist}”. Add it again?"
-msgstr ""
+msgstr "这首歌曲已在“{playlist}”中。要再次添加吗？"
 
 #: src/ui/dialogs.rs:261
 #, rust-format
 msgid "This song is already in “{playlist}”. Add them anyway?"
-msgstr ""
+msgstr "这首歌曲已在“{playlist}”中。仍要添加吗？"
 
 #. Translators: {name} is a song name and {playlist} a playlist name.
 #: src/ui/dialogs.rs:266
 #, rust-format
 msgid "“{name}” is already in “{playlist}”. Add it again?"
-msgstr ""
+msgstr "“{name}”已在“{playlist}”中。要再次添加吗？"
 
 #: src/ui/dialogs.rs:274
 #, rust-format
 msgid "“{name}” is already in “{playlist}”. Add them anyway?"
-msgstr ""
+msgstr "“{name}”已在“{playlist}”中。仍要添加吗？"
 
 #: src/ui/dialogs.rs:283
 #, rust-format
 msgid "“{first}” and “{second}” are already in “{playlist}”. Add them anyway?"
-msgstr ""
+msgstr "“{first}”和“{second}”已在“{playlist}”中。仍要添加吗？"
 
 #. Translators: {first} and {second} are song names, {count} is how many more songs are already in the playlist, and {playlist} is a playlist name.
 #: src/ui/dialogs.rs:292
@@ -2081,852 +2110,855 @@ msgid_plural ""
 "“{first}”, “{second}”, and {count} more are already in “{playlist}”. Add "
 "them anyway?"
 msgstr[0] ""
+"“{first}”、“{second}”及另外 {count} 首歌曲已在“{playlist}”中。仍要添加吗？"
 
 #: src/ui/dialogs.rs:367
 msgid "My playlist"
-msgstr ""
+msgstr "我的歌单"
 
 #: src/ui/dialogs.rs:372 src/ui/dialogs.rs:375 src/ui/dialogs.rs:560
 #: src/ui/dialogs.rs:569
 msgid "Public playlist"
-msgstr ""
+msgstr "公开歌单"
 
 #. Translators: {count} is the number of songs.
 #: src/ui/dialogs.rs:388
 #, rust-format
 msgid "{count} song will be added."
 msgid_plural "{count} songs will be added."
-msgstr[0] ""
+msgstr[0] "将添加 {count} 首歌曲。"
 
 #: src/ui/dialogs.rs:406
 msgid "Create"
-msgstr ""
+msgstr "创建"
 
 #: src/ui/dialogs.rs:464
 msgid "Selected playlist cover"
-msgstr ""
+msgstr "已选择的歌单封面"
 
 #: src/ui/dialogs.rs:470
 msgid "Current playlist cover"
-msgstr ""
+msgstr "当前歌单封面"
 
 #: src/ui/dialogs.rs:479
 msgid "Uploading cover…"
-msgstr ""
+msgstr "正在上传封面…"
 
 #: src/ui/dialogs.rs:481
 msgid "Choosing cover…"
-msgstr ""
+msgstr "正在选择封面…"
 
 #: src/ui/dialogs.rs:487
 msgid "Change cover"
-msgstr ""
+msgstr "更换封面"
 
 #: src/ui/dialogs.rs:496
 msgid "Upload cover"
-msgstr ""
+msgstr "上传封面"
 
 #: src/ui/dialogs.rs:522
 msgid "Playlist name"
-msgstr ""
+msgstr "歌单名称"
 
 #: src/ui/dialogs.rs:528
 msgid "Description"
-msgstr ""
+msgstr "简介"
 
 #: src/ui/dialogs.rs:543
 msgid "Optional description"
-msgstr ""
+msgstr "可选简介"
 
 #: src/ui/dialogs.rs:585
 msgid "Save"
-msgstr ""
+msgstr "保存"
 
 #: src/ui/home.rs:211
 msgid "Made for you"
-msgstr ""
+msgstr "为你打造"
 
 #: src/ui/home.rs:216
 msgid "Couldn't load this shelf"
-msgstr ""
+msgstr "无法加载此栏目"
 
 #. Translators: {owner} is the name of the playlist's owner.
 #: src/ui/home.rs:227 src/ui/search.rs:590
 #, rust-format
 msgid "By {owner}"
-msgstr ""
+msgstr "创建者：{owner}"
 
 #: src/ui/home.rs:450
 msgid "Your podcasts"
-msgstr ""
+msgstr "你的播客"
 
 #. Translators: {time} is the time left in an episode, such as 12 min; {show} is the podcast's name.
 #: src/ui/home.rs:456
 #, rust-format
 msgid "{time} left • {show}"
-msgstr ""
+msgstr "剩余 {time} • {show}"
 
 #. Translators: {show} is the podcast's name.
 #: src/ui/home.rs:465
 #, rust-format
 msgid "New • {show}"
-msgstr ""
+msgstr "新 • {show}"
 
 #: src/ui/home.rs:512 src/ui/home.rs:522 src/ui/home.rs:537
 msgid "Your top artists"
-msgstr ""
+msgstr "你的热门艺人"
 
 #: src/ui/home.rs:654
 msgid "Show more top songs"
-msgstr ""
+msgstr "显示更多热门歌曲"
 
 #: src/ui/home.rs:668
 msgid "Recommended for you"
-msgstr ""
+msgstr "为你推荐"
 
 #: src/ui/keys.rs:191
 msgctxt "key"
 msgid "Space"
-msgstr ""
+msgstr "空格"
 
 #: src/ui/keys.rs:192
 msgid "Play or pause"
-msgstr ""
+msgstr "播放或暂停"
 
 #: src/ui/keys.rs:196
 msgid "Previous or next"
-msgstr ""
+msgstr "上一首或下一首"
 
 #: src/ui/keys.rs:200
 msgid "Seek 10 seconds"
-msgstr ""
+msgstr "快进或快退 10 秒"
 
 #: src/ui/keys.rs:204
 msgid "Volume up or down"
-msgstr ""
+msgstr "调高或调低音量"
 
 #: src/ui/keys.rs:206
 msgid "Mute or unmute"
-msgstr ""
+msgstr "静音或取消静音"
 
 #: src/ui/keys.rs:209
 msgid "Like or unlike the playing song"
-msgstr ""
+msgstr "点赞或取消点赞正在播放的歌曲"
 
 #: src/ui/keys.rs:211
 msgid "Toggle shuffle"
-msgstr ""
+msgstr "开关随机播放"
 
 #: src/ui/keys.rs:212
 msgid "Cycle repeat"
-msgstr ""
+msgstr "切换循环模式"
 
 #: src/ui/keys.rs:213
 msgid "Show the queue"
-msgstr ""
+msgstr "显示播放队列"
 
 #: src/ui/keys.rs:214
 msgid "Show the lyrics"
-msgstr ""
+msgstr "显示歌词"
 
 #: src/ui/keys.rs:215
 msgid "Lyrics: leave full screen"
-msgstr ""
+msgstr "歌词：退出全屏"
 
 #: src/ui/keys.rs:218
 msgid "Song list: select all"
-msgstr ""
+msgstr "歌曲列表：全选"
 
 #: src/ui/keys.rs:222
 msgid "Song list: copy the selected songs' links"
-msgstr ""
+msgstr "歌曲列表：复制所选歌曲的链接"
 
 #: src/ui/keys.rs:226
 msgid "Playlist: add the pasted song links"
-msgstr ""
+msgstr "歌单：添加粘贴的歌曲链接"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
 #: src/ui/keys.rs:231
 msgid "Cmd+F  or  /"
-msgstr ""
+msgstr "Cmd+F  或  /"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
 #: src/ui/keys.rs:234
 msgid "Ctrl+F  or  /"
-msgstr ""
+msgstr "Ctrl+F  或  /"
 
 #: src/ui/keys.rs:240
 msgid "Show or hide the sidebar"
-msgstr ""
+msgstr "显示或隐藏侧边栏"
 
 #: src/ui/keys.rs:242
 msgid "Back or forward"
-msgstr ""
+msgstr "后退或前进"
 
 #: src/ui/keys.rs:253
 msgid "Go to the playing artist"
-msgstr ""
+msgstr "前往正在播放的艺人"
 
 #: src/ui/keys.rs:257
 msgid "Go to the playing album"
-msgstr ""
+msgstr "前往正在播放的专辑"
 
 #: src/ui/keys.rs:259
 msgid "Winamp mini player"
-msgstr ""
+msgstr "Winamp 迷你播放器"
 
 #: src/ui/keys.rs:262
 msgid "MilkDrop, under the mini player"
-msgstr ""
+msgstr "MilkDrop，位于迷你播放器下方"
 
 #. Translators: Keep the key name F. Translate "or" and "double-click".
 #: src/ui/keys.rs:266
 msgid "F  or  double-click"
-msgstr ""
+msgstr "F  或  双击"
 
 #: src/ui/keys.rs:267
 msgid "MilkDrop: fill the screen"
-msgstr ""
+msgstr "MilkDrop：全屏"
 
 #: src/ui/keys.rs:269
 msgid "MilkDrop: next preset"
-msgstr ""
+msgstr "MilkDrop：下一个预设"
 
 #: src/ui/keys.rs:272
 msgid "MilkDrop: previous preset"
-msgstr ""
+msgstr "MilkDrop：上一个预设"
 
 #: src/ui/keys.rs:274
 msgid "MilkDrop: keep this preset"
-msgstr ""
+msgstr "MilkDrop：保持当前预设"
 
 #: src/ui/keys.rs:277
 msgid "MilkDrop: leave full screen, or close"
-msgstr ""
+msgstr "MilkDrop：退出全屏或关闭"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
 #: src/ui/keys.rs:286
 msgid "Cmd+/ or ?"
-msgstr ""
+msgstr "Cmd+/ 或 ?"
 
 #. Translators: Keep the key names. Only the word "or" is translated.
 #: src/ui/keys.rs:289
 msgid "Ctrl+/ or ?"
-msgstr ""
+msgstr "Ctrl+/ 或 ?"
 
 #: src/ui/keys.rs:295
 msgid "Close the window"
-msgstr ""
+msgstr "关闭窗口"
 
 #: src/ui/keys.rs:297 src/ui/winamp/mod.rs:743
 msgid "Quit"
-msgstr ""
+msgstr "退出"
 
 #: src/ui/library.rs:18
 msgid "No saved albums"
-msgstr ""
+msgstr "没有已保存的专辑"
 
 #: src/ui/library.rs:19
 msgid "Saved albums appear here."
-msgstr ""
+msgstr "保存的专辑会显示在这里。"
 
 #: src/ui/library.rs:23
 msgid "No followed artists"
-msgstr ""
+msgstr "没有已关注的艺人"
 
 #: src/ui/library.rs:24
 msgid "Followed artists appear here."
-msgstr ""
+msgstr "关注的艺人会显示在这里。"
 
 #: src/ui/library.rs:28
 msgid "No podcasts yet"
-msgstr ""
+msgstr "还没有播客"
 
 #: src/ui/library.rs:29
 msgid "Followed podcasts appear here."
-msgstr ""
+msgstr "关注的播客会显示在这里。"
 
 #: src/ui/library.rs:33
 msgid "No saved episodes"
-msgstr ""
+msgstr "没有已保存的单集"
 
 #: src/ui/library.rs:34
 msgid "Saved episodes appear here."
-msgstr ""
+msgstr "保存的单集会显示在这里。"
 
 #: src/ui/login.rs:74
 msgid "A native Spotify client."
-msgstr ""
+msgstr "原生 Spotify 客户端。"
 
 #: src/ui/login.rs:82
 msgid "Waiting for Spotify in your browser…"
-msgstr ""
+msgstr "正在等待浏览器中的 Spotify…"
 
 #: src/ui/login.rs:85
 msgid "Didn't open? Open the sign-in page again"
-msgstr ""
+msgstr "没有打开？重新打开登录页面"
 
 #: src/ui/login.rs:114 src/ui/login.rs:149
 msgid "Use the shared Spotify app instead"
-msgstr ""
+msgstr "改用共享 Spotify 应用"
 
 #: src/ui/login.rs:128
 msgid "Sign in with Spotify"
-msgstr ""
+msgstr "使用 Spotify 登录"
 
 #: src/ui/login.rs:134
 msgid ""
 "Sign in through your browser. Spotifast never sees your password. Local "
 "playback needs Spotify Premium."
 msgstr ""
+"通过浏览器登录。Spotifast 永远不会看到你的密码。本地播放需要 Spotify "
+"Premium。"
 
 #: src/ui/login.rs:167
 msgid "Proxy Settings"
-msgstr ""
+msgstr "代理设置"
 
 #. Translators: {version} is the app's version number, such as 1.2.0.
 #: src/ui/login.rs:188
 #, rust-format
 msgid "Spotifast {version} • not affiliated with Spotify"
-msgstr ""
+msgstr "Spotifast {version} • 与 Spotify 无关"
 
 #: src/ui/mod.rs:343
 msgid "Minimize"
-msgstr ""
+msgstr "最小化"
 
 #: src/ui/mod.rs:349
 msgid "Restore"
-msgstr ""
+msgstr "还原"
 
 #: src/ui/mod.rs:351
 msgid "Maximize"
-msgstr ""
+msgstr "最大化"
 
 #: src/ui/radio.rs:105
 msgid "Radio comes from playback on this computer. Turn it on in Settings."
-msgstr ""
+msgstr "电台来自这台电脑上的播放。请在设置中开启。"
 
 #: src/ui/radio.rs:202
 msgid "Based on this playlist"
-msgstr ""
+msgstr "基于此歌单"
 
 #: src/ui/radio.rs:203
 msgid "Based on this album"
-msgstr ""
+msgstr "基于此专辑"
 
 #: src/ui/radio.rs:204
 msgid "Based on this artist"
-msgstr ""
+msgstr "基于此艺人"
 
 #: src/ui/radio.rs:205
 msgid "Based on this song"
-msgstr ""
+msgstr "基于此歌曲"
 
 #. Translators: {first} is an artist name.
 #: src/ui/radio.rs:224
 #, rust-format
 msgid "With {first}"
-msgstr ""
+msgstr "包含 {first}"
 
 #. Translators: {first} and {second} are artist names.
 #: src/ui/radio.rs:227
 #, rust-format
 msgid "With {first} and {second}"
-msgstr ""
+msgstr "包含 {first} 和 {second}"
 
 #. Translators: {first}, {second} and {third} are artist names.
 #: src/ui/radio.rs:233
 #, rust-format
 msgid "With {first}, {second} and {third}"
-msgstr ""
+msgstr "包含 {first}、{second} 和 {third}"
 
 #. Translators: {first}, {second} and {third} are artist names; more follow.
 #: src/ui/radio.rs:240
 #, rust-format
 msgid "With {first}, {second}, {third} and more"
-msgstr ""
+msgstr "包含 {first}、{second}、{third} 等"
 
 #. Translators: {query} is the text the user searched for.
 #: src/ui/search.rs:66
 #, rust-format
 msgid "No results for “{query}”"
-msgstr ""
+msgstr "没有“{query}”的相关结果"
 
 #: src/ui/search.rs:68
 msgid "Check the spelling, or try fewer words."
-msgstr ""
+msgstr "请检查拼写，或减少字词。"
 
 #: src/ui/search.rs:91 src/ui/winamp/playlist.rs:647
 msgid "Search Spotify"
-msgstr ""
+msgstr "搜索 Spotify"
 
 #: src/ui/search.rs:94
 msgid "Find songs, artists, albums, playlists, and podcasts."
-msgstr ""
+msgstr "查找歌曲、艺人、专辑、歌单和播客。"
 
 #: src/ui/search.rs:99
 msgid "Recent searches"
-msgstr ""
+msgstr "最近搜索"
 
 #: src/ui/search.rs:137
 msgid "Top result"
-msgstr ""
+msgstr "最佳结果"
 
 #. Translators: {artists} is the album's artist names.
 #: src/ui/search.rs:188
 #, rust-format
 msgid "Album • {artists}"
-msgstr ""
+msgstr "专辑 • {artists}"
 
 #. Translators: Precedes the song's artist names, which follow as links.
 #: src/ui/search.rs:349
 msgid "Song • "
-msgstr ""
+msgstr "歌曲 • "
 
 #: src/ui/show.rs:57
 msgid "All episodes"
-msgstr ""
+msgstr "所有单集"
 
 #. Translators: {count} is the number of episodes of a podcast.
 #: src/ui/show.rs:113
 #, rust-format
 msgid "{count} episode"
 msgid_plural "{count} episodes"
-msgstr[0] ""
+msgstr[0] "{count} 个单集"
 
 #: src/ui/show.rs:163
 msgid "Play latest episode"
-msgstr ""
+msgstr "播放最新单集"
 
 #: src/ui/show.rs:183
 msgid "Follow podcast"
-msgstr ""
+msgstr "关注播客"
 
 #. Translators: {duration} is the time left in an episode, such as "12 min".
 #: src/ui/show.rs:347
 #, rust-format
 msgid "{duration} left"
-msgstr ""
+msgstr "剩余 {duration}"
 
 #: src/ui/show.rs:369
 msgid "Played"
-msgstr ""
+msgstr "已播放"
 
 #: src/ui/topbar.rs:203
 msgid "Show sidebar (Ctrl+B)"
-msgstr ""
+msgstr "显示侧边栏 (Ctrl+B)"
 
 #: src/ui/topbar.rs:204
 msgid "Show sidebar (Cmd+B)"
-msgstr ""
+msgstr "显示侧边栏 (Cmd+B)"
 
 #: src/ui/topbar.rs:223
 msgid "Back"
-msgstr ""
+msgstr "后退"
 
 #: src/ui/topbar.rs:234
 msgid "Forward"
-msgstr ""
+msgstr "前进"
 
 #. Translators: {device} is the name of the device playing the music.
 #: src/ui/topbar.rs:248
 #, rust-format
 msgid "Playing on {device}"
-msgstr ""
+msgstr "正在 {device} 上播放"
 
 #: src/ui/topbar.rs:250
 msgid "Playing on another device"
-msgstr ""
+msgstr "正在其他设备上播放"
 
 #: src/ui/topbar.rs:259
 msgid "Update ready"
-msgstr ""
+msgstr "更新已就绪"
 
 #: src/ui/topbar.rs:262 src/ui/update.rs:74
 msgid "Downloading update…"
-msgstr ""
+msgstr "正在下载更新…"
 
 #. Translators: {version} is a version number such as 1.2.0.
 #: src/ui/topbar.rs:266
 #, rust-format
 msgid "Update to {version}"
-msgstr ""
+msgstr "更新到 {version}"
 
 #: src/ui/topbar.rs:300
 msgid "What do you want to play?"
-msgstr ""
+msgstr "想听什么？"
 
 #: src/ui/topbar.rs:453
 msgid "MilkDrop visualiser (Ctrl+Shift+K)"
-msgstr ""
+msgstr "MilkDrop 可视化效果 (Ctrl+Shift+K)"
 
 #: src/ui/topbar.rs:454
 msgid "MilkDrop visualiser (Cmd+Shift+K)"
-msgstr ""
+msgstr "MilkDrop 可视化效果 (Cmd+Shift+K)"
 
 #: src/ui/topbar.rs:468
 msgid "Winamp mini player (Ctrl+M)"
-msgstr ""
+msgstr "Winamp 迷你播放器 (Ctrl+M)"
 
 #: src/ui/topbar.rs:469
 msgid "Winamp mini player (Cmd+Shift+M)"
-msgstr ""
+msgstr "Winamp 迷你播放器 (Cmd+Shift+M)"
 
 #: src/ui/topbar.rs:480
 msgid "Waiting for Spotify…"
-msgstr ""
+msgstr "正在等待 Spotify…"
 
 #. Translators: {version} is a version number such as 1.2.0.
 #: src/ui/topbar.rs:517
 #, rust-format
 msgid "Version {version} is available."
-msgstr ""
+msgstr "版本 {version} 已推出。"
 
 #: src/ui/update.rs:19
 msgid "Update Spotifast"
-msgstr ""
+msgstr "更新 Spotifast"
 
 #: src/ui/update.rs:51
 msgid "Close update"
-msgstr ""
+msgstr "关闭更新"
 
 #: src/ui/update.rs:65
 msgid "Release notes"
-msgstr ""
+msgstr "发行说明"
 
 #: src/ui/update.rs:72
 msgid "Checking download…"
-msgstr ""
+msgstr "正在检查下载…"
 
 #. Translators: {received} and {total} are sizes in megabytes, such as 12.5.
 #: src/ui/update.rs:90
 #, rust-format
 msgid "{received} of {total} MB"
-msgstr ""
+msgstr "{received} / {total} MB"
 
 #: src/ui/update.rs:106
 msgid "Ready to install"
-msgstr ""
+msgstr "可以安装"
 
 #: src/ui/update.rs:115
 msgid "Music playing on this computer will stop when Spotifast restarts."
-msgstr ""
+msgstr "Spotifast 重启时，这台电脑上正在播放的音乐将停止。"
 
 #: src/ui/update.rs:122
 msgid "Restart to update"
-msgstr ""
+msgstr "重启以更新"
 
 #: src/ui/update.rs:129
 msgid "Preparing to restart…"
-msgstr ""
+msgstr "正在准备重启…"
 
 #: src/ui/update.rs:160
 msgid "Download from GitHub"
-msgstr ""
+msgstr "从 GitHub 下载"
 
 #: src/ui/update.rs:165
 msgid "Retry download"
-msgstr ""
+msgstr "重新下载"
 
 #: src/ui/update.rs:167
 msgid "Download update"
-msgstr ""
+msgstr "下载更新"
 
 #: src/ui/winamp/equalizer.rs:59
 msgid "Roll the equalizer up"
-msgstr ""
+msgstr "收起均衡器"
 
 #: src/ui/winamp/equalizer.rs:225
 msgid "Roll the equalizer down"
-msgstr ""
+msgstr "展开均衡器"
 
 #: src/ui/winamp/mod.rs:423 src/ui/winamp/mod.rs:470 src/ui/winamp/mod.rs:637
 msgid "Back to the big window (Ctrl+M)"
-msgstr ""
+msgstr "返回大窗口 (Ctrl+M)"
 
 #: src/ui/winamp/mod.rs:424 src/ui/winamp/mod.rs:468 src/ui/winamp/mod.rs:635
 msgid "Back to the big window (Cmd+Shift+M)"
-msgstr ""
+msgstr "返回大窗口 (Cmd+Shift+M)"
 
 #: src/ui/winamp/mod.rs:502
 msgid "Roll the window down"
-msgstr ""
+msgstr "展开窗口"
 
 #: src/ui/winamp/mod.rs:669
 msgid "Roll the window up"
-msgstr ""
+msgstr "收起窗口"
 
 #: src/ui/winamp/mod.rs:734
 msgid "Choose a skin"
-msgstr ""
+msgstr "选择皮肤"
 
 #: src/ui/winamp/mod.rs:740
 msgid "Big window"
-msgstr ""
+msgstr "大窗口"
 
 #: src/ui/winamp/mod.rs:873 src/ui/winamp/playlist.rs:718
 #: src/ui/winamp/playlist.rs:723
 msgid "Song info"
-msgstr ""
+msgstr "歌曲信息"
 
 #: src/ui/winamp/mod.rs:894
 msgid "Size: 2x, 3x, 4x"
-msgstr ""
+msgstr "大小：2x、3x、4x"
 
 #: src/ui/winamp/mod.rs:913
 msgid "Visualisation"
-msgstr ""
+msgstr "可视化"
 
 #: src/ui/winamp/mod.rs:917
 msgid "Spectrum analyser"
-msgstr ""
+msgstr "频谱分析器"
 
 #: src/ui/winamp/mod.rs:918
 msgid "Oscilloscope"
-msgstr ""
+msgstr "示波器"
 
 #. Translators: The visualiser choice that shows no visualisation.
 #: src/ui/winamp/mod.rs:920
 msgctxt "visualiser"
 msgid "Nothing"
-msgstr ""
+msgstr "无"
 
 #: src/ui/winamp/mod.rs:1051
 msgid "Play in mono"
-msgstr ""
+msgstr "以单声道播放"
 
 #: src/ui/winamp/mod.rs:1059
 msgid "Play in stereo"
-msgstr ""
+msgstr "以立体声播放"
 
 #. Translators: {percent} is a number from 0 to 100, followed by a percent sign.
 #: src/ui/winamp/mod.rs:1150
 #, rust-format
 msgid "Balance: {percent}% left"
-msgstr ""
+msgstr "声道平衡：左 {percent}%"
 
 #. Translators: {percent} is a number from 0 to 100, followed by a percent sign.
 #: src/ui/winamp/mod.rs:1155
 #, rust-format
 msgid "Balance: {percent}% right"
-msgstr ""
+msgstr "声道平衡：右 {percent}%"
 
 #: src/ui/winamp/mod.rs:1158
 msgid "Balance: center"
-msgstr ""
+msgstr "声道平衡：居中"
 
 #. Translators: {percent} is a number from 0 to 100, followed by a percent sign.
 #: src/ui/winamp/mod.rs:1163
 #, rust-format
 msgid "Volume: {percent}%"
-msgstr ""
+msgstr "音量：{percent}%"
 
 #. Translators: {position} and {duration} are times such as 2:12, {percent} a number from 0 to 100.
 #: src/ui/winamp/mod.rs:1179
 #, rust-format
 msgid "Seek to: {position}/{duration} ({percent}%)"
-msgstr ""
+msgstr "跳转到：{position}/{duration} ({percent}%)"
 
 #: src/ui/winamp/mod.rs:1511
 msgid "Open the big window"
-msgstr ""
+msgstr "打开大窗口"
 
 #: src/ui/winamp/playlist.rs:663
 msgid "Remove selected"
-msgstr ""
+msgstr "移除所选"
 
 #: src/ui/winamp/playlist.rs:666
 msgid "Spotify does not let apps remove one queued song."
-msgstr ""
+msgstr "Spotify 不允许应用移除播放队列中的单首歌曲。"
 
 #: src/ui/winamp/playlist.rs:671
 msgid "Remove all"
-msgstr ""
+msgstr "全部移除"
 
 #: src/ui/winamp/playlist.rs:674
 msgid "You can only clear this computer's queue."
-msgstr ""
+msgstr "只能清空这台电脑的播放队列。"
 
 #. Translators: Selects every song in the list.
 #: src/ui/winamp/playlist.rs:685
 msgctxt "selection"
 msgid "All"
-msgstr ""
+msgstr "全选"
 
 #. Translators: Clears the selection of songs in the list.
 #: src/ui/winamp/playlist.rs:687
 msgctxt "selection"
 msgid "None"
-msgstr ""
+msgstr "全不选"
 
 #. Translators: Selects the songs that are not selected, and clears the rest.
 #: src/ui/winamp/playlist.rs:689
 msgctxt "selection"
 msgid "Invert"
-msgstr ""
+msgstr "反选"
 
 #: src/ui/winamp/playlist.rs:750
 msgid "Load list"
-msgstr ""
+msgstr "载入列表"
 
 #: src/ui/winamp/playlist.rs:759
 msgid "No playlists yet"
-msgstr ""
+msgstr "还没有歌单"
 
 #: src/ui/winamp/playlist.rs:779
 msgid "Save list"
-msgstr ""
+msgstr "保存列表"
 
 #: src/ui/winamp/playlist.rs:781
 msgid "Save the queue as a new playlist"
-msgstr ""
+msgstr "将播放队列保存为新歌单"
 
 #. Translators: A length of time, abbreviated. Keep {hours} and {minutes}.
 #: src/util.rs:28 src/util.rs:47
 #, rust-format
 msgid "{hours} hr {minutes} min"
-msgstr ""
+msgstr "{hours} 小时 {minutes} 分钟"
 
 #. Translators: A length of time, abbreviated. Keep {minutes} and {seconds}.
 #: src/util.rs:33
 #, rust-format
 msgid "{minutes} min {seconds} sec"
-msgstr ""
+msgstr "{minutes} 分 {seconds} 秒"
 
 #. Translators: A length of time, abbreviated. Keep {seconds}.
 #: src/util.rs:38
 #, rust-format
 msgid "{seconds} sec"
-msgstr ""
+msgstr "{seconds} 秒"
 
 #. Translators: A length of time, abbreviated. Keep {minutes}.
 #: src/util.rs:52
 #, rust-format
 msgid "{minutes} min"
-msgstr ""
+msgstr "{minutes} 分钟"
 
 #: src/util.rs:77
 msgctxt "month"
 msgid "Jan"
-msgstr ""
+msgstr "1月"
 
 #: src/util.rs:78
 msgctxt "month"
 msgid "Feb"
-msgstr ""
+msgstr "2月"
 
 #: src/util.rs:79
 msgctxt "month"
 msgid "Mar"
-msgstr ""
+msgstr "3月"
 
 #: src/util.rs:80
 msgctxt "month"
 msgid "Apr"
-msgstr ""
+msgstr "4月"
 
 #: src/util.rs:81
 msgctxt "month"
 msgid "May"
-msgstr ""
+msgstr "5月"
 
 #: src/util.rs:82
 msgctxt "month"
 msgid "Jun"
-msgstr ""
+msgstr "6月"
 
 #: src/util.rs:83
 msgctxt "month"
 msgid "Jul"
-msgstr ""
+msgstr "7月"
 
 #: src/util.rs:84
 msgctxt "month"
 msgid "Aug"
-msgstr ""
+msgstr "8月"
 
 #: src/util.rs:85
 msgctxt "month"
 msgid "Sep"
-msgstr ""
+msgstr "9月"
 
 #: src/util.rs:86
 msgctxt "month"
 msgid "Oct"
-msgstr ""
+msgstr "10月"
 
 #: src/util.rs:87
 msgctxt "month"
 msgid "Nov"
-msgstr ""
+msgstr "11月"
 
 #: src/util.rs:88
 msgctxt "month"
 msgid "Dec"
-msgstr ""
+msgstr "12月"
 
 #. Translators: A date. {month} is an abbreviated month name; reorder as your language writes dates.
 #: src/util.rs:94
 #, rust-format
 msgid "{month} {day}, {year}"
-msgstr ""
+msgstr "{year}年{month}{day}日"
 
 #. Translators: A month and year. {month} is an abbreviated month name.
 #: src/util.rs:97
 #, rust-format
 msgid "{month} {year}"
-msgstr ""
+msgstr "{year}年{month}"
 
 #. Translators: How long ago a song was added. Keep {count}.
 #: src/util.rs:123
 #, rust-format
 msgid "{count} second ago"
 msgid_plural "{count} seconds ago"
-msgstr[0] ""
+msgstr[0] "{count} 秒前"
 
 #. Translators: How long ago a song was added. Keep {count}.
 #: src/util.rs:133
 #, rust-format
 msgid "{count} minute ago"
 msgid_plural "{count} minutes ago"
-msgstr[0] ""
+msgstr[0] "{count} 分钟前"
 
 #. Translators: How long ago a song was added. Keep {count}.
 #: src/util.rs:143
 #, rust-format
 msgid "{count} hour ago"
 msgid_plural "{count} hours ago"
-msgstr[0] ""
+msgstr[0] "{count} 小时前"
 
 #. Translators: How long ago a song was added. Keep {count}.
 #: src/util.rs:151
 #, rust-format
 msgid "{count} day ago"
 msgid_plural "{count} days ago"
-msgstr[0] ""
+msgstr[0] "{count} 天前"
 
 #. Translators: How long ago a song was added. Keep {count}.
 #: src/util.rs:158
 #, rust-format
 msgid "{count} week ago"
 msgid_plural "{count} weeks ago"
-msgstr[0] ""
+msgstr[0] "{count} 周前"
 
 #: src/util.rs:262
 msgid "Good morning"
-msgstr ""
+msgstr "早上好"
 
 #: src/util.rs:263
 msgid "Good afternoon"
-msgstr ""
+msgstr "下午好"
 
 #: src/util.rs:264
 msgid "Good evening"
-msgstr ""
+msgstr "晚上好"
 
 #: src/window.rs:11
 msgid "On Wayland, use your desktop's Keep Above shortcut or window rule."
-msgstr ""
+msgstr "在 Wayland 上，请使用桌面环境的“保持在最上层”快捷键或窗口规则。"
 
 #~ msgid "Enable lyrics motion"
 #~ msgstr "启用歌词动画"

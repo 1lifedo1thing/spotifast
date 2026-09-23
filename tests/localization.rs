@@ -35,7 +35,9 @@ fn compiled_po_omits_unfinished_messages_and_uses_locale_plural_rules() {
 /// compiles out and shows the English source, as the test above checks. A
 /// catalog listed here must stay complete, and every catalog must keep the
 /// placeholders of whatever it does translate.
-const COMPLETE: &[&str] = &["es"];
+const COMPLETE: &[&str] = &[
+    "de-DE", "es", "fr", "it", "ja", "nl", "pl", "pt-BR", "pt-PT", "ru", "sv", "zh-Hans", "zh-Hant",
+];
 
 #[test]
 fn catalogs_cover_the_template_and_preserve_named_placeholders() {

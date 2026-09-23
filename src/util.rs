@@ -418,11 +418,12 @@ mod tests {
         ] {
             assert_eq!(format_relative_date(Locale::Spanish, added, now), expected);
         }
-        // A catalogue without these phrases yet keeps the whole English one.
-        assert_eq!(format_date(Locale::Swedish, "2024-01-05"), "Jan 5, 2024");
+        // Each language orders the date its own way.
+        assert_eq!(format_date(Locale::Swedish, "2024-01-05"), "5 jan. 2024");
+        assert_eq!(format_date(Locale::English, "2024-01-05"), "Jan 5, 2024");
         assert_eq!(
             format_relative_date(Locale::Swedish, "2026-08-30T12:00:00Z", now),
-            "1 day ago"
+            "för 1 dag sedan"
         );
     }
 

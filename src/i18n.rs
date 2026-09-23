@@ -394,7 +394,7 @@ mod tests {
         assert_eq!(pgettext(Locale::German, context, source), "Folgen");
         assert_eq!(pgettext(Locale::Japanese, context, source), "追従");
         assert_eq!(pgettext(Locale::English, context, source), source);
-        assert_eq!(pgettext(Locale::German, "artist", source), source);
+        assert_eq!(pgettext(Locale::German, "no such context", source), source);
         assert_eq!(gettext(Locale::German, source), source);
     }
 
@@ -416,7 +416,7 @@ mod tests {
     }
     #[test]
     fn short_counts_are_localized_without_parsing_complete_phrases() {
-        assert_eq!(Locale::German.song_count(2), "2 Titel");
+        assert_eq!(Locale::German.song_count(2), "2 Songs");
         assert_eq!(Locale::Japanese.song_count(2), "2曲");
         assert_eq!(Locale::German.playlist_count(1), "1 Playlist");
         assert_eq!(Locale::German.playlist_count(2), "2 Playlists");
@@ -433,8 +433,8 @@ mod tests {
             (Locale::Russian, 1, "Папка • 1 плейлист"),
             (Locale::Russian, 3, "Папка • 3 плейлиста"),
             (Locale::Russian, 5, "Папка • 5 плейлистов"),
-            (Locale::Japanese, 1, "フォルダー • 1件のプレイリスト"),
-            (Locale::Japanese, 4, "フォルダー • 4件のプレイリスト"),
+            (Locale::Japanese, 1, "フォルダ • 1件のプレイリスト"),
+            (Locale::Japanese, 4, "フォルダ • 4件のプレイリスト"),
         ] {
             assert_eq!(
                 locale.folder_playlist_count(count),
