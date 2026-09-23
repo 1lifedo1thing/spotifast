@@ -674,6 +674,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                 "Cmd+Plus and Cmd+Minus work anywhere; Cmd+0 resets.",
             ),
         ),
+        RowText::new(
+            "Custom title bar",
+            "Draw Spotifast's own title bar and window buttons instead of the standard Windows ones.",
+        )
+        .when(app.windows_controls_visible()),
     ];
     if section_matches(&needle, "Appearance", &appearance_rows) {
         any_visible = true;
@@ -835,6 +840,22 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     });
                 },
             );
+            if app.windows_controls_visible() {
+                filtered_row(
+                    ui,
+                    &palette,
+                    &needle,
+                    "Appearance",
+                    &appearance_rows[5],
+                    |ui| {
+                        let mut custom = app.settings.custom_titlebar;
+                        if widgets::switch(ui, &palette, "Custom title bar", &mut custom).changed()
+                        {
+                            app.actions.push(Action::SetCustomTitlebar(custom));
+                        }
+                    },
+                );
+            }
         });
     }
 

@@ -177,7 +177,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     // its empty parts drag the window.
     let inset = theme::titlebar_inset(ui.ctx());
     let content_height = theme::TOP_BAR_HEIGHT + inset;
-    if cfg!(windows) {
+    if crate::window::custom_titlebar() {
         super::titlebar_drag(
             ui,
             egui::Rect::from_min_size(

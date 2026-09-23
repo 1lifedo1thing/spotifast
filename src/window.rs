@@ -165,6 +165,27 @@ pub fn can_restore(pos: [f32; 2], pixels_per_point: f32) -> bool {
     .contains(anchor)
 }
 
+static CUSTOM_TITLEBAR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether the main window draws its own title bar and window buttons
+/// instead of the platform's frame. Only Windows offers the choice, and it
+/// is off unless the listener turns it on in Settings.
+pub fn custom_titlebar() -> bool {
+    custom_titlebar_for(
+        cfg!(windows),
+        CUSTOM_TITLEBAR.load(std::sync::atomic::Ordering::Relaxed),
+    )
+}
+
+/// Sets the title bar choice the next main window is created with.
+pub fn set_custom_titlebar(on: bool) {
+    CUSTOM_TITLEBAR.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+const fn custom_titlebar_for(on_windows: bool, chosen: bool) -> bool {
+    on_windows && chosen
+}
+
 /// Whether frames may wait for vsync. It lowers the cost of every frame, but on
 /// Wayland a hidden window gets no frame callbacks and a vsync wait there
 /// blocks the whole app. The winit fork reports such a window as occluded,
@@ -227,6 +248,14 @@ mod wayland {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_windows_draws_its_own_title_bar_and_only_when_chosen() {
+        assert!(custom_titlebar_for(true, true));
+        assert!(!custom_titlebar_for(true, false));
+        assert!(!custom_titlebar_for(false, true));
+        assert!(!custom_titlebar_for(false, false));
+    }
 
     #[test]
     fn vsync_waits_only_where_a_hidden_window_cannot_block() {

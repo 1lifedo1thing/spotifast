@@ -8261,6 +8261,19 @@ impl App {
                     self.push_winamp_level(ctx);
                 }
             }
+            Action::SetCustomTitlebar(custom) => {
+                if self.settings.custom_titlebar != custom {
+                    self.settings.custom_titlebar = custom;
+                    crate::window::set_custom_titlebar(custom);
+                    self.mark_settings_dirty();
+                    if !self.settings.winamp_window {
+                        // Decorations are fixed at creation. Replace only the
+                        // native window, keeping the page and playback.
+                        self.switch_intent = true;
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                }
+            }
             Action::SetWinampTaskbar(visible) => {
                 if self.settings.winamp_show_taskbar != visible {
                     self.settings.winamp_show_taskbar = visible;
@@ -10173,6 +10186,29 @@ mod tests {
             toasts + 1,
             "already local, nothing to explain"
         );
+    }
+
+    /// The title bar choice is saved and, because decorations are fixed when
+    /// a window is created, replaces only the main window's native window.
+    /// The mini player picks it up the next time the main window opens.
+    #[test]
+    fn choosing_the_custom_title_bar_recreates_only_the_main_window() {
+        let mut app = headless_app();
+        let ctx = egui::Context::default();
+        app.apply(Action::SetCustomTitlebar(true), &ctx);
+        assert!(app.settings.custom_titlebar);
+        assert!(app.switch_intent, "the main window is replaced");
+        assert_eq!(crate::window::custom_titlebar(), cfg!(windows));
+
+        app.switch_intent = false;
+        app.apply(Action::SetCustomTitlebar(true), &ctx);
+        assert!(!app.switch_intent, "an unchanged choice keeps the window");
+
+        app.settings.winamp_window = true;
+        app.apply(Action::SetCustomTitlebar(false), &ctx);
+        assert!(!app.settings.custom_titlebar);
+        assert!(!app.switch_intent, "the mini player is not the main window");
+        assert!(!crate::window::custom_titlebar());
     }
 
     #[test]

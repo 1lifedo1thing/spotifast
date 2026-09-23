@@ -233,13 +233,13 @@ pub fn titlebar_drag(ui: &mut egui::Ui, rect: egui::Rect) {
         ui.id().with("titlebar-drag"),
         egui::Sense::click_and_drag(),
     );
-    if cfg!(windows) && response.double_clicked() {
+    if crate::window::custom_titlebar() && response.double_clicked() {
         let maximized = ui
             .ctx()
             .input(|input| input.viewport().maximized.unwrap_or(false));
         ui.ctx()
             .send_viewport_cmd(egui::ViewportCommand::Maximized(!maximized));
-    } else if (cfg!(windows) && response.drag_started())
+    } else if (crate::window::custom_titlebar() && response.drag_started())
         || (cfg!(target_os = "macos")
             && response.is_pointer_button_down_on()
             && ui.input(|input| input.pointer.primary_pressed())
@@ -270,7 +270,7 @@ const fn windows_chrome_visible(on_windows: bool, fullscreen: bool) -> bool {
 
 fn windows_chrome_visible_here(ctx: &egui::Context) -> bool {
     let fullscreen = ctx.input(|input| input.viewport().fullscreen.unwrap_or(false));
-    windows_chrome_visible(cfg!(windows), fullscreen)
+    windows_chrome_visible(crate::window::custom_titlebar(), fullscreen)
 }
 
 const fn windows_controls_reservation(
@@ -307,7 +307,13 @@ pub(super) fn window_controls_reservation(
     topbar_width: f32,
 ) -> WindowControlsReservation {
     let fullscreen = ctx.input(|input| input.viewport().fullscreen.unwrap_or(false));
-    windows_controls_reservation(cfg!(windows), fullscreen, queue, lyrics, topbar_width)
+    windows_controls_reservation(
+        crate::window::custom_titlebar(),
+        fullscreen,
+        queue,
+        lyrics,
+        topbar_width,
+    )
 }
 
 /// Draws the Windows caption controls over the outermost top-right header.
@@ -361,7 +367,7 @@ fn window_resize(ui: &mut egui::Ui) {
             input.viewport().maximized.unwrap_or(false),
         )
     });
-    if !window_resize_enabled(cfg!(windows), fullscreen, maximized) {
+    if !window_resize_enabled(crate::window::custom_titlebar(), fullscreen, maximized) {
         return;
     }
 

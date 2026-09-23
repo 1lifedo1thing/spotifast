@@ -476,6 +476,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     if let Some(name) = cli.device_name {
         settings.device_name = name;
     }
+    spotifast::window::set_custom_titlebar(settings.custom_titlebar);
     // macOS delivers links as Apple Events; install before the event loop.
     #[cfg(target_os = "macos")]
     if let Some(guard) = &instance {
@@ -775,8 +776,8 @@ impl MiniWindow {
     }
 }
 
-const fn main_window_decorated(on_windows: bool) -> bool {
-    !on_windows
+const fn main_window_decorated(custom_titlebar: bool) -> bool {
+    !custom_titlebar
 }
 
 #[cfg(any(test, feature = "demo"))]
@@ -873,7 +874,7 @@ fn native_options(
                 .with_title_shown(false)
                 // Windows has no equivalent to macOS's floating traffic lights.
                 // Removing its decorations lets the app surface fill the window.
-                .with_decorations(main_window_decorated(cfg!(windows)))
+                .with_decorations(main_window_decorated(spotifast::window::custom_titlebar()))
                 .with_inner_size(size)
                 .with_min_inner_size(inner_size.unwrap_or([760.0, 520.0]))
                 .with_fullscreen(fullscreen);
@@ -1018,7 +1019,10 @@ mod native_window_tests {
     #[test]
     fn main_window_uses_the_platform_decoration_policy() {
         let options = native_options(false, None, None);
-        assert_eq!(options.viewport.decorations, Some(!cfg!(windows)));
+        assert_eq!(
+            options.viewport.decorations,
+            Some(!spotifast::window::custom_titlebar())
+        );
         assert_eq!(options.viewport.fullsize_content_view, Some(true));
         assert_eq!(options.viewport.titlebar_shown, Some(false));
         assert_eq!(options.viewport.title_shown, Some(false));
