@@ -569,6 +569,11 @@ pub struct HomeData {
     pub recommendations: Loadable<Vec<Track>>,
     pub discover: HashMap<String, Loadable<Vec<Playlist>>>,
     pub discover_pending: HashMap<String, Loadable<Vec<Playlist>>>,
+    /// Saved podcasts with their newest episodes, in library order, for the
+    /// podcast shelf. A refresh replaces them only once it answers.
+    pub podcasts: Vec<(Show, Vec<Episode>)>,
+    /// The Home generation whose podcast episodes were last asked for.
+    pub podcasts_generation: u64,
     pub generation: u64,
     pub top_songs_generation: u64,
     pub requested: bool,

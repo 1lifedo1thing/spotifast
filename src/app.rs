@@ -575,6 +575,9 @@ const TRACKPAD_SCALE: f32 = 1.8;
 /// second.
 /// How many plays the Home shelf asks for: it shows sixteen cards.
 const HOME_RECENTS: u32 = 50;
+/// How many saved podcasts Home reads new episodes from, most recently
+/// saved first. Each costs one request per Home refresh.
+const HOME_PODCAST_SHOWS: usize = 8;
 /// How many plays the Recents tab asks for at a time. Spotify's own
 /// endpoint limit is fifty. A shorter page marks the end.
 const RECENTS_PAGE: u32 = 50;
@@ -3575,6 +3578,41 @@ impl App {
                 generation,
             });
         }
+        // The podcast shelf reads from the saved shows. The first page of
+        // them is the one the Podcasts shelf of the library asks for.
+        if self.library.shows.loaded_once {
+            self.request_home_episodes();
+        } else if !self.library.shows.loading && self.library.shows.error.is_none() {
+            self.load_more(Page::Podcasts);
+        }
+    }
+
+    /// Asks for the newest episodes of the most recently saved podcasts,
+    /// once per Home refresh. Known audiobooks are skipped: librespot cannot
+    /// play them.
+    fn request_home_episodes(&mut self) {
+        if self.home.podcasts_generation == self.home.generation {
+            return;
+        }
+        self.home.podcasts_generation = self.home.generation;
+        let shows: Vec<Show> = self
+            .library
+            .shows
+            .items
+            .iter()
+            .map(|saved| &saved.show)
+            .filter(|show| !show.id.is_empty() && !self.audiobook_shows.contains(&show.uri))
+            .take(HOME_PODCAST_SHOWS)
+            .cloned()
+            .collect();
+        if shows.is_empty() {
+            self.home.podcasts.clear();
+            return;
+        }
+        self.backend.api(ApiRequest::HomeEpisodes {
+            shows,
+            generation: self.home.generation,
+        });
     }
 
     fn load_top_songs(&mut self, force: bool) {
@@ -5397,8 +5435,18 @@ impl App {
                         self.backend.send(Command::AudiobookShows(unknown));
                     }
                     self.library.shows.absorb(offset, page);
+                    if offset == 0 && self.home.requested {
+                        self.request_home_episodes();
+                    }
                 }
                 Err(error) => self.library.shows.fail(error.to_string()),
+            },
+            ApiResponse::HomeEpisodes { generation, .. } if generation != self.home.generation => {}
+            ApiResponse::HomeEpisodes { result, .. } => match result {
+                Ok(podcasts) => self.home.podcasts = podcasts,
+                // The shelf is an extra: without an answer it keeps what it
+                // showed, or stays hidden.
+                Err(error) => log::debug!("podcast episodes for Home unavailable: {error}"),
             },
             ApiResponse::SavedEpisodes { offset, .. }
                 if self.library.episodes.next_offset != Some(offset) => {}
@@ -14567,6 +14615,98 @@ mod tests {
             result: Ok(page(vec![episode("c")], 2)),
         });
         assert!(app.library.episodes.items.is_empty() && !app.library.episodes.loaded_once);
+        app.backend.shutdown();
+        let _ = std::fs::remove_dir_all(app.dirs.config.parent().unwrap());
+    }
+
+    /// Home's podcast shelf reads a bounded number of saved shows once per
+    /// Home refresh, skips known audiobooks, and keeps what it shows until
+    /// the current refresh answers.
+    #[test]
+    fn home_reads_a_few_saved_podcasts_once_per_refresh() {
+        use crate::api::models::{Episode, Page as ApiPage, SavedShow};
+        let mut app = test_app("home-podcasts");
+        let show = |index: usize| Show {
+            id: format!("s{index}"),
+            uri: format!("spotify:show:s{index}"),
+            ..Show::default()
+        };
+        app.load_home(false);
+        assert!(app.library.shows.loading, "Home asks for the saved shows");
+        assert!(app.backend.take_home_episode_requests().is_empty());
+
+        app.audiobook_shows.insert("spotify:show:s1".into());
+        app.handle_api(ApiResponse::SavedShows {
+            offset: 0,
+            result: Ok(ApiPage {
+                items: (0..12)
+                    .map(|index| SavedShow {
+                        show: show(index),
+                        ..SavedShow::default()
+                    })
+                    .collect(),
+                total: 12,
+                limit: 50,
+                offset: 0,
+                next: None,
+            }),
+        });
+        let generation = app.home.generation;
+        let expected: Vec<String> = [0, 2, 3, 4, 5, 6, 7, 8]
+            .iter()
+            .map(|index| format!("s{index}"))
+            .collect();
+        assert_eq!(
+            app.backend.take_home_episode_requests(),
+            vec![(expected, generation)]
+        );
+
+        // Visiting Home again soon, or another first page of the shows,
+        // asks for nothing more.
+        app.load_home(false);
+        app.library.shows.next_offset = Some(0);
+        app.handle_api(ApiResponse::SavedShows {
+            offset: 0,
+            result: Ok(ApiPage {
+                items: vec![SavedShow {
+                    show: show(0),
+                    ..SavedShow::default()
+                }],
+                total: 1,
+                limit: 50,
+                offset: 0,
+                next: None,
+            }),
+        });
+        assert!(app.backend.take_home_episode_requests().is_empty());
+
+        let episodes = |show_index: usize| {
+            vec![(
+                show(show_index),
+                vec![Episode {
+                    uri: format!("spotify:episode:e{show_index}"),
+                    ..Episode::default()
+                }],
+            )]
+        };
+        app.handle_api(ApiResponse::HomeEpisodes {
+            generation,
+            result: Ok(episodes(0)),
+        });
+        assert_eq!(app.home.podcasts, episodes(0));
+
+        app.load_home(true);
+        assert_eq!(app.backend.take_home_episode_requests().len(), 1);
+        app.handle_api(ApiResponse::HomeEpisodes {
+            generation,
+            result: Ok(episodes(2)),
+        });
+        assert_eq!(app.home.podcasts, episodes(0), "an older answer is ignored");
+        app.handle_api(ApiResponse::HomeEpisodes {
+            generation: app.home.generation,
+            result: Err(crate::api::ApiError::RateLimited),
+        });
+        assert_eq!(app.home.podcasts, episodes(0), "a failure keeps the shelf");
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(app.dirs.config.parent().unwrap());
     }

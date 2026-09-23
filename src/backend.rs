@@ -42,6 +42,8 @@ const MAX_PENDING_ALBUM_TYPES: usize = 50;
 const AUDIOBOOK_BATCH: usize = 50;
 /// How long resolving a radio station and its songs may take.
 const RADIO_TIMEOUT: Duration = Duration::from_secs(20);
+/// Newest episodes read from each saved podcast for Home's podcast shelf.
+const HOME_EPISODES_PER_SHOW: u32 = 5;
 pub const PLAYLIST_PAGE_SIZE: u32 = 50;
 const RECONNECT_WINDOW: Duration = Duration::from_secs(600);
 const RECONNECT_LIMIT: usize = 6;
@@ -266,6 +268,12 @@ pub enum ApiRequest {
     ShowEpisodes {
         id: String,
         offset: u32,
+    },
+    /// The newest episodes of a few saved podcasts, for Home. The shows
+    /// are read one after another, not all at once.
+    HomeEpisodes {
+        shows: Vec<Show>,
+        generation: u64,
     },
     Track {
         id: String,
@@ -496,6 +504,11 @@ pub enum ApiResponse {
         id: String,
         offset: u32,
         result: ApiResult<Page<Episode>>,
+    },
+    /// Each show with its newest episodes, in the order asked for.
+    HomeEpisodes {
+        generation: u64,
+        result: ApiResult<Vec<(Show, Vec<Episode>)>>,
     },
     Track {
         id: String,
@@ -872,6 +885,8 @@ pub struct Backend {
     player_commands: std::sync::Mutex<Vec<PlayerCommand>>,
     #[cfg(test)]
     album_type_requests: std::sync::Mutex<Vec<Vec<String>>>,
+    #[cfg(test)]
+    home_episode_requests: std::sync::Mutex<Vec<(Vec<String>, u64)>>,
 }
 
 impl Backend {
@@ -956,6 +971,8 @@ impl Backend {
             player_commands: std::sync::Mutex::new(Vec::new()),
             #[cfg(test)]
             album_type_requests: std::sync::Mutex::new(Vec::new()),
+            #[cfg(test)]
+            home_episode_requests: std::sync::Mutex::new(Vec::new()),
         }
     }
 
@@ -1077,7 +1094,27 @@ impl Backend {
                 .unwrap_or_else(|poisoned| poisoned.into_inner())
                 .push((id.clone(), *offset, *generation));
         }
+        #[cfg(test)]
+        if let ApiRequest::HomeEpisodes { shows, generation } = &request {
+            self.home_episode_requests
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .push((
+                    shows.iter().map(|show| show.id.clone()).collect(),
+                    *generation,
+                ));
+        }
         self.send(Command::Api(request));
+    }
+
+    #[cfg(test)]
+    pub(crate) fn take_home_episode_requests(&self) -> Vec<(Vec<String>, u64)> {
+        std::mem::take(
+            &mut *self
+                .home_episode_requests
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()),
+        )
     }
 
     #[cfg(test)]
@@ -3276,6 +3313,7 @@ fn operation_for(api: &ApiGateway, request: &ApiRequest) -> Operation {
         | ApiRequest::AlbumQueueTracks { .. }
         | ApiRequest::Show { .. }
         | ApiRequest::ShowEpisodes { .. }
+        | ApiRequest::HomeEpisodes { .. }
         | ApiRequest::Track { .. }
         | ApiRequest::Episode { .. } => Operation::Catalog,
     }
@@ -3655,6 +3693,35 @@ async fn handle(
             id,
             offset,
         },
+        ApiRequest::HomeEpisodes {
+            shows: asked,
+            generation,
+        } => {
+            let mut shows = Vec::new();
+            let mut failure = None;
+            for show in asked {
+                match routed!(show_episodes(&show.id, 0, HOME_EPISODES_PER_SHOW)) {
+                    Ok(page) => shows.push((show, page.items)),
+                    // A show that is gone answers on its own; a rate limit,
+                    // an exhausted quota or a lost sign-in would answer the
+                    // same for every show still to come, so stop asking.
+                    Err(error) => {
+                        let stop = !matches!(error, ApiError::Status { .. } | ApiError::Decode(_));
+                        failure.get_or_insert(error);
+                        if stop {
+                            break;
+                        }
+                    }
+                }
+            }
+            ApiResponse::HomeEpisodes {
+                generation,
+                result: match failure {
+                    Some(error) if shows.is_empty() => Err(error),
+                    _ => Ok(shows),
+                },
+            }
+        }
         ApiRequest::Track { id } => ApiResponse::Track {
             result: routed!(track(&id)),
             id,

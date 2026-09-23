@@ -210,6 +210,18 @@ or the request fails, the page keeps the edits and offers a retry. Refreshing
 again retries confirmation without losing the local changes. This uses the
 existing playlist requests and adds no periodic polling.
 
+## Podcasts on Home
+
+On `main`, after 0.9.1, Home's **Your podcasts** shelf reads the first page of
+saved shows, the same request the library's Podcasts shelf makes, if it has
+not been read yet. It then asks for the five newest episodes of each of the
+eight most recently saved shows, one show at a time, through the normal
+personal/shared app routing. Spotify includes each episode's resume point in
+those answers. Shows known to be audiobooks are not asked for. These requests
+run when Home refreshes: on opening Home, at most once every ten minutes, and
+on a manual refresh. A rate limit, exhausted quota or expired sign-in stops the
+remaining shows for that refresh; the shelf keeps what it showed before.
+
 ## Album queueing
 
 On `main`, after 0.8.0, adding an album, single, or EP to the queue resolves

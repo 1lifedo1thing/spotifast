@@ -81,6 +81,8 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   badges in narrow windows; hover their icons to read the labels.
 - **Home** with Made for you, Recently played, your top artists and songs, and
   recommendations. Right-click playlist shortcuts and shelf cards for their actions.
+  On `main`, after 0.9.1, **Your podcasts** lists episodes of your saved
+  podcasts that you have started, then new ones you have not.
 - **Artist pages** with popular songs, a filterable discography, and related
   artists. **Album**, **playlist**, and **podcast** pages support playback
   from any row. Since 0.8.0, album and playlist scrollbars represent the full track count;

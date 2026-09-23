@@ -474,6 +474,37 @@ pub fn populate(app: &mut App) {
     let millis = oldest.as_second() * 1000 + i64::from(oldest.subsec_nanosecond() / 1_000_000);
     app.recents.after = Some(millis.to_string());
     app.recents.complete = false;
+    // Podcast shelf: episodes to continue and new ones, dated from today so
+    // the new ones stay new.
+    let today = jiff::Zoned::now().date();
+    app.home.podcasts = (0..4)
+        .map(|show_index| {
+            let episodes = (0..3)
+                .map(|position| {
+                    let mut episode = episode(show_index * 3 + position, show_index);
+                    let age = (show_index * 4 + position * 7) as i64;
+                    episode.release_date = today
+                        .checked_sub(jiff::Span::new().days(age))
+                        .ok()
+                        .map(|date| date.to_string());
+                    let started = match (show_index, position) {
+                        (0, 0) => Some(1_200_000),
+                        (1, 1) | (3, 1) => Some(900_000),
+                        (1, 0) | (2, 0) => Some(0),
+                        _ => None,
+                    };
+                    episode.resume_point = Some(ResumePoint {
+                        fully_played: started.is_none(),
+                        resume_position_ms: started.unwrap_or(0),
+                    });
+                    episode.show = None;
+                    episode
+                })
+                .collect();
+            (show(show_index), episodes)
+        })
+        .collect();
+    app.home.podcasts_generation = app.home.generation;
     app.home.top_artists = Loadable::Loaded((0..8).map(artist).collect());
     app.home.top_tracks = Loadable::Loaded(tracks.iter().skip(10).take(10).cloned().collect());
     app.home.top_songs = Loadable::Loaded(tracks.iter().skip(10).cloned().collect());
@@ -1682,6 +1713,37 @@ mod tests {
             serde_json::from_str(&serde_json::to_string(&app.settings).unwrap()).unwrap();
         assert_eq!(restored.library_sort, app.settings.library_sort);
         assert_eq!(restored.sidebar_order, saved);
+        app.backend.shutdown();
+    }
+
+    /// Home's podcast shelf uses the ordinary cards, leaves out audiobooks
+    /// and shows no longer saved, and is not drawn at all when empty.
+    #[test]
+    fn the_home_podcast_shelf_shows_saved_podcasts_only() {
+        let (ctx, mut app) = accessible_app("home-podcasts");
+        let view = crate::ui::home::show;
+        view_frame(&ctx, &mut app, vec![], view);
+        let painted = view_frame(&ctx, &mut app, vec![], view);
+        let has = |painted: &[(String, egui::Rect)], wanted: &str| {
+            painted.iter().any(|(text, _)| text == wanted)
+        };
+        assert!(has(&painted, "Your podcasts"));
+        assert!(has(&painted, "20 min left • Rework"));
+        assert!(has(&painted, "New • Song Exploder"));
+
+        let rework = app.home.podcasts[0].0.uri.clone();
+        app.audiobook_shows.insert(rework);
+        let exploder = app.home.podcasts[1].0.uri.clone();
+        app.saved.insert(exploder, false);
+        let painted = view_frame(&ctx, &mut app, vec![], view);
+        assert!(!has(&painted, "20 min left • Rework"));
+        assert!(!has(&painted, "New • Song Exploder"));
+        assert!(has(&painted, "43 min left • Darknet Diaries"));
+
+        app.home.podcasts.clear();
+        let painted = view_frame(&ctx, &mut app, vec![], view);
+        assert!(!has(&painted, "Your podcasts"));
+        assert!(has(&painted, "Your top artists"));
         app.backend.shutdown();
     }
 

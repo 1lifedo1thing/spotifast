@@ -25,6 +25,16 @@ Point at a horizontal shelf, such as Made for you or Recently played on
 Home, and hold `Shift` while turning the mouse wheel. The shelf moves while
 the surrounding page stays put. Release `Shift` to scroll the page normally.
 
+## Podcasts on Home
+
+On `main`, after 0.9.1, Home has a **Your podcasts** shelf below Recently
+played. It lists episodes you have started and not finished, with the time
+left, followed by each podcast's newest episode if it came out in the last 30
+days and you have not started it, marked **New**. It covers the eight podcasts
+you saved most recently and the five newest episodes of each. Audiobooks are
+left out. The shelf is hidden when there is nothing to show. Click a card to
+open the podcast, or use its play button to play the episode.
+
 ## Dragging beyond the visible list
 
 Since 0.8.0, hold a dragged song near the top or
