@@ -6,7 +6,7 @@
 //! the interface with `request_repaint`, so the app stays event-driven and
 //! idle when nothing is happening.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeSet, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -38,6 +38,8 @@ const ALBUM_TYPE_TIMEOUT: Duration = Duration::from_secs(30);
 const ENGINE_CONNECT_TIMEOUT: Duration = Duration::from_secs(75);
 // Keep at most one full Web API album page outstanding for a playback engine.
 const MAX_PENDING_ALBUM_TYPES: usize = 50;
+// Saved shows asked about in one extended-metadata request.
+const AUDIOBOOK_BATCH: usize = 50;
 pub const PLAYLIST_PAGE_SIZE: u32 = 50;
 const RECONNECT_WINDOW: Duration = Duration::from_secs(600);
 const RECONNECT_LIMIT: usize = 6;
@@ -670,6 +672,13 @@ pub enum Command {
     StoreLikedSongsCache(crate::liked::Cache),
     /// Resolve the precise type of Web API singles through the streaming session.
     AlbumTypes(Vec<String>),
+    /// Ask the streaming session which saved shows are audiobooks.
+    AudiobookShows(Vec<String>),
+    /// Internal: an audiobook lookup finished for the session it started in.
+    AudiobookShowsResolved {
+        session_generation: u64,
+        audiobooks: Vec<String>,
+    },
     /// Internal: one precise album type lookup finished.
     AlbumTypeResolved {
         uri: String,
@@ -757,6 +766,9 @@ pub enum Event {
         id: String,
         name: Option<String>,
     },
+    /// Saved shows that Spotify's metadata marks as audiobooks. librespot
+    /// cannot play them, so the Podcasts shelf leaves them out.
+    AudiobookShows(Vec<String>),
     /// Whether Spotify's internal metadata positively identifies an album as an EP.
     AlbumType {
         uri: String,
@@ -1236,6 +1248,8 @@ struct Worker {
     /// other request reports.
     rootlist_pending: bool,
     album_type_lookup: AlbumTypeLookup,
+    /// Saved shows waiting for the streaming session to say which are audiobooks.
+    audiobook_lookup: BTreeSet<String>,
     /// True while a playback grant or engine connection is in flight, so a
     /// second attempt does not pile up.
     engine_busy: bool,
@@ -1298,6 +1312,7 @@ impl Worker {
             engine: None,
             rootlist_pending: false,
             album_type_lookup: AlbumTypeLookup::default(),
+            audiobook_lookup: BTreeSet::new(),
             engine_busy: false,
             search_tasks: Vec::new(),
             engine_restart_pending: false,
@@ -1809,6 +1824,18 @@ impl Worker {
                     }
                 }
                 Command::AlbumTypes(uris) => self.fetch_album_types(uris),
+                Command::AudiobookShows(uris) => {
+                    self.audiobook_lookup.extend(uris);
+                    self.start_audiobook_lookup();
+                }
+                Command::AudiobookShowsResolved {
+                    session_generation,
+                    audiobooks,
+                } => {
+                    if self.signed_in && session_generation == *self.session.borrow() {
+                        self.emit(Event::AudiobookShows(audiobooks));
+                    }
+                }
                 Command::AlbumTypeResolved {
                     uri,
                     session_generation,
@@ -2269,6 +2296,7 @@ impl Worker {
         self.resume = None;
         self.resume_verify = None;
         self.album_type_lookup.reset_session();
+        self.audiobook_lookup.clear();
         if let Some(engine) = self.engine.take() {
             engine.shutdown();
         }
@@ -2601,6 +2629,7 @@ impl Worker {
                 self.reconnects.clear();
                 self.emit(Event::Playback(LocalPlayback::Ready { device_id }));
                 self.start_album_type_lookup();
+                self.start_audiobook_lookup();
             }
             None => {
                 self.resume = None;
@@ -2803,6 +2832,35 @@ impl Worker {
         self.album_type_lookup
             .enqueue(self.signed_in, self.premium, uris);
         self.start_album_type_lookup();
+    }
+
+    /// Asks the streaming session about the waiting shows. Without a
+    /// session they wait; a failed answer leaves them shown.
+    fn start_audiobook_lookup(&mut self) {
+        let Some(engine) = self.engine.clone() else {
+            return;
+        };
+        if self.audiobook_lookup.is_empty() {
+            return;
+        }
+        let uris: Vec<String> = std::mem::take(&mut self.audiobook_lookup)
+            .into_iter()
+            .collect();
+        let session_generation = *self.session.borrow();
+        let commands = self.commands.clone();
+        tokio::spawn(async move {
+            let mut audiobooks = Vec::new();
+            for chunk in uris.chunks(AUDIOBOOK_BATCH) {
+                match session_reads::audiobook_shows(engine.session(), chunk).await {
+                    Ok(found) => audiobooks.extend(found),
+                    Err(error) => log::debug!("audiobook lookup failed: {error:#}"),
+                }
+            }
+            let _ = commands.send(Command::AudiobookShowsResolved {
+                session_generation,
+                audiobooks,
+            });
+        });
     }
 
     fn start_album_type_lookup(&mut self) {

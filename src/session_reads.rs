@@ -153,6 +153,58 @@ fn page(items: Vec<PlaylistItem>, total: u32, offset: u32, limit: u32) -> Page<P
 
 /// The display name behind a user id, from the profile view Spotify's
 /// clients read; `None` when nothing answers.
+/// Which of the given show URIs Spotify's metadata marks as audiobooks, in
+/// one batched request. librespot cannot play them. A show Spotify does not
+/// answer for is treated as a podcast, so it stays visible.
+pub async fn audiobook_shows(session: &Session, uris: &[String]) -> anyhow::Result<Vec<String>> {
+    let request = show_request(uris);
+    if request.entity_request.is_empty() {
+        return Ok(Vec::new());
+    }
+    let response = session.spclient().get_extended_metadata(request).await?;
+    Ok(audiobooks_in(&response))
+}
+
+fn show_request(uris: &[String]) -> BatchedEntityRequest {
+    let mut request = BatchedEntityRequest::new();
+    for uri in uris.iter().filter(|uri| uri.starts_with("spotify:show:")) {
+        request.entity_request.push(EntityRequest {
+            entity_uri: uri.clone(),
+            query: vec![ExtensionQuery {
+                extension_kind: EnumOrUnknown::new(ExtensionKind::SHOW_V4),
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+    }
+    request
+}
+
+fn audiobooks_in(response: &BatchedExtensionResponse) -> Vec<String> {
+    let mut audiobooks = Vec::new();
+    for array in &response.extended_metadata {
+        if array.extension_kind.enum_value() != Ok(ExtensionKind::SHOW_V4) {
+            continue;
+        }
+        for data in &array.extension_data {
+            if !matches!(data.header.status_code, 0 | 200) {
+                continue;
+            }
+            let is_audiobook = data
+                .extension_data
+                .as_ref()
+                .and_then(|any| {
+                    librespot_protocol::metadata::Show::parse_from_bytes(&any.value).ok()
+                })
+                .is_some_and(|show| show.is_audiobook());
+            if is_audiobook {
+                audiobooks.push(data.entity_uri.clone());
+            }
+        }
+    }
+    audiobooks
+}
+
 pub async fn user_display_name(session: &Session, user_id: &str) -> Option<String> {
     let bytes = session
         .spclient()
@@ -996,6 +1048,42 @@ mod tests {
         episode.set_gid(vec![0x05; 16]);
         episode.set_name("Episode 1".into());
         episode.write_to_bytes().unwrap()
+    }
+
+    fn show_bytes(audiobook: bool) -> Vec<u8> {
+        let mut show = librespot_protocol::metadata::Show::new();
+        show.set_gid(vec![0x07; 16]);
+        show.set_name("I, Robot".into());
+        show.set_is_audiobook(audiobook);
+        show.write_to_bytes().unwrap()
+    }
+
+    /// Only shows Spotify marks as audiobooks are reported. A show it does
+    /// not answer for, or answers with another kind, stays a podcast.
+    #[test]
+    fn only_shows_marked_as_audiobooks_are_reported() {
+        let book = "spotify:show:book";
+        let podcast = "spotify:show:podcast";
+        let answers = response([
+            answer(ExtensionKind::SHOW_V4, book, 200, Some(show_bytes(true))),
+            answer(ExtensionKind::SHOW_V4, podcast, 0, Some(show_bytes(false))),
+            answer(ExtensionKind::SHOW_V4, "spotify:show:gone", 404, None),
+            answer(
+                ExtensionKind::TRACK_V4,
+                "spotify:show:odd",
+                200,
+                Some(show_bytes(true)),
+            ),
+        ]);
+        assert_eq!(audiobooks_in(&answers), vec![book.to_string()]);
+
+        let request = show_request(&[book.into(), "spotify:episode:chapter".into()]);
+        assert_eq!(
+            request.entity_request.len(),
+            1,
+            "only shows are asked about"
+        );
+        assert_eq!(request.entity_request[0].entity_uri, book);
     }
 
     fn asked(uris: &[&str]) -> BTreeSet<String> {

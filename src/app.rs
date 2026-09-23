@@ -326,6 +326,11 @@ pub struct App {
     track_requests: HashSet<String>,
     /// Album URIs already resolved or attempted through librespot this session.
     album_types_requested: HashSet<String>,
+    /// Saved shows Spotify marks as audiobooks, which librespot cannot play;
+    /// the Podcasts shelf leaves them out.
+    pub audiobook_shows: HashSet<String>,
+    /// Saved shows already asked about.
+    audiobooks_requested: HashSet<String>,
     /// Album URIs positively identified as EPs by librespot.
     confirmed_ep_albums: HashSet<String>,
     /// Built table rows, keyed by page. Capped; dropped on reset and eviction.
@@ -715,6 +720,8 @@ impl App {
             track_cache: HashMap::new(),
             track_requests: HashSet::new(),
             album_types_requested: HashSet::new(),
+            audiobook_shows: HashSet::new(),
+            audiobooks_requested: HashSet::new(),
             confirmed_ep_albums: HashSet::new(),
             table_rows: HashMap::new(),
             page_used: HashMap::new(),
@@ -1794,6 +1801,9 @@ impl App {
                 Event::UserName { id, name } => {
                     self.set_user_name(id, name);
                 }
+                Event::AudiobookShows(uris) => {
+                    self.audiobook_shows.extend(uris);
+                }
                 Event::AlbumType { uri, result } => match result {
                     Ok(true) => {
                         self.confirmed_ep_albums.insert(uri);
@@ -1946,6 +1956,8 @@ impl App {
         self.artist_pages.clear();
         self.show_pages.clear();
         self.album_types_requested.clear();
+        self.audiobook_shows.clear();
+        self.audiobooks_requested.clear();
         self.confirmed_ep_albums.clear();
         self.saved.clear();
         self.saved_pending.clear();
@@ -5312,6 +5324,15 @@ impl App {
                 Ok(page) => {
                     for item in &page.items {
                         self.saved.insert(item.show.uri.clone(), true);
+                    }
+                    let unknown: Vec<String> = page
+                        .items
+                        .iter()
+                        .map(|item| item.show.uri.clone())
+                        .filter(|uri| self.audiobooks_requested.insert(uri.clone()))
+                        .collect();
+                    if !unknown.is_empty() {
+                        self.backend.send(Command::AudiobookShows(unknown));
                     }
                     self.library.shows.absorb(offset, page);
                 }

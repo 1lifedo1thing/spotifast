@@ -67,6 +67,7 @@ clients. Spotifast uses its session for:
 - **Display names** for the user IDs attached to songs in a playlist.
 - **Precise EP types** for releases that the Web API groups with singles.
 - **Song radio and autoplay** through Spotify's context resolver.
+- **Audiobook detection** for saved shows, which the Web API lists as podcasts.
 
 ## librespot playback
 
@@ -102,7 +103,9 @@ The Web API and librespot do not provide these features:
 - **Local files.** librespot only streams Spotify's catalogue. It cannot fetch
   audio for a `spotify:local:` entry. Playing files from disk would require a
   separate player. See [issue #3](https://github.com/crmne/spotifast/issues/3).
-- **Audiobooks.** librespot does not play them.
+- **Audiobooks.** librespot does not play them. Spotify lists some
+  audiobooks among saved shows; on `main`, after 0.9.1, Spotifast asks the
+  librespot session which ones and leaves them out of the Podcasts shelf.
 - **Offline listening and downloads.** Spotify's DRM and the project's scope
   rule these out.
 - **Playback speed and crossfade.** librespot supports neither. Spotifast

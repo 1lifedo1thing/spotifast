@@ -799,6 +799,10 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
         Filter::Podcasts => {
             for saved in &app.library.shows.items {
                 let show = &saved.show;
+                // Audiobooks arrive as shows, but librespot can't play them.
+                if app.audiobook_shows.contains(&show.uri) {
+                    continue;
+                }
                 if !needle.is_empty() && !show.name.to_lowercase().contains(&needle) {
                     continue;
                 }
