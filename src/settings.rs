@@ -132,11 +132,12 @@ impl<'de> Deserialize<'de> for LanguageChoice {
 impl ThemeChoice {
     pub const ALL: [ThemeChoice; 3] = [Self::System, Self::Light, Self::Dark];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self, locale: crate::i18n::Locale) -> std::borrow::Cow<'static, str> {
+        use crate::i18n::{gettext, pgettext};
         match self {
-            Self::Dark => "Dark",
-            Self::Light => "Light",
-            Self::System => "Follow system",
+            Self::Dark => pgettext(locale, "theme", "Dark"),
+            Self::Light => pgettext(locale, "theme", "Light"),
+            Self::System => gettext(locale, "Follow system"),
         }
     }
 }
@@ -159,12 +160,13 @@ pub enum ProxyMode {
 impl ProxyMode {
     pub const ALL: [ProxyMode; 4] = [Self::Off, Self::System, Self::Http, Self::Socks];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self, locale: crate::i18n::Locale) -> std::borrow::Cow<'static, str> {
+        use crate::i18n::pgettext;
         match self {
-            Self::Off => "Off",
-            Self::System => "System",
-            Self::Http => "HTTP",
-            Self::Socks => "SOCKS5",
+            Self::Off => pgettext(locale, "proxy", "Off"),
+            Self::System => pgettext(locale, "proxy", "System"),
+            Self::Http => "HTTP".into(),
+            Self::Socks => "SOCKS5".into(),
         }
     }
 

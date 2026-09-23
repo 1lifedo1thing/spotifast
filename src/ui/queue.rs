@@ -309,10 +309,13 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
         // The trash sits with the songs it removes: only this section is
         // the user's to clear, the context below plays itself.
         ui.horizontal(|ui| {
-            // Translators: Songs added manually, before the current playlist or album continues.
             theme::text(
                 ui,
-                gettext(app.locale, "Playing next"),
+                gettext(
+                    app.locale,
+                    // Translators: Songs added manually, before the current playlist or album continues.
+                    "Playing next",
+                ),
                 theme::semibold(14.0),
                 palette.text,
             );
@@ -413,10 +416,13 @@ fn contents(app: &mut App, ui: &mut egui::Ui, compact: bool) {
     // row on it belongs to Next up, which plays from the context and is never
     // rewritten. The player bar's Queue button still takes the drop.
     if queue_len > queued_len {
-        // Translators: Upcoming songs from the current playlist or album, after manually queued songs.
         theme::text(
             ui,
-            gettext(app.locale, "Next up"),
+            gettext(
+                app.locale,
+                // Translators: Upcoming songs from the current playlist or album, after manually queued songs.
+                "Next up",
+            ),
             theme::semibold(14.0),
             palette.text,
         );

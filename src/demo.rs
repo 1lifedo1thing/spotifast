@@ -4348,15 +4348,15 @@ mod tests {
                     results.episodes = None;
                 }
                 let section = if selected == SearchFilter::All {
-                    filter.label()
+                    filter.label(crate::i18n::Locale::English)
                 } else {
-                    "All"
+                    "All".into()
                 };
                 check_card_menu(
                     &mut app,
                     &ctx,
                     crate::ui::search::show,
-                    section,
+                    &section,
                     &title,
                     &uri,
                     &labels,
@@ -4400,31 +4400,31 @@ mod tests {
     fn home_cards_open_item_menus() {
         for (section, title, uri, labels) in [
             (
-                crate::util::greeting(),
+                crate::util::greeting(crate::i18n::Locale::English),
                 playlist(1).name,
                 playlist(1).uri,
                 vec!["Edit details", "Delete"],
             ),
             (
-                crate::util::greeting(),
+                crate::util::greeting(crate::i18n::Locale::English),
                 playlist(0).name,
                 playlist(0).uri,
                 vec!["Remove from Your Library"],
             ),
             (
-                "Made for you",
+                "Made for you".into(),
                 playlist(0).name,
                 playlist(0).uri,
                 vec!["Remove from Your Library"],
             ),
             (
-                "Recently played",
+                "Recently played".into(),
                 track(5).name,
                 track(5).uri,
                 vec!["Add to queue", "Add to playlist", "Go to song radio"],
             ),
             (
-                "Your top artists",
+                "Your top artists".into(),
                 artist(1).name,
                 artist(1).uri,
                 vec!["Follow"],
@@ -4435,7 +4435,7 @@ mod tests {
                 &mut app,
                 &ctx,
                 crate::ui::home::show,
-                section,
+                &section,
                 &title,
                 &uri,
                 &labels,

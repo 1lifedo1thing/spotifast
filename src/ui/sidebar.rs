@@ -4,7 +4,7 @@ use egui::{Align, CornerRadius, Frame, Layout, Margin, Rect, Sense, Vec2, pos2, 
 
 use crate::api::models::pick_image;
 use crate::app::App;
-use crate::i18n::gettext;
+use crate::i18n::{Locale, gettext};
 use crate::model::{Action, Dialog, DragEntry, DragTrack, Loadable, Page};
 use crate::settings::{LIKED_SONGS_KEY, LibraryShelf as Filter, LibrarySort};
 use crate::theme::{self, Icon, Palette};
@@ -684,6 +684,7 @@ fn folder_rows(app: &App, user_id: &str, entries: &mut Vec<Entry>) {
                     continue;
                 }
                 entries.push(playlist_entry(
+                    app.locale,
                     playlist,
                     *index,
                     user_id,
@@ -698,6 +699,7 @@ fn folder_rows(app: &App, user_id: &str, entries: &mut Vec<Entry>) {
     for (index, playlist) in playlists.iter().enumerate() {
         if !seen.contains(playlist.uri.as_str()) {
             entries.push(playlist_entry(
+                app.locale,
                 playlist,
                 index,
                 user_id,
@@ -738,6 +740,7 @@ fn folder_playlists(rootlist: &[crate::player::RootlistEntry], id: &str) -> usiz
 }
 
 fn playlist_entry(
+    locale: Locale,
     playlist: &crate::api::models::Playlist,
     index: usize,
     user_id: &str,
@@ -748,7 +751,8 @@ fn playlist_entry(
         image: pick_image(&playlist.images, 64).map(str::to_string),
         grid_image: pick_image(&playlist.images, 640).map(str::to_string),
         name: playlist.name.clone(),
-        subtitle: format!("Playlist • {}", playlist.owner_name()),
+        // Translators: {owner} is the name of the playlist's owner.
+        subtitle: gettext(locale, "Playlist • {owner}").replace("{owner}", playlist.owner_name()),
         grid_subtitle: playlist.owner_name().to_string(),
         page: Page::Playlist(playlist.id.clone()),
         uri: playlist.uri.clone(),
@@ -940,6 +944,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
         let response = super::widgets::search_field(
             ui,
             &palette,
+            app.locale,
             egui::Id::new("sidebar-search"),
             &mut app.library.filter,
             &gettext(locale, "Search in Your Library"),
@@ -1007,6 +1012,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             continue;
                         }
                         entries.push(playlist_entry(
+                            locale,
                             playlist,
                             index,
                             &user_id,
@@ -1101,7 +1107,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                     image: pick_image(&show.images, 64).map(str::to_string),
                     grid_image: pick_image(&show.images, 640).map(str::to_string),
                     name: show.name.clone(),
-                    subtitle: format!("Podcast • {}", show.publisher),
+                    // Translators: {publisher} is the podcast's publisher.
+                    subtitle: gettext(locale, "Podcast • {publisher}")
+                        .replace("{publisher}", &show.publisher),
                     grid_subtitle: show.publisher.clone(),
                     page: Page::Show(show.id.clone()),
                     uri: show.uri.clone(),
@@ -1157,10 +1165,10 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                 theme::subtle(
                     ui,
                     &palette,
-                    if needle.is_empty() {
-                        "Nothing here yet."
+                    &if needle.is_empty() {
+                        gettext(app.locale, "Nothing here yet.")
                     } else {
-                        "No matches."
+                        gettext(app.locale, "No matches.")
                     },
                 );
             }
@@ -1903,7 +1911,14 @@ fn full_playlist_order(app: &App) -> Vec<String> {
         .iter()
         .enumerate()
         .map(|(index, playlist)| {
-            playlist_entry(playlist, index, app.user_id().unwrap_or(""), false, 0)
+            playlist_entry(
+                app.locale,
+                playlist,
+                index,
+                app.user_id().unwrap_or(""),
+                false,
+                0,
+            )
         })
         .collect();
     entries.push(liked_entry(app));
@@ -2058,7 +2073,7 @@ mod ordering_tests {
             .unwrap()
             .iter()
             .enumerate()
-            .map(|(index, playlist)| playlist_entry(playlist, index, "", false, 0))
+            .map(|(index, playlist)| playlist_entry(Locale::English, playlist, index, "", false, 0))
             .collect()
     }
 

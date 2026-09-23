@@ -626,15 +626,16 @@ impl SearchFilter {
         Self::Episodes,
     ];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self, locale: crate::i18n::Locale) -> std::borrow::Cow<'static, str> {
+        use crate::i18n::{gettext, pgettext};
         match self {
-            Self::All => "All",
-            Self::Songs => "Songs",
-            Self::Artists => "Artists",
-            Self::Albums => "Albums",
-            Self::Playlists => "Playlists",
-            Self::Podcasts => "Podcasts",
-            Self::Episodes => "Episodes",
+            Self::All => pgettext(locale, "filter", "All"),
+            Self::Songs => gettext(locale, "Songs"),
+            Self::Artists => gettext(locale, "Artists"),
+            Self::Albums => gettext(locale, "Albums"),
+            Self::Playlists => gettext(locale, "Playlists"),
+            Self::Podcasts => gettext(locale, "Podcasts"),
+            Self::Episodes => gettext(locale, "Episodes"),
         }
     }
 }
@@ -722,12 +723,13 @@ impl DiscographyFilter {
     pub const ALL: [DiscographyFilter; 4] =
         [Self::All, Self::Albums, Self::Singles, Self::AppearsOn];
 
-    pub fn label(self) -> &'static str {
+    pub fn label(self, locale: crate::i18n::Locale) -> std::borrow::Cow<'static, str> {
+        use crate::i18n::{gettext, pgettext};
         match self {
-            Self::All => "All",
-            Self::Albums => "Albums",
-            Self::Singles => "Singles & EPs",
-            Self::AppearsOn => "Appears On",
+            Self::All => pgettext(locale, "filter", "All"),
+            Self::Albums => gettext(locale, "Albums"),
+            Self::Singles => gettext(locale, "Singles & EPs"),
+            Self::AppearsOn => gettext(locale, "Appears On"),
         }
     }
 

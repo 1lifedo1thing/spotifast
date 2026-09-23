@@ -6,14 +6,14 @@ use std::sync::Arc;
 use crate::api::models::{PlayableItem, Track};
 use crate::app::App;
 use crate::backend::LocalPlayback;
-use crate::i18n::gettext;
+use crate::i18n::{Locale, gettext};
 use crate::model::{Loadable, Page, RowContext};
 use crate::theme::Icon;
 use crate::util;
 
 use super::collection::{
-    Actions, Hero, Table, actions_row, hero, hero_images, remember_table_items, table,
-    table_items_hit,
+    Actions, Hero, Table, actions_row, hero, hero_images, remember_table_items, songs_and_duration,
+    table, table_items_hit,
 };
 use super::widgets;
 
@@ -28,10 +28,11 @@ pub fn radio(app: &mut App, ui: &mut egui::Ui, seed: &str) {
     let Some(page) = app.radio_pages.get(seed) else {
         return;
     };
+    let locale = app.locale;
     let name = app
         .radio_name(seed)
         .or_else(|| page.name.clone())
-        .unwrap_or_else(|| gettext(app.locale, "Radio").into_owned());
+        .unwrap_or_else(|| gettext(locale, "Radio").into_owned());
     let mut images = app.radio_images(seed);
     if images.is_empty() {
         images.clone_from(&page.images);
@@ -45,7 +46,7 @@ pub fn radio(app: &mut App, ui: &mut egui::Ui, seed: &str) {
                 .iter()
                 .map(|song| song.duration_ms as u64)
                 .sum::<u64>(),
-            featuring(songs),
+            featuring(locale, songs),
         ))),
         Loadable::Failed(error) => Err(error.clone()),
         Loadable::Loading | Loadable::NotLoaded => Ok(None),
@@ -57,16 +58,12 @@ pub fn radio(app: &mut App, ui: &mut egui::Ui, seed: &str) {
 
     let mut byline = Vec::new();
     if let Some(seed_page) = seed_page {
-        byline.push((based_on(seed).to_string(), Some(seed_page)));
+        byline.push((based_on(locale, seed).into_owned(), Some(seed_page)));
     }
     let mut description = None;
     if let Ok(Some((count, duration, artists))) = &state {
         byline.push((
-            format!(
-                "{} songs, {}",
-                util::format_count(*count as u64),
-                util::format_total_ms(*duration)
-            ),
+            songs_and_duration(locale, u32::try_from(*count).unwrap_or(u32::MAX), *duration),
             None,
         ));
         description.clone_from(artists);
@@ -77,7 +74,7 @@ pub fn radio(app: &mut App, ui: &mut egui::Ui, seed: &str) {
         Hero {
             images: hero_images(&images, None, false),
             liked: false,
-            kind: "Radio",
+            kind: gettext(locale, "Radio"),
             title: &name,
             description,
             byline,
@@ -103,7 +100,10 @@ pub fn radio(app: &mut App, ui: &mut egui::Ui, seed: &str) {
                 widgets::error_row(
                     ui,
                     app,
-                    "Radio comes from playback on this computer. Turn it on in Settings.",
+                    &gettext(
+                        locale,
+                        "Radio comes from playback on this computer. Turn it on in Settings.",
+                    ),
                     None,
                 );
             } else {
@@ -188,7 +188,7 @@ fn radio_actions<'a>(
         view,
         saved: None,
         saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
-        saved_tooltips: ("", ""),
+        saved_tooltips: Default::default(),
         owned_playlist: None,
         reload: Some((Page::Radio(seed.to_string()), !loaded)),
         name,
@@ -197,18 +197,18 @@ fn radio_actions<'a>(
 }
 
 /// What the radio is based on, linking to the seed's page.
-fn based_on(seed: &str) -> &'static str {
+fn based_on(locale: Locale, seed: &str) -> std::borrow::Cow<'static, str> {
     match util::uri_kind(seed) {
-        Some("playlist") => "Based on this playlist",
-        Some("album") => "Based on this album",
-        Some("artist") => "Based on this artist",
-        _ => "Based on this song",
+        Some("playlist") => gettext(locale, "Based on this playlist"),
+        Some("album") => gettext(locale, "Based on this album"),
+        Some("artist") => gettext(locale, "Based on this artist"),
+        _ => gettext(locale, "Based on this song"),
     }
 }
 
 /// "With A, B and C": the first few artists the mix plays, as Spotify's
 /// own radio pages describe themselves.
-fn featuring(songs: &[Track]) -> Option<String> {
+fn featuring(locale: Locale, songs: &[Track]) -> Option<String> {
     let mut names: Vec<&str> = Vec::new();
     for artist in songs.iter().flat_map(|song| &song.artists) {
         if !artist.name.is_empty() && !names.contains(&artist.name.as_str()) {
@@ -220,10 +220,28 @@ fn featuring(songs: &[Track]) -> Option<String> {
     }
     match names.as_slice() {
         [] => None,
-        [one] => Some(format!("With {one}")),
-        [first, second] => Some(format!("With {first} and {second}")),
-        [first, second, third] => Some(format!("With {first}, {second} and {third}")),
-        [first, second, third, ..] => Some(format!("With {first}, {second}, {third} and more")),
+        // Translators: {first} is an artist name.
+        [first] => Some(gettext(locale, "With {first}").replace("{first}", first)),
+        [first, second] => Some(
+            // Translators: {first} and {second} are artist names.
+            gettext(locale, "With {first} and {second}")
+                .replace("{first}", first)
+                .replace("{second}", second),
+        ),
+        [first, second, third] => Some(
+            // Translators: {first}, {second} and {third} are artist names.
+            gettext(locale, "With {first}, {second} and {third}")
+                .replace("{first}", first)
+                .replace("{second}", second)
+                .replace("{third}", third),
+        ),
+        [first, second, third, ..] => Some(
+            // Translators: {first}, {second} and {third} are artist names; more follow.
+            gettext(locale, "With {first}, {second}, {third} and more")
+                .replace("{first}", first)
+                .replace("{second}", second)
+                .replace("{third}", third),
+        ),
     }
 }
 
@@ -231,6 +249,7 @@ fn featuring(songs: &[Track]) -> Option<String> {
 mod tests {
     use super::featuring;
     use crate::api::models::{ArtistRef, Track};
+    use crate::i18n::Locale;
 
     fn by(names: &[&str]) -> Track {
         Track {
@@ -247,14 +266,21 @@ mod tests {
 
     #[test]
     fn a_radio_names_its_first_artists() {
-        assert_eq!(featuring(&[]), None);
-        assert_eq!(featuring(&[by(&["Björk"])]).as_deref(), Some("With Björk"));
+        assert_eq!(featuring(Locale::English, &[]), None);
         assert_eq!(
-            featuring(&[by(&["Björk", "Arca"]), by(&["Björk"])]).as_deref(),
+            featuring(Locale::English, &[by(&["Björk"])]).as_deref(),
+            Some("With Björk")
+        );
+        assert_eq!(
+            featuring(Locale::English, &[by(&["Björk", "Arca"]), by(&["Björk"])]).as_deref(),
             Some("With Björk and Arca")
         );
         assert_eq!(
-            featuring(&[by(&["A"]), by(&["B"]), by(&["C"]), by(&["D"]), by(&["E"])]).as_deref(),
+            featuring(
+                Locale::English,
+                &[by(&["A"]), by(&["B"]), by(&["C"]), by(&["D"]), by(&["E"])]
+            )
+            .as_deref(),
             Some("With A, B, C and more")
         );
     }

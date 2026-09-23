@@ -3,8 +3,14 @@
 //! eframe already places the window on-screen. The session can still refer
 //! to a monitor that was unplugged, so check before moving the window there.
 
-pub const ON_TOP_UNAVAILABLE: &str =
-    "On Wayland, use your desktop's Keep Above shortcut or window rule.";
+/// Why a Wayland window cannot be kept above others from the app, and what
+/// to do instead.
+pub fn on_top_unavailable(locale: crate::i18n::Locale) -> std::borrow::Cow<'static, str> {
+    crate::i18n::gettext(
+        locale,
+        "On Wayland, use your desktop's Keep Above shortcut or window rule.",
+    )
+}
 
 #[cfg(any(target_os = "macos", test))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

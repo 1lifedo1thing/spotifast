@@ -46,7 +46,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         login::show(app, ui, connecting);
         update::show(app, ctx);
         toasts(app, ctx, 20.0);
-        window_controls(ui, &app.palette);
+        window_controls(ui, &app.palette, app.locale);
         window_resize(ui);
         return;
     }
@@ -82,7 +82,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     update::show(app, ctx);
     widgets::drag_ghost(ctx, &app.palette);
     toasts(app, ctx, theme::PLAYER_BAR_HEIGHT + 16.0);
-    window_controls(ui, &app.palette);
+    window_controls(ui, &app.palette, app.locale);
     window_resize(ui);
 }
 
@@ -320,7 +320,8 @@ pub(super) fn window_controls_reservation(
 }
 
 /// Draws the Windows caption controls over the outermost top-right header.
-pub fn window_controls(ui: &mut egui::Ui, palette: &theme::Palette) {
+pub fn window_controls(ui: &mut egui::Ui, palette: &theme::Palette, locale: crate::i18n::Locale) {
+    use crate::i18n::gettext;
     if !windows_chrome_visible_here(ui.ctx()) {
         return;
     }
@@ -339,21 +340,31 @@ pub fn window_controls(ui: &mut egui::Ui, palette: &theme::Palette) {
                 for (icon, tooltip, command) in [
                     (
                         Icon::Minus,
-                        "Minimize",
+                        gettext(locale, "Minimize"),
                         egui::ViewportCommand::Minimized(true),
                     ),
                     (
                         if maximized { Icon::Copy } else { Icon::Square },
-                        if maximized { "Restore" } else { "Maximize" },
+                        if maximized {
+                            gettext(locale, "Restore")
+                        } else {
+                            gettext(locale, "Maximize")
+                        },
                         egui::ViewportCommand::Maximized(!maximized),
                     ),
-                    (Icon::X, "Close", egui::ViewportCommand::Close),
+                    (
+                        Icon::X,
+                        gettext(locale, "Close"),
+                        egui::ViewportCommand::Close,
+                    ),
                 ] {
-                    let image = icon.image(palette.secondary, 14.0).alt_text(tooltip);
+                    let image = icon
+                        .image(palette.secondary, 14.0)
+                        .alt_text(tooltip.as_ref());
                     let button = egui::Button::image(image).frame_when_inactive(false);
                     if ui
                         .add_sized(egui::Vec2::splat(36.0), button)
-                        .on_hover_text(tooltip)
+                        .on_hover_text(tooltip.as_ref())
                         .clicked()
                     {
                         ui.ctx().send_viewport_cmd(command);
