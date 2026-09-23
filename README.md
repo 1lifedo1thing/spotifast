@@ -142,6 +142,11 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   another Spotify client.
   Large playlist checkpoints read and write their JSON through a small background
   buffer, preserving the existing cache format without another full JSON copy.
+- On `main`, after 0.9.1, the **Shuffle** button beside a collection's **Play**
+  button sets the global mode without starting that collection. Choose it before
+  a playback device is active; the next **Play** uses that selection. While
+  another collection plays, it changes that playback's mode without switching
+  to the viewed collection.
 - **Lyrics.** Follow synced lyrics in a side panel or full-screen view, or read
   unsynced lyrics when timestamps are unavailable. Full-screen lyrics scroll
   smoothly and highlight the playing line automatically.
@@ -155,7 +160,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
 - **Light and dark**, or follow the system.
 - **Repeat stays selected.** On `main`, after 0.8.0, starting another song
   locally preserves Repeat, with Shuffle on or off.
-- **Song changes keep the selected song.** On `main`, after 0.8.0, the default
+- **Song changes keep the selected song.** On `main`, after 0.9.1, the default
   audio output keeps discarded audio paced while a replacement loads, preventing
   the old cached song from racing to its end and causing an extra skip.
 - **Reconnects keep the queue.** On `main`, after 0.8.0, recovering an
@@ -322,7 +327,7 @@ NixOS's `fonts.packages` are found too.
 Since 0.8.0, long right-to-left titles in song rows and the player
 bar end with an ellipsis inside their text area, including joined Arabic letters.
 
-On `main`, after 0.8.0, the Linux launcher is
+On `main`, after 0.9.1, the Linux launcher is
 `packaging/applications/spotifast.desktop`. Its icon and window identity also
 use Spotifast, while existing settings and window positions are preserved.
 After installing it, `xdg-mime default spotifast.desktop x-scheme-handler/spotify`
@@ -349,7 +354,7 @@ addresses when one cannot connect, including a prompt IPv4/IPv6 fallback.
 Socket and proxy tunnel setup have a five-second limit. See
 [how it connects](docs/_reference/how-it-connects.md#the-engine).
 
-On `main`, after 0.8.0, the whole engine connection can take up to 75 seconds,
+On `main`, after 0.9.1, the whole engine connection can take up to 75 seconds,
 including server resolution and authentication. A stalled setup may therefore
 remain **Connecting** longer than one five-second attempt; the outer deadline
 does not guarantee that every fallback will be tried.

@@ -6724,6 +6724,9 @@ impl App {
                 self.local.shuffle = shuffle;
                 self.backend.player(PlayerCommand::Shuffle(shuffle));
             }
+            Target::Remote(None) if self.remote_fresh().is_none() => {
+                // Keep the mode for Play without requesting an absent device.
+            }
             Target::Remote(device_id) => {
                 if let Some(remote) = self.remote.as_mut() {
                     remote.state.shuffle_state = shuffle;
@@ -7578,7 +7581,9 @@ impl App {
                 }
             }
             Action::ToggleShuffle => {
-                let shuffle = self.now_playing().is_some_and(|now| now.shuffle);
+                let shuffle = self
+                    .now_playing()
+                    .map_or(self.shuffle_wanted, |now| now.shuffle);
                 self.set_shuffle(!shuffle);
             }
             Action::SetShuffle(shuffle) => self.set_shuffle(shuffle),
@@ -17772,6 +17777,285 @@ mod tests {
                 Some("spotify:track:middle")
             );
         }
+        app.backend.shutdown();
+    }
+
+    fn draw_collection_actions(
+        ctx: &egui::Context,
+        app: &mut App,
+        uri: &str,
+        events: Vec<egui::Event>,
+    ) {
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(800.0, 600.0),
+                )),
+                events,
+                ..Default::default()
+            },
+            |ui| {
+                crate::ui::collection::actions_row(
+                    app,
+                    ui,
+                    crate::ui::collection::Actions {
+                        play_uri: Some(uri.to_owned()),
+                        view: None,
+                        saved: None,
+                        saved_icons: (
+                            crate::theme::Icon::CirclePlus,
+                            crate::theme::Icon::CircleCheck,
+                        ),
+                        saved_tooltips: ("", ""),
+                        owned_playlist: None,
+                        reload: None,
+                        name: "Test",
+                    },
+                    None,
+                );
+            },
+        );
+        output.textures_delta.clear();
+        app.apply_actions(ctx);
+    }
+
+    fn click_collection_action(
+        ctx: &egui::Context,
+        app: &mut App,
+        uri: &str,
+        position: egui::Pos2,
+    ) {
+        let click = vec![
+            egui::Event::PointerMoved(position),
+            egui::Event::PointerButton {
+                pos: position,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::NONE,
+            },
+            egui::Event::PointerButton {
+                pos: position,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ];
+        draw_collection_actions(ctx, app, uri, vec![]);
+        draw_collection_actions(ctx, app, uri, click);
+    }
+
+    #[test]
+    fn shuffle_selected_without_a_device_applies_when_collection_play_starts() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        app.attach(&ctx);
+        crate::demo::populate(&mut app);
+        let remote = app.remote.take().expect("demo remote playback");
+        app.local_ready = false;
+        app.local_device_id = None;
+        app.local_playback = LocalPlayback::Unavailable;
+        app.local.connected = false;
+        app.selected_device = None;
+        app.shuffle_wanted = false;
+        assert!(matches!(app.target(), Target::Remote(None)));
+
+        click_collection_action(
+            &ctx,
+            &mut app,
+            "spotify:playlist:pl0",
+            egui::pos2(87.0, 28.0),
+        );
+        assert!(app.playing_context_shuffle());
+        assert!(app.remote.is_none(), "Shuffle must not start playback");
+        assert!(app.backend.take_remote_play_requests().is_empty());
+        assert!(
+            app.backend.take_remote_shuffle_requests().is_empty(),
+            "without an active device, Shuffle stays pending instead of calling Spotify"
+        );
+        assert!(
+            app.toasts.is_empty(),
+            "selecting a pending mode shows no error"
+        );
+
+        let playing_context = remote
+            .state
+            .context
+            .as_ref()
+            .expect("demo playing context")
+            .uri
+            .clone();
+        assert_ne!(playing_context, "spotify:playlist:pl0");
+        app.remote = Some(remote);
+        click_collection_action(
+            &ctx,
+            &mut app,
+            "spotify:playlist:pl0",
+            egui::pos2(28.0, 28.0),
+        );
+
+        let requests = app.backend.take_remote_play_requests();
+        assert!(matches!(
+            requests.as_slice(),
+            [ApiRequest::ShufflePlay { device_id: Some(device), play }]
+                if device == "remote1" && play.context_uri.as_deref() == Some("spotify:playlist:pl0")
+        ));
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn player_bar_uses_pending_shuffle_without_a_device() {
+        use egui::accesskit::{Action as AccessibleAction, ActionRequest, Toggled, TreeId};
+
+        fn draw_player_bar(
+            ctx: &egui::Context,
+            app: &mut App,
+            events: Vec<egui::Event>,
+        ) -> egui::accesskit::TreeUpdate {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(1280.0, 800.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| crate::ui::player_bar::show(app, ui),
+            );
+            output.textures_delta.clear();
+            app.apply_actions(ctx);
+            output.platform_output.accesskit_update.unwrap()
+        }
+
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        let mut app = headless_app();
+        app.attach(&ctx);
+        crate::demo::populate(&mut app);
+        app.remote.take().expect("demo remote playback");
+        app.local_ready = false;
+        app.local_device_id = None;
+        app.local_playback = LocalPlayback::Unavailable;
+        app.local.connected = false;
+        app.selected_device = None;
+        app.shuffle_wanted = false;
+        assert!(app.now_playing().is_none());
+
+        click_collection_action(
+            &ctx,
+            &mut app,
+            "spotify:playlist:pl0",
+            egui::pos2(87.0, 28.0),
+        );
+        assert!(app.playing_context_shuffle());
+
+        draw_player_bar(&ctx, &mut app, Vec::new());
+        let enabled = draw_player_bar(&ctx, &mut app, Vec::new());
+        let (shuffle_id, shuffle_node) = enabled
+            .nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some("Shuffle"))
+            .expect("player-bar Shuffle button");
+        assert_eq!(shuffle_node.toggled(), Some(Toggled::True));
+
+        draw_player_bar(
+            &ctx,
+            &mut app,
+            vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                target_tree: TreeId::ROOT,
+                target_node: *shuffle_id,
+                action: AccessibleAction::Click,
+                data: None,
+            })],
+        );
+        assert!(!app.playing_context_shuffle());
+
+        let disabled = draw_player_bar(&ctx, &mut app, Vec::new());
+        let shuffle_node = &disabled
+            .nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some("Shuffle"))
+            .expect("player-bar Shuffle button")
+            .1;
+        assert_eq!(shuffle_node.toggled(), Some(Toggled::False));
+        assert!(app.backend.take_remote_shuffle_requests().is_empty());
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn shuffle_targets_active_remote_playback_without_a_device_id() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        app.attach(&ctx);
+        crate::demo::populate(&mut app);
+        app.local_ready = false;
+        app.selected_device = None;
+        app.shuffle_wanted = false;
+        app.remote
+            .as_mut()
+            .unwrap()
+            .state
+            .device
+            .as_mut()
+            .unwrap()
+            .id = None;
+        assert!(matches!(app.target(), Target::Remote(None)));
+
+        click_collection_action(
+            &ctx,
+            &mut app,
+            "spotify:playlist:pl0",
+            egui::pos2(87.0, 28.0),
+        );
+        assert!(matches!(
+            app.backend.take_remote_shuffle_requests().as_slice(),
+            [ApiRequest::Remote {
+                action: RemoteAction::Shuffle,
+                device_id: None,
+                flag: true,
+                ..
+            }]
+        ));
+        app.backend.shutdown();
+    }
+
+    #[test]
+    fn shuffle_toggle_on_another_collection_keeps_playing_context_until_play() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        app.attach(&ctx);
+        crate::demo::populate(&mut app);
+        app.shuffle_wanted = true;
+        let playing_context = app
+            .playing_context_uri()
+            .expect("demo is playing a collection");
+        let other_collection = "spotify:playlist:pl0";
+        assert_ne!(playing_context, other_collection);
+        app.open(Page::Playlist("pl0".into()));
+
+        click_collection_action(&ctx, &mut app, other_collection, egui::pos2(87.0, 28.0));
+        assert!(!app.playing_context_shuffle());
+        assert_eq!(
+            app.playing_context_uri().as_deref(),
+            Some(playing_context.as_str())
+        );
+        assert!(
+            app.backend.take_remote_play_requests().is_empty(),
+            "changing the global mode must not start the viewed collection"
+        );
+
+        click_collection_action(&ctx, &mut app, other_collection, egui::pos2(28.0, 28.0));
+        let requests = app.backend.take_remote_play_requests();
+        assert!(matches!(
+            requests.as_slice(),
+            [ApiRequest::Remote {
+                action: RemoteAction::Play,
+                device_id: Some(device),
+                play: Some(play),
+                ..
+            }] if device == "remote1" && play.context_uri.as_deref() == Some(other_collection)
+        ));
         app.backend.shutdown();
     }
 
