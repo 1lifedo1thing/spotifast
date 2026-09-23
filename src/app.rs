@@ -321,6 +321,9 @@ pub struct App {
     queue_cleared: Option<(std::collections::HashSet<String>, Instant)>,
     /// Upcoming context order before shuffle was toggled, used to detect lagging responses.
     queue_shuffle_pending: Option<QueueShufflePending>,
+    /// When a local reorder or positional insert last landed, used to
+    /// reject a fetch whose queued rows still show the pre-move order.
+    queue_reorder_pending: Option<Instant>,
     /// What the window's title bar says, as last set.
     window_title: String,
 
@@ -731,6 +734,7 @@ impl App {
             queue_stale_retries: 0,
             queue_cleared: None,
             queue_shuffle_pending: None,
+            queue_reorder_pending: None,
             window_title: String::new(),
             library: Library::default(),
             liked_songs: crate::liked::LikedSongs::default(),
@@ -2017,6 +2021,7 @@ impl App {
         self.saved_writes.clear();
         self.queue = Loadable::NotLoaded;
         self.queue_shuffle_pending = None;
+        self.queue_reorder_pending = None;
         self.devices.clear();
         self.control_devices_stale = true;
         self.devices_fetched_at = None;
@@ -4110,11 +4115,18 @@ impl App {
         }
     }
 
+    /// Whether the local player is the active target, so its queue can be
+    /// rewritten directly. Neither the Web API nor librespot can reorder or
+    /// insert into a live queue; the only way to change one is to clear it
+    /// and re-add its songs in the new order, which only reaches the
+    /// engine actually playing them.
+    pub fn queue_locally_reorderable(&self) -> bool {
+        self.local.is_active() && matches!(self.target(), Target::Local)
+    }
+
     /// Whether the active local queue has rows that can be cleared.
     pub fn can_clear_queue(&self) -> bool {
-        self.local.is_active()
-            && matches!(self.target(), Target::Local)
-            && self.queued_rows_len() > 0
+        self.queue_locally_reorderable() && self.queued_rows_len() > 0
     }
 
     /// Clears manually queued tracks while keeping the context's upcoming rows.
@@ -4319,6 +4331,19 @@ impl App {
             {
                 return true;
             }
+        }
+        // A local reorder or positional insert is optimistic; reject a
+        // fetch whose queued rows have not caught up to it yet.
+        if let Some(at) = self.queue_reorder_pending
+            && at.elapsed() < PLAYBACK_HOLD
+            && !fetched
+                .queue
+                .iter()
+                .take(self.manual_queue.len())
+                .map(|item| item.uri())
+                .eq(self.manual_queue.iter().map(String::as_str))
+        {
+            return true;
         }
         false
     }
@@ -4770,6 +4795,7 @@ impl App {
                 if result.is_ok() {
                     self.queue_cleared = None;
                     self.queue_shuffle_pending = None;
+                    self.queue_reorder_pending = None;
                 }
                 self.queue = Loadable::from_result(result);
                 self.reconcile_pending_queue();
@@ -7104,6 +7130,52 @@ impl App {
         }
     }
 
+    /// Queues several songs after the ones already queued, skipping any
+    /// queued again within `QUEUE_ADD_DEBOUNCE`, with one combined toast.
+    fn queue_many(&mut self, songs: Vec<(String, String)>) {
+        // Each picked row is its own ask, so a song picked twice is queued
+        // twice. Only an add from an earlier click can make one of them a
+        // repeat, so decide that before adding any.
+        let repeats: Vec<bool> = songs
+            .iter()
+            .map(|(uri, _)| self.queued_moments_ago(uri))
+            .collect();
+        let mut count = 0;
+        for ((uri, label), repeat) in songs.into_iter().zip(repeats) {
+            if !repeat {
+                self.queue_one(uri, label, false);
+                count += 1;
+            }
+        }
+        if count > 0 {
+            self.queued_toast(count);
+        }
+    }
+
+    fn queued_toast(&mut self, count: usize) {
+        self.toast(match count {
+            1 => "1 song added to queue".to_string(),
+            count => format!("{count} songs added to queue"),
+        });
+    }
+
+    /// Replays the manually queued songs on the local engine in their
+    /// current order. librespot can only append to or clear a live queue,
+    /// so a move or positional insert clears it and re-adds every song.
+    fn resync_local_queue(&mut self) {
+        self.backend.player(PlayerCommand::ClearQueue);
+        for uri in self.manual_queue.clone() {
+            if uri.starts_with("spotify:track:") || uri.starts_with("spotify:episode:") {
+                self.backend.player(PlayerCommand::AddToQueue(uri));
+            }
+        }
+        // Drop any queue fetch already in flight: it was asked for before
+        // the move and would otherwise land with the pre-move order.
+        self.queue_seq += 1;
+        self.queue_reorder_pending = Some(Instant::now());
+        self.queue_recheck_at = Some(Instant::now() + QUEUE_RECHECK);
+    }
+
     /// Adds one song after existing manual queue entries.
     ///
     /// `announce` is false when a batch should produce one toast.
@@ -7834,26 +7906,86 @@ impl App {
             }
             Action::SetRepeat(mode) => self.set_repeat(mode),
             Action::AddToQueue { uri, label } => self.add_to_queue(uri, label),
-            Action::QueueMany { songs } => {
-                // Each picked row is its own ask, so a song picked twice is
-                // queued twice. Only an add from an earlier click can make
-                // one of them a repeat, so decide that before adding any.
-                let repeats: Vec<bool> = songs
-                    .iter()
-                    .map(|(uri, _)| self.queued_moments_ago(uri))
-                    .collect();
-                let mut count = 0;
-                for ((uri, label), repeat) in songs.into_iter().zip(repeats) {
-                    if !repeat {
-                        self.queue_one(uri, label, false);
-                        count += 1;
+            Action::QueueMany { songs } => self.queue_many(songs),
+            Action::MoveInQueue { from, to } => {
+                if !self.queue_locally_reorderable() {
+                    return;
+                }
+                let queued_len = self.queued_rows_len();
+                if from >= queued_len || to > queued_len || from == to || to == from + 1 {
+                    return;
+                }
+                if let Loadable::Loaded(queue) = &mut self.queue {
+                    let item = queue.queue.remove(from);
+                    queue
+                        .queue
+                        .insert(if to > from { to - 1 } else { to }, item);
+                }
+                if from < self.manual_queue.len() {
+                    let uri = self.manual_queue.remove(from);
+                    let at = (if to > from { to - 1 } else { to }).min(self.manual_queue.len());
+                    self.manual_queue.insert(at, uri);
+                    // Pending additions are tracked by manual_queue index;
+                    // shift them the same way the move just shifted the row
+                    // they point at, or they end up naming a different song.
+                    for addition in &mut self.pending_queue_adds {
+                        if addition.manual_index == from {
+                            addition.manual_index = at;
+                        } else if from < addition.manual_index && addition.manual_index <= at {
+                            addition.manual_index -= 1;
+                        } else if at <= addition.manual_index && addition.manual_index < from {
+                            addition.manual_index += 1;
+                        }
                     }
                 }
-                if count > 0 {
-                    self.toast(match count {
-                        1 => "1 song added to queue".to_string(),
-                        count => format!("{count} songs added to queue"),
+                self.session_dirty = true;
+                self.resync_local_queue();
+            }
+            Action::InsertInQueue { items, position } => {
+                if !self.queue_locally_reorderable() {
+                    let songs = items
+                        .into_iter()
+                        .map(|item| (item.uri().to_string(), item.name().to_string()))
+                        .collect();
+                    self.queue_many(songs);
+                    return;
+                }
+                let position = position.min(self.queued_rows_len());
+                let repeats: Vec<bool> = items
+                    .iter()
+                    .map(|item| self.queued_moments_ago(item.uri()))
+                    .collect();
+                let mut inserted = 0;
+                for (item, repeat) in items.into_iter().zip(repeats) {
+                    if repeat {
+                        continue;
+                    }
+                    let uri = item.uri().to_string();
+                    let at = (position + inserted).min(self.manual_queue.len());
+                    // Inserting here shifts every later manual_queue row
+                    // right by one; keep pending additions pointing at their
+                    // own song rather than the one now sitting in their slot.
+                    for addition in &mut self.pending_queue_adds {
+                        if addition.manual_index >= at {
+                            addition.manual_index += 1;
+                        }
+                    }
+                    self.pending_queue_adds.push(PendingQueueAdd {
+                        item: item.clone(),
+                        at: Instant::now(),
+                        manual_index: at,
+                        write: None,
                     });
+                    if let Loadable::Loaded(queue) = &mut self.queue {
+                        queue.queue.insert(at.min(queue.queue.len()), item);
+                    }
+                    self.manual_queue.insert(at, uri);
+                    inserted += 1;
+                }
+                if inserted > 0 {
+                    self.session_dirty = true;
+                    self.queued_toast(inserted);
+                    self.resync_local_queue();
                 }
             }
             Action::SetSavedMany { uris, saved } => {
@@ -13156,6 +13288,229 @@ mod tests {
             "remote shuffle preserves hand-queued songs and updates context rows"
         );
         assert_eq!(app.queued_rows_len(), 1);
+    }
+
+    /// A queue fetch already in flight before a local reorder must not be
+    /// allowed to land afterwards and undo it. Once resynced with the local
+    /// engine, a fresh fetch still reporting the pre-drag order is likewise
+    /// rejected as stale until it catches up.
+    #[test]
+    fn stale_queue_response_after_local_reorder_does_not_undo_it() {
+        let mut app = headless_app();
+        app.auth = AuthStatus::Connected {
+            username: "alice".into(),
+        };
+        app.local_ready = true;
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: "spotify:track:playing".into(),
+            ..Default::default()
+        });
+        app.local.playback = Playback::Playing;
+        app.manual_queue = vec![
+            "spotify:track:manual1".into(),
+            "spotify:track:manual2".into(),
+        ];
+        app.queue = loaded_queue(
+            "spotify:track:playing",
+            &[
+                "spotify:track:manual1",
+                "spotify:track:manual2",
+                "spotify:track:ctx1",
+            ],
+        );
+
+        // A periodic refresh is already in flight before the drag lands.
+        app.refresh_queue(true);
+        let outstanding_seq = app.queue_seq;
+
+        let ctx = egui::Context::default();
+        app.apply(Action::MoveInQueue { from: 0, to: 2 }, &ctx);
+
+        let reordered = vec![
+            "spotify:track:manual2".to_string(),
+            "spotify:track:manual1".to_string(),
+            "spotify:track:ctx1".to_string(),
+        ];
+        assert_eq!(
+            queue_uris(&app).1,
+            reordered,
+            "the reorder is applied optimistically"
+        );
+
+        // The request that was already outstanding lands after the move,
+        // still reporting the pre-drag order. It must be superseded.
+        let pre_drag_response = Queue {
+            currently_playing: Some(queued_song("spotify:track:playing")),
+            queue: vec![
+                queued_song("spotify:track:manual1"),
+                queued_song("spotify:track:manual2"),
+                queued_song("spotify:track:ctx1"),
+            ],
+        };
+        app.handle_api(ApiResponse::Queue {
+            seq: outstanding_seq,
+            result: Ok(pre_drag_response.clone()),
+        });
+        assert_eq!(
+            queue_uris(&app).1,
+            reordered,
+            "a late pre-drag response must not undo the move"
+        );
+
+        // A fresh fetch, issued after the move, still reports the pre-drag
+        // order because the local engine has not caught up to the resync
+        // yet. It is rejected as stale rather than accepted.
+        app.queue_recheck_at = None;
+        app.refresh_queue(true);
+        let seq = app.queue_seq;
+        app.handle_api(ApiResponse::Queue {
+            seq,
+            result: Ok(pre_drag_response),
+        });
+        assert_eq!(
+            queue_uris(&app).1,
+            reordered,
+            "a lagging fresh response must not undo the move either"
+        );
+        assert_eq!(app.queue_stale_retries, 1);
+        assert!(app.queue_recheck_at.is_some());
+
+        // Once the resync has landed, the confirmed order is accepted.
+        let resynced_response = Queue {
+            currently_playing: Some(queued_song("spotify:track:playing")),
+            queue: vec![
+                queued_song("spotify:track:manual2"),
+                queued_song("spotify:track:manual1"),
+                queued_song("spotify:track:ctx1"),
+            ],
+        };
+        app.handle_api(ApiResponse::Queue {
+            seq,
+            result: Ok(resynced_response),
+        });
+        assert_eq!(app.queue_stale_retries, 0);
+        assert!(app.queue_reorder_pending.is_none());
+        assert_eq!(queue_uris(&app).1, reordered);
+    }
+
+    /// Moving a queued row must keep every pending addition pointing at its
+    /// own song, not whichever row now sits in its old `manual_queue` slot.
+    #[test]
+    fn moving_a_queued_row_keeps_pending_additions_on_their_own_song() {
+        let mut app = headless_app();
+        app.auth = AuthStatus::Connected {
+            username: "alice".into(),
+        };
+        app.local_ready = true;
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: "spotify:track:playing".into(),
+            ..Default::default()
+        });
+        app.local.playback = Playback::Playing;
+        app.manual_queue = vec![
+            "spotify:track:m0".into(),
+            "spotify:track:m1".into(),
+            "spotify:track:m2".into(),
+        ];
+        app.queue = loaded_queue(
+            "spotify:track:playing",
+            &["spotify:track:m0", "spotify:track:m1", "spotify:track:m2"],
+        );
+        app.pending_queue_adds = vec![
+            PendingQueueAdd {
+                item: queued_song("spotify:track:m0"),
+                at: Instant::now(),
+                manual_index: 0,
+                write: None,
+            },
+            PendingQueueAdd {
+                item: queued_song("spotify:track:m1"),
+                at: Instant::now(),
+                manual_index: 1,
+                write: None,
+            },
+            PendingQueueAdd {
+                item: queued_song("spotify:track:m2"),
+                at: Instant::now(),
+                manual_index: 2,
+                write: None,
+            },
+        ];
+
+        let ctx = egui::Context::default();
+        // Drag "m0" past the end: it lands last, "m1" and "m2" each shift up one.
+        app.apply(Action::MoveInQueue { from: 0, to: 3 }, &ctx);
+
+        assert_eq!(
+            app.manual_queue,
+            ["spotify:track:m1", "spotify:track:m2", "spotify:track:m0"]
+        );
+        assert_eq!(app.pending_queue_adds.len(), 3);
+        for addition in &app.pending_queue_adds {
+            assert_eq!(
+                app.manual_queue[addition.manual_index],
+                addition.item.uri(),
+                "pending addition must still name the song at its own index"
+            );
+        }
+    }
+
+    /// Inserting a dropped song into "Playing next" must keep every earlier
+    /// pending addition pointing at its own song, not the newly inserted row.
+    #[test]
+    fn inserting_in_queue_keeps_pending_additions_on_their_own_song() {
+        let mut app = headless_app();
+        app.auth = AuthStatus::Connected {
+            username: "alice".into(),
+        };
+        app.local_ready = true;
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: "spotify:track:playing".into(),
+            ..Default::default()
+        });
+        app.local.playback = Playback::Playing;
+        app.manual_queue = vec!["spotify:track:m0".into(), "spotify:track:m1".into()];
+        app.queue = loaded_queue(
+            "spotify:track:playing",
+            &["spotify:track:m0", "spotify:track:m1"],
+        );
+        app.pending_queue_adds = vec![
+            PendingQueueAdd {
+                item: queued_song("spotify:track:m0"),
+                at: Instant::now(),
+                manual_index: 0,
+                write: None,
+            },
+            PendingQueueAdd {
+                item: queued_song("spotify:track:m1"),
+                at: Instant::now(),
+                manual_index: 1,
+                write: None,
+            },
+        ];
+
+        let ctx = egui::Context::default();
+        // Drop "new" between "m0" and "m1": "m1"'s pending entry must shift.
+        app.apply(
+            Action::InsertInQueue {
+                items: vec![queued_song("spotify:track:new")],
+                position: 1,
+            },
+            &ctx,
+        );
+
+        assert_eq!(
+            app.manual_queue,
+            ["spotify:track:m0", "spotify:track:new", "spotify:track:m1"]
+        );
+        assert_eq!(app.pending_queue_adds.len(), 3);
+        for addition in &app.pending_queue_adds {
+            assert_eq!(
+                app.manual_queue[addition.manual_index],
+                addition.item.uri(),
+                "pending addition must still name the song at its own index"
+            );
+        }
     }
 
     /// A stale queue answer whose current track does not match the active

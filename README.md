@@ -134,6 +134,13 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   Starting an album or playlist keeps those additions under **Playing next**,
   even when it starts a song you also queued. **Clear queue** removes the
   additions and keeps the playing collection's remaining songs.
+  Dropping a dragged song, or selection, on the player bar's Queue button
+  queues it the same way. While this computer is playing locally, dropping
+  a song at a position within the open queue's *Playing next* inserts it
+  there instead of always at the end, and dragging a queued row elsewhere in
+  that section reorders it; with a remote Spotify Connect device, every drop
+  still just adds to the end, since neither Spotify nor librespot can
+  reorder or insert into a live remote queue.
   Selecting repeated playlist rows queues every occurrence in the selected
   order. A repeated click counts once, and the notification counts actual additions.
   Since 0.8.0, Recent keeps repeated short-song plays separate,
@@ -608,6 +615,8 @@ cargo run --features demo -- --demo --demo-page playlist:pl1 --demo-show queue
 Demo mode never writes settings. `--demo-shot <PATH>` writes the window to a
 PNG and exits, which is useful for reproducible interface screenshots.
 `--demo-size WIDTHxHEIGHT` sets the window size in logical pixels for that shot.
+`--demo-drag X,Y:X,Y` holds a drag in the shot: it presses at the first point
+and keeps the button down at the second.
 Demo windows ignore saved window geometry and do not save window or interface state.
 Use `--demo-data <DIRECTORY>` to keep demo caches and logs in a separate directory.
 

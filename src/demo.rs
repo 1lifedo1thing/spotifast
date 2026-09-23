@@ -676,6 +676,34 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                         .map(|item| item.uri().to_string())
                         .collect();
                 }
+                // Local playback is the only target that can be reordered
+                // or inserted into positionally; simulate it active so the
+                // drag-to-reorder behaviour is reviewable here. Carry over
+                // the displayed track's own metadata rather than a bare
+                // default, so the player bar and top bar render the same
+                // as without this override.
+                app.local_ready = true;
+                let now = app.now_playing();
+                app.local.track = Some(crate::player::LocalTrack {
+                    uri: now.as_ref().map(|now| now.uri.clone()).unwrap_or_default(),
+                    title: now
+                        .as_ref()
+                        .map(|now| now.title.clone())
+                        .unwrap_or_default(),
+                    artists: now
+                        .as_ref()
+                        .map(|now| now.artists.clone())
+                        .unwrap_or_default(),
+                    album: now
+                        .as_ref()
+                        .map(|now| now.album_name.clone())
+                        .unwrap_or_default(),
+                    art_url: now.as_ref().and_then(|now| now.art_url.clone()),
+                    art_small_url: now.as_ref().and_then(|now| now.art_small.clone()),
+                    duration_ms: now.as_ref().map(|now| now.duration_ms).unwrap_or_default(),
+                    is_episode: now.as_ref().is_some_and(|now| now.show_id.is_some()),
+                });
+                app.local.playback = crate::player::Playback::Paused;
             }
             "recents" => {
                 app.show_queue_panel = true;
@@ -5582,6 +5610,864 @@ mod tests {
         );
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    /// Dropping a dragged song on the queue button in the player bar queues
+    /// it, the same as the "Add to queue" menu item.
+    #[test]
+    fn dropping_a_dragged_song_on_the_queue_button_queues_it() {
+        let (ctx, mut app) = accessible_app("queue-button-drop");
+        let source_uri = app
+            .queue
+            .get()
+            .unwrap()
+            .currently_playing
+            .clone()
+            .unwrap()
+            .uri()
+            .to_string();
+
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let button = accessible_node(&tree, "Queue", egui::accesskit::Role::Button);
+        let bounds = tree
+            .nodes
+            .iter()
+            .find(|(id, _)| *id == button)
+            .unwrap()
+            .1
+            .bounds()
+            .unwrap();
+        let end = egui::pos2(
+            (bounds.x0 + bounds.x1) as f32 / 2.0,
+            (bounds.y0 + bounds.y1) as f32 / 2.0,
+        );
+
+        // Drag the now-playing song from the bottom-left player, same
+        // starting point as the equivalent playlist-insert test.
+        let start = egui::pos2(40.0, 755.0);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                egui::Event::PointerButton {
+                    pos: start,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + egui::vec2(20.0, -10.0))],
+        );
+        let payload = egui::DragAndDrop::payload::<DragTrack>(&ctx)
+            .expect("dragging the now-playing song should create a payload");
+        assert_eq!(payload.items[0].uri(), source_uri);
+
+        frame_events(&ctx, &mut app, vec![egui::Event::PointerMoved(end)]);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerButton {
+                pos: end,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+
+        assert_eq!(app.manual_queue, vec![source_uri]);
+        assert!(
+            app.toasts
+                .iter()
+                .any(|toast| toast.message == "1 song added to queue"),
+            "{:?}",
+            app.toasts
+        );
+        app.backend.shutdown();
+    }
+
+    /// Dropping a dragged song anywhere on the open queue list (side panel
+    /// or full page) queues it. The queue has no positional drop slots, so
+    /// any point in the list works, not just the toggle button.
+    #[test]
+    fn dropping_a_dragged_song_on_the_open_queue_list_queues_it() {
+        let (ctx, mut app) = accessible_app("queue-list-drop");
+        app.show_queue_panel = true;
+        let source_uri = app
+            .queue
+            .get()
+            .unwrap()
+            .currently_playing
+            .clone()
+            .unwrap()
+            .uri()
+            .to_string();
+        for _ in 0..3 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+
+        // A point well inside the queue side panel's body, clear of its
+        // close/save buttons and tab chips.
+        let end = egui::pos2(1100.0, 300.0);
+
+        let start = egui::pos2(40.0, 755.0);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                egui::Event::PointerButton {
+                    pos: start,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + egui::vec2(20.0, -10.0))],
+        );
+        let payload = egui::DragAndDrop::payload::<DragTrack>(&ctx)
+            .expect("dragging the now-playing song should create a payload");
+        assert_eq!(payload.items[0].uri(), source_uri);
+
+        frame_events(&ctx, &mut app, vec![egui::Event::PointerMoved(end)]);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerButton {
+                pos: end,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+
+        assert_eq!(app.manual_queue, vec![source_uri]);
+        assert!(
+            app.toasts
+                .iter()
+                .any(|toast| toast.message == "1 song added to queue"),
+            "{:?}",
+            app.toasts
+        );
+        app.backend.shutdown();
+    }
+
+    /// Seeds three manually queued songs at the front of "Playing next",
+    /// named "Queued 0".."Queued 2", for the queue-reorder tests below.
+    /// Also makes the local player the active target, the only case where
+    /// the queue can be reordered or inserted into positionally.
+    fn seed_queued_songs(app: &mut App) -> Vec<String> {
+        app.local_ready = true;
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: app.now_playing().unwrap().uri,
+            ..Default::default()
+        });
+        app.local.playback = crate::player::Playback::Paused;
+        let songs: Vec<Track> = (0..3)
+            .map(|index| {
+                let mut t = track(index);
+                t.uri = format!("spotify:track:queued{index}");
+                t.id = Some(format!("queued{index}"));
+                t.name = format!("Queued {index}");
+                t
+            })
+            .collect();
+        if let Loadable::Loaded(queue) = &mut app.queue {
+            for (offset, song) in songs.iter().enumerate() {
+                queue
+                    .queue
+                    .insert(offset, PlayableItem::Track(song.clone()));
+            }
+        }
+        let uris: Vec<String> = songs.iter().map(|song| song.uri.clone()).collect();
+        app.manual_queue = uris.clone();
+        uris
+    }
+
+    /// Dragging a song already in "Playing next" and dropping it elsewhere
+    /// in the queue moves it there instead of adding a duplicate.
+    #[test]
+    fn dragging_a_queued_row_within_the_queue_reorders_it() {
+        let (ctx, mut app) = accessible_app("queue-reorder");
+        app.show_queue_panel = true;
+        let uris = seed_queued_songs(&mut app);
+        for _ in 0..3 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let row_rect = |name: &str| {
+            let prefix = format!("Play {name},");
+            let bounds = tree
+                .nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == egui::accesskit::Role::Button
+                        && node.label().is_some_and(|text| text.starts_with(&prefix))
+                })
+                .unwrap_or_else(|| panic!("missing row {name}"))
+                .1
+                .bounds()
+                .unwrap();
+            egui::Rect::from_min_max(
+                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+            )
+        };
+        let start_row = row_rect("Queued 0");
+        let start = egui::pos2(start_row.left() + 80.0, start_row.center().y);
+        // Dropped past the last queued row: moves to the end of "Playing next".
+        let last_row = row_rect("Queued 2");
+        let end = egui::pos2(last_row.left() + 130.0, last_row.bottom() - 1.0);
+
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                egui::Event::PointerButton {
+                    pos: start,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + egui::vec2(15.0, -10.0))],
+        );
+        let payload =
+            egui::DragAndDrop::payload::<DragTrack>(&ctx).expect("a reorderable queue row drags");
+        assert_eq!(
+            payload.from,
+            Some(("queue".to_string(), 0)),
+            "the queue row must tag itself as the move source"
+        );
+
+        frame_events(&ctx, &mut app, vec![egui::Event::PointerMoved(end)]);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerButton {
+                pos: end,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+
+        assert_eq!(
+            app.manual_queue,
+            vec![uris[1].clone(), uris[2].clone(), uris[0].clone()],
+            "moved, not duplicated"
+        );
+        app.backend.shutdown();
+    }
+
+    /// If the playing song advances (consuming the front queued row) while a
+    /// queued row is mid-drag, the drop must still act on the song that was
+    /// actually picked up, not on whatever now sits at the drag's recorded
+    /// start index.
+    #[test]
+    fn dragging_a_queued_row_while_next_advances_moves_the_dragged_song() {
+        let (ctx, mut app) = accessible_app("queue-reorder-mid-drag-advance");
+        app.show_queue_panel = true;
+        let uris = seed_queued_songs(&mut app);
+        for _ in 0..3 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let row_rect = |name: &str| {
+            let prefix = format!("Play {name},");
+            let bounds = tree
+                .nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == egui::accesskit::Role::Button
+                        && node.label().is_some_and(|text| text.starts_with(&prefix))
+                })
+                .unwrap_or_else(|| panic!("missing row {name}"))
+                .1
+                .bounds()
+                .unwrap();
+            egui::Rect::from_min_max(
+                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+            )
+        };
+        // "Queued 1" is dragged; row 0's slot is the drop target, captured
+        // now so the drop still lands there once row 0 shifts up.
+        let start_row = row_rect("Queued 1");
+        let start = egui::pos2(start_row.left() + 80.0, start_row.center().y);
+        let front_slot = row_rect("Queued 0");
+        let end = egui::pos2(front_slot.left() + 130.0, front_slot.top() + 1.0);
+
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                egui::Event::PointerButton {
+                    pos: start,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + egui::vec2(15.0, -10.0))],
+        );
+        let payload =
+            egui::DragAndDrop::payload::<DragTrack>(&ctx).expect("a reorderable queue row drags");
+        assert_eq!(
+            payload.from,
+            Some(("queue".to_string(), 1)),
+            "the queue row must tag itself as the move source"
+        );
+
+        // "Next" fires mid-drag: the front queued row is consumed and every
+        // later row's index shifts down by one, so index 1 (the recorded
+        // drag source) now names "Queued 2" instead of the dragged song.
+        app.manual_queue.remove(0);
+        if let Loadable::Loaded(queue) = &mut app.queue {
+            queue.queue.remove(0);
+        }
+
+        frame_events(&ctx, &mut app, vec![egui::Event::PointerMoved(end)]);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerButton {
+                pos: end,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+
+        // The dragged song ("Queued 1") had already shifted to the front on
+        // its own; dropping it back on the front slot is a no-op. Trusting
+        // the stale index 1 would instead have moved "Queued 2" (the wrong
+        // song) to the front.
+        assert_eq!(
+            app.manual_queue,
+            vec![uris[1].clone(), uris[2].clone()],
+            "the dragged song stays put instead of the wrong row moving"
+        );
+        app.backend.shutdown();
+    }
+
+    /// "Next up" plays from the current context, not from a list Spotifast
+    /// can rewrite, so it is never a drop target: dropping a queued row on
+    /// it must not move or insert anything, even though the row sits inside
+    /// the same scrollable list as "Playing next".
+    #[test]
+    fn dropping_a_queued_row_on_next_up_does_nothing() {
+        let (ctx, mut app) = accessible_app("queue-reorder-next-up-not-a-target");
+        app.show_queue_panel = true;
+        let uris = seed_queued_songs(&mut app);
+        for _ in 0..3 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        // "Otomo" is also a demo library track shown elsewhere on the page
+        // behind the queue side panel, so match on the queue panel's own
+        // on-screen column (it opens flush against the right edge) rather
+        // than the first node with a matching label.
+        let row_rect = |name: &str| {
+            let prefix = format!("Play {name},");
+            let bounds = tree
+                .nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == egui::accesskit::Role::Button
+                        && node.label().is_some_and(|text| text.starts_with(&prefix))
+                        && node
+                            .bounds()
+                            .is_some_and(|bounds| bounds.x0 >= 900.0 && bounds.y1 <= 800.0)
+                })
+                .unwrap_or_else(|| panic!("missing on-screen queue row {name}"))
+                .1
+                .bounds()
+                .unwrap();
+            egui::Rect::from_min_max(
+                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+            )
+        };
+        let start_row = row_rect("Queued 0");
+        let start = egui::pos2(start_row.left() + 80.0, start_row.center().y);
+        // "Otomo" is the first row of "Next up", from the default demo
+        // queue past the three manually queued rows seeded above.
+        let next_up_row = row_rect("Otomo");
+        // The "Next up" heading sits just below Playing next's last row.
+        let heading = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some("Next up") || node.value() == Some("Next up"))
+            .and_then(|(_, node)| node.bounds())
+            .expect("the Next up heading");
+        let heading = egui::Rect::from_min_max(
+            egui::pos2(heading.x0 as f32, heading.y0 as f32),
+            egui::pos2(heading.x1 as f32, heading.y1 as f32),
+        );
+
+        for end in [
+            egui::pos2(next_up_row.left() + 130.0, next_up_row.center().y),
+            egui::pos2(heading.left() + 130.0, heading.center().y),
+            egui::pos2(heading.left() + 130.0, heading.top() + 1.0),
+        ] {
+            frame_events(
+                &ctx,
+                &mut app,
+                vec![
+                    egui::Event::PointerMoved(start),
+                    egui::Event::PointerButton {
+                        pos: start,
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            );
+            frame_events(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerMoved(start + egui::vec2(15.0, -10.0))],
+            );
+            egui::DragAndDrop::payload::<DragTrack>(&ctx).expect("a reorderable queue row drags");
+
+            frame_events(&ctx, &mut app, vec![egui::Event::PointerMoved(end)]);
+            frame_events(
+                &ctx,
+                &mut app,
+                vec![egui::Event::PointerButton {
+                    pos: end,
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers: egui::Modifiers::NONE,
+                }],
+            );
+            frame_events(&ctx, &mut app, vec![]);
+
+            assert_eq!(
+                app.manual_queue, uris,
+                "Next up is never a drop target: nothing moves or gets inserted (dropped at {end:?})"
+            );
+        }
+        app.backend.shutdown();
+    }
+
+    /// Holding a dragged queue row at the bottom edge of the open queue
+    /// scrolls it, as the playlist table does, so a row can be moved past
+    /// the rows that fit on screen.
+    #[test]
+    fn dragging_a_queued_row_scrolls_a_long_playing_next() {
+        use egui::accesskit::Role;
+        let (ctx, mut app) = accessible_app("queue-drag-scroll");
+        app.show_queue_panel = true;
+        seed_queued_songs(&mut app);
+        let songs: Vec<Track> = (3..40)
+            .map(|index| {
+                let mut t = track(index);
+                t.uri = format!("spotify:track:queued{index}");
+                t.id = Some(format!("queued{index}"));
+                t.name = format!("Queued {index}");
+                t
+            })
+            .collect();
+        if let Loadable::Loaded(queue) = &mut app.queue {
+            for (offset, song) in songs.iter().enumerate() {
+                queue
+                    .queue
+                    .insert(3 + offset, PlayableItem::Track(song.clone()));
+            }
+        }
+        app.manual_queue
+            .extend(songs.iter().map(|song| song.uri.clone()));
+        let uris = app.manual_queue.clone();
+        let on_screen = |tree: &egui::accesskit::TreeUpdate, name: &str| {
+            let prefix = format!("Play {name},");
+            tree.nodes.iter().find_map(|(_, node)| {
+                (node.role() == Role::Button
+                    && node.label().is_some_and(|text| text.starts_with(&prefix)))
+                .then(|| node.bounds())
+                .flatten()
+                .filter(|bounds| bounds.x0 >= 900.0)
+            })
+        };
+        for _ in 0..3 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        assert!(
+            on_screen(&tree, "Queued 39").is_none(),
+            "the last queued row starts out of view"
+        );
+        let first = on_screen(&tree, "Queued 0").expect("the first queued row is shown");
+        let start = egui::pos2(first.x0 as f32 + 80.0, ((first.y0 + first.y1) / 2.0) as f32);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                egui::Event::PointerButton {
+                    pos: start,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + egui::vec2(15.0, -10.0))],
+        );
+        egui::DragAndDrop::payload::<DragTrack>(&ctx).expect("a reorderable queue row drags");
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(egui::pos2(
+                start.x,
+                800.0 - crate::theme::PLAYER_BAR_HEIGHT - 14.0,
+            ))],
+        );
+        for _ in 0..400 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        assert!(
+            on_screen(&tree, "Queued 39").is_some(),
+            "holding the drag at the bottom edge scrolls Playing next into view"
+        );
+        assert_eq!(
+            app.manual_queue, uris,
+            "scrolling alone must not reorder rows"
+        );
+        egui::DragAndDrop::clear_payload(&ctx);
+        app.backend.shutdown();
+    }
+
+    /// With nothing manually queued yet, every row the open queue shows
+    /// belongs to "Next up", so the panel offers no drop target at all:
+    /// neither a Next up row nor its heading takes a dragged song. The
+    /// player bar's Queue button still does.
+    #[test]
+    fn dropping_a_song_on_next_up_with_an_empty_playing_next_does_nothing() {
+        use egui::accesskit::Role;
+        let (ctx, mut app) = accessible_app("queue-empty-playing-next-not-a-target");
+        app.show_queue_panel = true;
+        // Make the local player the active target, like `seed_queued_songs`,
+        // but leave "Playing next" empty.
+        app.local_ready = true;
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: app.now_playing().unwrap().uri,
+            ..Default::default()
+        });
+        app.local.playback = crate::player::Playback::Paused;
+        assert!(app.manual_queue.is_empty());
+        assert!(app.queue_locally_reorderable());
+
+        let source_uri = app
+            .queue
+            .get()
+            .unwrap()
+            .currently_playing
+            .clone()
+            .unwrap()
+            .uri()
+            .to_string();
+
+        for _ in 0..3 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let bounds_of = |id: egui::accesskit::NodeId| {
+            let bounds = tree
+                .nodes
+                .iter()
+                .find(|(node, _)| *node == id)
+                .unwrap()
+                .1
+                .bounds()
+                .unwrap();
+            egui::Rect::from_min_max(
+                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+            )
+        };
+        // "Otomo" is the first row of the default demo queue's "Next up".
+        // It is also a demo library track shown elsewhere on the page
+        // behind the queue side panel, so match on the queue panel's own
+        // on-screen column (it opens flush against the right edge) rather
+        // than the first node with a matching label.
+        let row = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == Role::Button
+                    && node
+                        .label()
+                        .is_some_and(|text| text.starts_with("Play Otomo,"))
+                    && node
+                        .bounds()
+                        .is_some_and(|bounds| bounds.x0 >= 900.0 && bounds.y1 <= 800.0)
+            })
+            .unwrap_or_else(|| panic!("missing on-screen queue row Otomo"))
+            .0;
+        let row = bounds_of(row);
+        let heading = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some("Next up") || node.value() == Some("Next up"))
+            .expect("the Next up heading")
+            .0;
+        let heading = bounds_of(heading);
+        // The player bar's Queue button, not the queue panel's Queue tab.
+        let button = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == Role::Button
+                    && node.label() == Some("Queue")
+                    && node.bounds().is_some_and(|bounds| {
+                        bounds.y0 >= f64::from(800.0 - crate::theme::PLAYER_BAR_HEIGHT)
+                    })
+            })
+            .expect("the player bar's Queue button")
+            .0;
+        let button = bounds_of(button);
+
+        let drag_to = |app: &mut App, end: egui::Pos2| {
+            let start = egui::pos2(40.0, 755.0);
+            frame_events(
+                &ctx,
+                app,
+                vec![
+                    egui::Event::PointerMoved(start),
+                    egui::Event::PointerButton {
+                        pos: start,
+                        button: egui::PointerButton::Primary,
+                        pressed: true,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            );
+            frame_events(
+                &ctx,
+                app,
+                vec![egui::Event::PointerMoved(start + egui::vec2(20.0, -10.0))],
+            );
+            let payload = egui::DragAndDrop::payload::<DragTrack>(&ctx)
+                .expect("dragging the now-playing song should create a payload");
+            assert_eq!(payload.items[0].uri(), source_uri);
+            frame_events(&ctx, app, vec![egui::Event::PointerMoved(end)]);
+            frame_events(
+                &ctx,
+                app,
+                vec![egui::Event::PointerButton {
+                    pos: end,
+                    button: egui::PointerButton::Primary,
+                    pressed: false,
+                    modifiers: egui::Modifiers::NONE,
+                }],
+            );
+            frame_events(&ctx, app, vec![]);
+        };
+
+        for end in [
+            egui::pos2(row.left() + 130.0, row.center().y),
+            egui::pos2(row.left() + 130.0, row.top() + 2.0),
+            heading.center(),
+            egui::pos2(heading.left() + 130.0, heading.top() - 2.0),
+        ] {
+            drag_to(&mut app, end);
+            assert!(
+                app.manual_queue.is_empty(),
+                "Next up is never a drop target, even when Playing next has no rows of its own (dropped at {end:?})"
+            );
+        }
+
+        drag_to(&mut app, button.center());
+        assert_eq!(
+            app.manual_queue,
+            vec![source_uri],
+            "the Queue button still queues the dropped song"
+        );
+        app.backend.shutdown();
+    }
+
+    /// Dropping a song from elsewhere at a specific row in "Playing next"
+    /// inserts it there instead of always appending at the end.
+    #[test]
+    fn dropping_a_new_song_at_a_queue_position_inserts_it_there() {
+        let (ctx, mut app) = accessible_app("queue-insert-position");
+        app.show_queue_panel = true;
+        let uris = seed_queued_songs(&mut app);
+        for _ in 0..3 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let row_rect = |name: &str| {
+            let prefix = format!("Play {name},");
+            let bounds = tree
+                .nodes
+                .iter()
+                .find(|(_, node)| {
+                    node.role() == egui::accesskit::Role::Button
+                        && node.label().is_some_and(|text| text.starts_with(&prefix))
+                })
+                .unwrap_or_else(|| panic!("missing row {name}"))
+                .1
+                .bounds()
+                .unwrap();
+            egui::Rect::from_min_max(
+                egui::pos2(bounds.x0 as f32, bounds.y0 as f32),
+                egui::pos2(bounds.x1 as f32, bounds.y1 as f32),
+            )
+        };
+        // Drop on top of "Queued 1": inserts before it.
+        let target_row = row_rect("Queued 1");
+        let end = egui::pos2(target_row.left() + 130.0, target_row.top() + 1.0);
+
+        let start = egui::pos2(40.0, 755.0);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                egui::Event::PointerButton {
+                    pos: start,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + egui::vec2(20.0, -10.0))],
+        );
+        let payload = egui::DragAndDrop::payload::<DragTrack>(&ctx)
+            .expect("dragging the now-playing song should create a payload");
+        let dropped_uri = payload.items[0].uri().to_string();
+
+        frame_events(&ctx, &mut app, vec![egui::Event::PointerMoved(end)]);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerButton {
+                pos: end,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+
+        assert_eq!(
+            app.manual_queue,
+            vec![
+                uris[0].clone(),
+                dropped_uri,
+                uris[1].clone(),
+                uris[2].clone(),
+            ],
+        );
+        app.backend.shutdown();
+    }
+
+    /// Without local playback active, neither the Web API nor librespot can
+    /// reorder or insert into the live queue, so a drop still just appends,
+    /// exactly like before this position-aware behavior existed.
+    #[test]
+    fn dropping_on_the_queue_without_local_playback_still_just_appends() {
+        let (ctx, mut app) = accessible_app("queue-remote-fallback");
+        app.show_queue_panel = true;
+        let uris = seed_queued_songs(&mut app);
+        app.local_ready = false;
+        assert!(!app.queue_locally_reorderable());
+        for _ in 0..3 {
+            frame_events(&ctx, &mut app, vec![]);
+        }
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let bounds = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| {
+                node.role() == egui::accesskit::Role::Button
+                    && node
+                        .label()
+                        .is_some_and(|text| text.starts_with("Play Queued 0,"))
+            })
+            .unwrap()
+            .1
+            .bounds()
+            .unwrap();
+        // Drop right on the first queued row; without local playback this
+        // still appends at the end, ignoring the row it landed on.
+        let end = egui::pos2(bounds.x0 as f32 + 130.0, bounds.y0 as f32 + 2.0);
+
+        let start = egui::pos2(40.0, 755.0);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![
+                egui::Event::PointerMoved(start),
+                egui::Event::PointerButton {
+                    pos: start,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ],
+        );
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerMoved(start + egui::vec2(20.0, -10.0))],
+        );
+        let payload = egui::DragAndDrop::payload::<DragTrack>(&ctx)
+            .expect("dragging the now-playing song should create a payload");
+        assert_eq!(payload.from, None, "not reorderable, so not tagged as one");
+        let dropped_uri = payload.items[0].uri().to_string();
+
+        frame_events(&ctx, &mut app, vec![egui::Event::PointerMoved(end)]);
+        frame_events(
+            &ctx,
+            &mut app,
+            vec![egui::Event::PointerButton {
+                pos: end,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            }],
+        );
+
+        assert_eq!(
+            app.manual_queue,
+            vec![
+                uris[0].clone(),
+                uris[1].clone(),
+                uris[2].clone(),
+                dropped_uri
+            ],
+        );
+        app.backend.shutdown();
     }
 
     /// Pins are pins: dropping a pinned row at the top of the block
