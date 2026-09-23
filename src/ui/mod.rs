@@ -80,7 +80,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
     devices::popup(app, ctx);
     dialogs::show(app, ctx);
     update::show(app, ctx);
-    widgets::drag_ghost(ctx, &app.palette);
+    widgets::drag_ghost(ctx, &app.palette, app.locale);
     toasts(app, ctx, theme::PLAYER_BAR_HEIGHT + 16.0);
     window_controls(ui, &app.palette, app.locale);
     window_resize(ui);

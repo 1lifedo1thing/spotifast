@@ -1774,19 +1774,27 @@ fn dragged_items(
     }
 }
 
-fn drag_label(track: &DragTrack) -> String {
+fn drag_label(locale: Locale, track: &DragTrack) -> String {
     match track.items.as_slice() {
         [] => track.title.clone(),
         [item] => item.name().to_string(),
-        [first, rest @ ..] => format!("{} + {} more", first.name(), rest.len()),
+        [first, rest @ ..] => ngettext(
+            locale,
+            // Translators: The label beside the pointer while songs are dragged. {name} is the first song's name and {count} how many more songs are dragged with it.
+            "{name} + {count} more",
+            "{name} + {count} more",
+            rest.len() as u32,
+        )
+        .replace("{name}", first.name())
+        .replace("{count}", &rest.len().to_string()),
     }
 }
 
 /// The chip that rides the pointer while a song is being dragged.
-pub fn drag_ghost(ctx: &egui::Context, palette: &Palette) {
+pub fn drag_ghost(ctx: &egui::Context, palette: &Palette, locale: Locale) {
     // A song and a sidebar row ride the pointer the same way.
     let chip = egui::DragAndDrop::payload::<DragTrack>(ctx)
-        .map(|track| (drag_label(&track), track.image.clone()))
+        .map(|track| (drag_label(locale, &track), track.image.clone()))
         .or_else(|| {
             egui::DragAndDrop::payload::<DragEntry>(ctx)
                 .map(|entry| (entry.title.clone(), entry.image.clone()))
@@ -3598,7 +3606,7 @@ mod tests {
             ],
             from: None,
         };
-        assert_eq!(drag_label(&track), "Kora Panna + 1 more");
+        assert_eq!(drag_label(Locale::English, &track), "Kora Panna + 1 more");
     }
 
     #[test]
