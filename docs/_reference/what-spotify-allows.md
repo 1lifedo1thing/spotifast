@@ -106,6 +106,11 @@ The Web API and librespot do not provide these features:
 - **Audiobooks.** librespot does not play them. Spotify lists some
   audiobooks among saved shows; on `main`, after 0.9.1, Spotifast asks the
   librespot session which ones and leaves them out of the Podcasts shelf.
+- **Google Cast.** Spotify's own apps find Cast speakers on the local
+  network and start Spotify's receiver on them. librespot has no Cast
+  sender, and the Web API only lists a Cast device once a Spotify app has
+  already woken it, so Spotifast cannot discover or start one itself. See
+  [issue #566](https://github.com/crmne/spotifast/issues/566).
 - **Offline listening and downloads.** Spotify's DRM and the project's scope
   rule these out.
 - **Playback speed and crossfade.** librespot supports neither. Spotifast
