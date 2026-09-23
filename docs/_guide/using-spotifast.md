@@ -253,6 +253,13 @@ saved title bar is outside every connected monitor’s work area. Positions on
 connected secondary monitors still restore. Reinstalling preserves settings;
 it is not needed to recover a position left on an unplugged display.
 
+## macOS Dock menu
+
+Right-click or Control-click Spotifast's Dock icon for **Play** (or **Pause**
+while music plays), **Next**, and **Previous**, above the standard Dock items.
+They control the same playing device as the player bar and keep working while
+the window is closed to the menu bar.
+
 ## Keeping the mini player above other windows
 
 **Always on top** works on Windows, macOS and X11. On Wayland the app's
