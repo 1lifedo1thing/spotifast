@@ -887,11 +887,10 @@ fn native_options(
         viewport,
         persist_window,
         persistence_path,
-        // AppKit resize animations need buffer swaps paced with the display.
-        // Keep VSync off elsewhere; hidden Wayland windows receive no frame
-        // callbacks and would block the event loop while waiting for one.
+        // Pace frames with the display wherever a hidden window cannot block
+        // the wait; see `window::vsync`. AppKit resize animations need it too.
         glow_options: eframe::egui_glow::GlowConfiguration {
-            vsync: cfg!(target_os = "macos"),
+            vsync: spotifast::window::vsync(),
             ..Default::default()
         },
         ..Default::default()
@@ -1026,10 +1025,10 @@ mod native_window_tests {
     }
 
     #[test]
-    fn macos_windows_wait_for_vsync() {
+    fn windows_wait_for_vsync_where_it_is_safe() {
         assert_eq!(
             native_options(false, None, None).glow_options.vsync,
-            cfg!(target_os = "macos")
+            spotifast::window::vsync()
         );
         let mini = MiniWindow {
             size: egui::vec2(550.0, 232.0),
@@ -1040,7 +1039,7 @@ mod native_window_tests {
         };
         assert_eq!(
             native_options(false, Some(mini), None).glow_options.vsync,
-            cfg!(target_os = "macos")
+            spotifast::window::vsync()
         );
     }
 

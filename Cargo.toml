@@ -161,6 +161,10 @@ mpris-server = { version = "0.10", features = ["tokio"] }
 # launch a Spotify link makes (src/single_instance.rs). Same version, so
 # nothing new is compiled.
 zbus = { version = "5", default-features = false, features = ["tokio"] }
+# Asks the Wayland compositor at startup whether it reports hidden windows as
+# suspended (xdg-shell v6), which decides whether vsync is safe. winit already
+# compiles this version.
+wayland-client = "0.31"
 
 [build-dependencies]
 # Validate/filter unfinished PO entries, then compile catalog text and gettext
@@ -210,6 +214,12 @@ opt-level = 0
 # which GitHub's windows-latest images no longer carry; the fork lets an
 # explicit CMAKE_GENERATOR win. Drop when upstream takes the change.
 [patch.crates-io]
+# winit 0.30.13 plus Wayland `Occluded` events for the xdg-shell suspended
+# state, without a redraw request while suspended. eframe then stops painting
+# a hidden window instead of blocking in eglSwapBuffers, so vsync stays safe on
+# Wayland. Proposed upstream for rust-windowing/winit#3442; drop the fork when
+# a release includes it.
+winit = { git = "https://github.com/crmne/winit", rev = "c8df61a52b8b563e1bb65e0f1d8630289d1c1bd6" }
 projectm-sys = { git = "https://github.com/crmne/projectm-rs", branch = "respect-cmake-generator" }
 # hyper-proxy2's unreleased rustls 0.23 update plus our upstream provider
 # compatibility fix. Drop this fork when a release includes both changes.

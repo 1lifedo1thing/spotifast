@@ -391,7 +391,7 @@ pub fn show(app: &mut App, ui: &mut Ui) {
     // egui subtracts one predicted frame from delayed repaints. With VSync,
     // the next buffer swap supplies that frame; without it, request two.
     if vis_moving {
-        ctx.request_repaint_after(visualiser_repaint_delay(cfg!(target_os = "macos")));
+        ctx.request_repaint_after(visualiser_repaint_delay(crate::window::vsync()));
     } else if now.is_some() {
         ctx.request_repaint_after(Duration::from_millis(220));
     }
