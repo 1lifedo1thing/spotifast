@@ -1993,7 +1993,11 @@ impl App {
         self.last_album_queue = None;
         self.cover_uploads.clear();
         self.uploaded_covers.clear();
-        self.library = Library::default();
+        // Pages still on their way belong to the signed-out account's load.
+        self.library = Library {
+            playlists_generation: self.library.playlists_generation,
+            ..Library::default()
+        };
         self.liked_songs = crate::liked::LikedSongs::default();
         self.liked_recheck_at = None;
         self.home = HomeData::default();
@@ -3398,7 +3402,12 @@ impl App {
         }
         self.library.playlists = Loadable::Loading;
         self.library.playlists_next = None;
-        self.backend.api(ApiRequest::MyPlaylists { offset: 0 });
+        self.library.playlists_asked = None;
+        self.library.playlists_generation += 1;
+        self.backend.api(ApiRequest::MyPlaylists {
+            offset: 0,
+            generation: self.library.playlists_generation,
+        });
     }
 
     pub fn ensure_loaded(&mut self, page: Page) {
@@ -3782,7 +3791,11 @@ impl App {
             }
             Page::Home => {
                 if let Some(offset) = self.library.playlists_next.take() {
-                    self.backend.api(ApiRequest::MyPlaylists { offset });
+                    self.library.playlists_asked = Some(offset);
+                    self.backend.api(ApiRequest::MyPlaylists {
+                        offset,
+                        generation: self.library.playlists_generation,
+                    });
                 }
             }
             _ => {}
@@ -4919,8 +4932,17 @@ impl App {
                     self.home.discover = std::mem::take(&mut self.home.discover_pending);
                 }
             }
-            ApiResponse::MyPlaylists { offset, result } => match result {
+            // A reload reads the playlists from the top again under a new
+            // generation, so a page any earlier load asked for no longer
+            // continues the list, whatever its offset. Within one load, only
+            // the later page on its way is taken, and only once.
+            ApiResponse::MyPlaylists {
+                offset, generation, ..
+            } if generation != self.library.playlists_generation
+                || (offset > 0 && self.library.playlists_asked != Some(offset)) => {}
+            ApiResponse::MyPlaylists { offset, result, .. } => match result {
                 Ok(page) => {
+                    self.library.playlists_asked = None;
                     let next_offset = page.next_offset();
                     match &mut self.library.playlists {
                         Loadable::Loaded(existing) if offset > 0 => existing.extend(page.items),
@@ -4950,6 +4972,7 @@ impl App {
                     }
                 }
                 Err(error) => {
+                    self.library.playlists_asked = None;
                     if offset == 0 {
                         self.library.playlists = Loadable::Failed(error.to_string());
                     } else {
@@ -10631,6 +10654,7 @@ mod tests {
         // then, and a flag Spotify already gave stays.
         app.handle_api(ApiResponse::MyPlaylists {
             offset: 0,
+            generation: app.library.playlists_generation,
             result: Ok(crate::api::models::Page {
                 items: vec![
                     Playlist {
@@ -10655,6 +10679,205 @@ mod tests {
             app.playlist_pages["pl1"].playlist.get().unwrap().public,
             Some(false)
         );
+    }
+
+    /// A page of the library's playlists, `limit` 2, that says whether
+    /// more follow.
+    fn playlist_page(ids: &[&str], offset: u32, total: u32) -> crate::api::models::Page<Playlist> {
+        crate::api::models::Page {
+            items: ids
+                .iter()
+                .map(|id| Playlist {
+                    id: (*id).into(),
+                    uri: format!("spotify:playlist:{id}"),
+                    ..Playlist::default()
+                })
+                .collect(),
+            total,
+            limit: 2,
+            offset,
+            next: (offset + (ids.len() as u32) < total).then(|| "more".to_string()),
+        }
+    }
+
+    fn listed_playlists(app: &App) -> Option<Vec<String>> {
+        app.library.playlists.get().map(|playlists| {
+            playlists
+                .iter()
+                .map(|playlist| playlist.id.clone())
+                .collect::<Vec<_>>()
+        })
+    }
+
+    fn playlist_ids(ids: &[&str]) -> Option<Vec<String>> {
+        Some(ids.iter().map(|id| (*id).to_string()).collect())
+    }
+
+    /// Following, unfollowing or editing a playlist reads the library's
+    /// playlists again from the top. A later page asked for before that
+    /// belongs to the old list: taking it made that page the whole list,
+    /// and the pages it led on to ran beside the new ones and repeated them.
+    #[test]
+    fn a_playlist_page_asked_for_before_a_reload_is_not_taken() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+
+        app.load_playlists();
+        let old = app.library.playlists_generation;
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            generation: old,
+            result: Ok(playlist_page(&["a", "b"], 0, 3)),
+        });
+        // The second page is on its way when following a playlist reloads.
+        app.handle_api(ApiResponse::PlaylistFollowChanged {
+            id: "new".into(),
+            followed: true,
+            result: Ok(()),
+        });
+        assert!(app.library.playlists.is_loading());
+        let new = app.library.playlists_generation;
+        assert_ne!(new, old, "a reload is a new load");
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 2,
+            generation: old,
+            result: Ok(playlist_page(&["c"], 2, 3)),
+        });
+        assert!(
+            app.library.playlists.is_loading(),
+            "the late page is not the reloaded list"
+        );
+        assert_eq!(app.library.playlists_next, None, "and asks for nothing");
+
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            generation: new,
+            result: Ok(playlist_page(&["new", "a"], 0, 4)),
+        });
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 2,
+            generation: new,
+            result: Ok(playlist_page(&["b", "c"], 2, 4)),
+        });
+        let whole = playlist_ids(&["new", "a", "b", "c"]);
+        assert_eq!(listed_playlists(&app), whole);
+        // Another answer for a page already taken adds nothing.
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 2,
+            generation: new,
+            result: Ok(playlist_page(&["b", "c"], 2, 4)),
+        });
+        assert_eq!(listed_playlists(&app), whole);
+    }
+
+    /// An offset does not say which load a page belongs to. Once the
+    /// reloaded list has asked for its own second page, the old load's
+    /// second page, arriving late at the same offset, is still not taken:
+    /// taking it ended the list early and dropped the real second page.
+    #[test]
+    fn an_old_playlist_page_at_the_offset_the_reload_asked_for_is_not_taken() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+
+        app.load_playlists();
+        let old = app.library.playlists_generation;
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            generation: old,
+            result: Ok(playlist_page(&["a", "b"], 0, 3)),
+        });
+        assert_eq!(app.library.playlists_asked, Some(2));
+        app.handle_api(ApiResponse::PlaylistFollowChanged {
+            id: "new".into(),
+            followed: true,
+            result: Ok(()),
+        });
+        let new = app.library.playlists_generation;
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            generation: new,
+            result: Ok(playlist_page(&["new", "a"], 0, 4)),
+        });
+        assert_eq!(
+            app.library.playlists_asked,
+            Some(2),
+            "the reloaded list asks for the same offset"
+        );
+
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 2,
+            generation: old,
+            result: Ok(playlist_page(&["c"], 2, 3)),
+        });
+        assert_eq!(
+            listed_playlists(&app),
+            playlist_ids(&["new", "a"]),
+            "the old load's page is not taken"
+        );
+        assert_eq!(
+            app.library.playlists_asked,
+            Some(2),
+            "the reloaded list still waits for its own page"
+        );
+
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 2,
+            generation: new,
+            result: Ok(playlist_page(&["b", "c"], 2, 4)),
+        });
+        assert_eq!(
+            listed_playlists(&app),
+            playlist_ids(&["new", "a", "b", "c"])
+        );
+    }
+
+    /// A later page that failed is no longer on its way, so another answer
+    /// for it is not taken into the list.
+    #[test]
+    fn a_failed_playlist_page_is_no_longer_awaited() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+
+        app.load_playlists();
+        let generation = app.library.playlists_generation;
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            generation,
+            result: Ok(playlist_page(&["a", "b"], 0, 3)),
+        });
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 2,
+            generation,
+            result: Err(crate::api::ApiError::RateLimited),
+        });
+        assert_eq!(app.library.playlists_asked, None);
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 2,
+            generation,
+            result: Ok(playlist_page(&["c"], 2, 3)),
+        });
+        assert_eq!(listed_playlists(&app), playlist_ids(&["a", "b"]));
+    }
+
+    /// Signing out forgets the library, but not which load came last: a
+    /// page the old account asked for does not become the next account's
+    /// list.
+    #[test]
+    fn a_playlist_page_asked_for_before_sign_out_is_not_taken() {
+        let mut app = headless_app();
+        app.backend.set_offline(true);
+
+        app.load_playlists();
+        let old = app.library.playlists_generation;
+        app.reset_data();
+        app.load_playlists();
+        assert_ne!(app.library.playlists_generation, old);
+        app.handle_api(ApiResponse::MyPlaylists {
+            offset: 0,
+            generation: old,
+            result: Ok(playlist_page(&["theirs"], 0, 1)),
+        });
+        assert!(app.library.playlists.is_loading());
     }
 
     /// The streaming session does not always name a playlist's owner. The
@@ -10723,6 +10946,7 @@ mod tests {
         app.handle_api(header("pl2", owned_by("other", Some("Molly"))));
         app.handle_api(ApiResponse::MyPlaylists {
             offset: 0,
+            generation: app.library.playlists_generation,
             result: Ok(crate::api::models::Page {
                 items: vec![
                     Playlist {
@@ -10809,6 +11033,7 @@ mod tests {
         // then, and one the header carried stays.
         app.handle_api(ApiResponse::MyPlaylists {
             offset: 0,
+            generation: app.library.playlists_generation,
             result: Ok(crate::api::models::Page {
                 items: vec![
                     Playlist {
@@ -13526,6 +13751,7 @@ mod tests {
         assert!(app.uploaded_covers.contains_key("pl1"));
         app.handle_api(ApiResponse::MyPlaylists {
             offset: 0,
+            generation: app.library.playlists_generation,
             result: Ok(crate::api::models::Page {
                 items: vec![Playlist {
                     id: "pl1".into(),
@@ -13622,6 +13848,7 @@ mod tests {
         }
         app.handle_api(ApiResponse::MyPlaylists {
             offset: 0,
+            generation: app.library.playlists_generation,
             result: Ok(crate::api::models::Page {
                 items: vec![Playlist {
                     id: "pl1".into(),
@@ -13710,6 +13937,7 @@ mod tests {
                 if confirm_from_library {
                     app.handle_api(ApiResponse::MyPlaylists {
                         offset: 0,
+                        generation: app.library.playlists_generation,
                         result: Ok(crate::api::models::Page {
                             items: vec![playlist(url)],
                             ..Default::default()
