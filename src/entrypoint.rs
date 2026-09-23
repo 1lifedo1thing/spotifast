@@ -370,6 +370,21 @@ pub(crate) fn run() -> eframe::Result<()> {
     };
     let cli = Cli::from_arg_matches(&Cli::command().name(name).get_matches())
         .unwrap_or_else(|error| error.exit());
+    // Demo mode invents plays, settings, and a signed-in account. Without a
+    // folder of its own it would write them into the real profile, where
+    // they would pass for the user's history and stop the next real launch
+    // from moving an older profile across.
+    #[cfg(feature = "demo")]
+    let cli = if (cli.demo || cli.demo_shot.is_some()) && cli.demo_data.is_none() {
+        Cli {
+            demo_data: Some(
+                std::env::temp_dir().join(format!("spotifast-demo-{}", std::process::id())),
+            ),
+            ..cli
+        }
+    } else {
+        cli
+    };
     // A control launch is a client, not a second app: talk to the running
     // instance and exit before touching the log file it is writing to.
     if let Some(control) = cli.control {
@@ -467,13 +482,6 @@ pub(crate) fn run() -> eframe::Result<()> {
     }
     log_panics(dirs.panic_log());
     let mut settings = settings::Settings::load(&dirs.settings_file());
-    #[cfg(feature = "demo")]
-    if (cli.demo || cli.demo_shot.is_some()) && cli.demo_data.is_none() {
-        // The default demo must not inherit real custom palette files or cache.
-        settings.custom_theme = None;
-        settings.custom_theme_cache = None;
-        settings.system_theme_cache = None;
-    }
     if let Some(name) = cli.device_name {
         settings.device_name = name;
     }
