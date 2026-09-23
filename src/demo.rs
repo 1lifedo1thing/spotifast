@@ -2625,6 +2625,51 @@ mod tests {
         app.backend.shutdown();
     }
 
+    /// Linux offers middle-click autoscroll as a switch that starts off and
+    /// is saved; Windows always autoscrolls and macOS never does, so neither
+    /// shows the row.
+    #[test]
+    fn the_linux_autoscroll_switch_starts_off_and_is_saved() {
+        use egui::accesskit::{Role, Toggled};
+        let (ctx, mut app) = accessible_app("autoscroll-setting");
+        let text = settings_text(&ctx, &mut app, "Middle-click autoscroll");
+        assert_eq!(
+            text.iter().any(|text| text == "Appearance"),
+            cfg!(target_os = "linux")
+        );
+        if !cfg!(target_os = "linux") {
+            app.backend.shutdown();
+            return;
+        }
+        app.open(Page::Settings);
+        accessible_frame(&ctx, &mut app, vec![]);
+        let tree = accessible_frame(&ctx, &mut app, vec![]);
+        let control = accessible_node(&tree, "Middle-click autoscroll", Role::CheckBox);
+        let toggled = |tree: &egui::accesskit::TreeUpdate| {
+            tree.nodes
+                .iter()
+                .find(|(id, _)| *id == control)
+                .and_then(|(_, node)| node.toggled())
+        };
+        assert_eq!(toggled(&tree), Some(Toggled::False));
+        assert!(!app.settings.middle_click_autoscroll);
+        accessible_frame(
+            &ctx,
+            &mut app,
+            vec![accessible_action(
+                control,
+                egui::accesskit::Action::Click,
+                None,
+            )],
+        );
+        assert!(app.settings.middle_click_autoscroll);
+        let path = app.dirs.config.join("autoscroll-choice.json");
+        app.settings.save(&path);
+        app.settings = Settings::load(&path);
+        assert!(app.settings.middle_click_autoscroll);
+        app.backend.shutdown();
+    }
+
     /// X11 can hide the mini player's taskbar entry, so it gets the same row
     /// and menu item as Windows; Wayland and macOS never show them.
     #[test]

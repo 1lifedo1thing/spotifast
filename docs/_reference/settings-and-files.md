@@ -229,6 +229,7 @@ main fields are:
 | `liked_songs_pinned` | `true` | Keep Liked Songs in the pin block; older settings place it first until moved |
 | `sidebar_compact` | `false` | Names only in the library sidebar, no covers |
 | `tracklist_compact` | `false` | One-line track rows without covers |
+| `middle_click_autoscroll` | `false` | Linux only: middle-click a list to autoscroll it. Windows always autoscrolls and macOS never does |
 | `winamp_window` | `false` | The window is the Winamp mini player |
 | `winamp_show_taskbar` | `true` | Windows since 0.8.0, and Linux X11 sessions: show the Winamp window's taskbar button; the main window always keeps its button. Wayland and macOS ignore it |
 | `custom_titlebar` | `false` | Windows only, on `main` after 0.9.1: draw Spotifast's own title bar and window buttons instead of the standard Windows ones |

@@ -675,6 +675,11 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             ),
         ),
         RowText::new(
+            "Middle-click autoscroll",
+            "Middle-click a list, then move the pointer to scroll it. Off by default, because a middle click usually pastes on Linux.",
+        )
+        .when(cfg!(target_os = "linux")),
+        RowText::new(
             "Custom title bar",
             "Draw Spotifast's own title bar and window buttons instead of the standard Windows ones.",
         )
@@ -840,13 +845,34 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     });
                 },
             );
-            if app.windows_controls_visible() {
+            if cfg!(target_os = "linux") {
                 filtered_row(
                     ui,
                     &palette,
                     &needle,
                     "Appearance",
                     &appearance_rows[5],
+                    |ui| {
+                        if widgets::switch(
+                            ui,
+                            &palette,
+                            "Middle-click autoscroll",
+                            &mut app.settings.middle_click_autoscroll,
+                        )
+                        .changed()
+                        {
+                            changed = true;
+                        }
+                    },
+                );
+            }
+            if app.windows_controls_visible() {
+                filtered_row(
+                    ui,
+                    &palette,
+                    &needle,
+                    "Appearance",
+                    &appearance_rows[6],
                     |ui| {
                         let mut custom = app.settings.custom_titlebar;
                         if widgets::switch(ui, &palette, "Custom title bar", &mut custom).changed()

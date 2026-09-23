@@ -208,6 +208,10 @@ pub struct Settings {
     pub queue_width: f32,
     /// Use compact single-line rows without cover art in track lists.
     pub tracklist_compact: bool,
+    /// Linux: middle-click a list to autoscroll it. Off by default, because
+    /// Linux desktops usually paste the primary selection on middle click.
+    /// Windows always autoscrolls and macOS never does.
+    pub middle_click_autoscroll: bool,
     pub search_history: Vec<String>,
     pub show_shortcut_hints: bool,
     /// An optional personal Spotify Web API application id. The shared
@@ -358,6 +362,7 @@ impl Default for Settings {
             lyrics_width: 360.0,
             queue_width: 360.0,
             tracklist_compact: false,
+            middle_click_autoscroll: false,
             search_history: Vec::new(),
             show_shortcut_hints: true,
             web_client_id: None,
@@ -1043,6 +1048,19 @@ mod tests {
         let json = serde_json::to_string(&settings).unwrap();
         let restored: Settings = serde_json::from_str(&json).unwrap();
         assert!(restored.tracklist_compact);
+    }
+
+    #[test]
+    fn middle_click_autoscroll_is_opt_in_and_round_trips() {
+        let settings: Settings = serde_json::from_str("{}").unwrap();
+        assert!(!settings.middle_click_autoscroll);
+        let settings = Settings {
+            middle_click_autoscroll: true,
+            ..Settings::default()
+        };
+        let json = serde_json::to_string(&settings).unwrap();
+        let restored: Settings = serde_json::from_str(&json).unwrap();
+        assert!(restored.middle_click_autoscroll);
     }
 
     #[test]
