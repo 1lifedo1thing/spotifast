@@ -2078,6 +2078,30 @@ mod tests {
     }
 
     #[test]
+    fn create_an_app_row_hides_once_the_personal_app_is_ready() {
+        let (ctx, mut app) = accessible_app("settings-create-app");
+        app.settings.web_client_id = None;
+        app.web_app = None;
+        let text = settings_text(&ctx, &mut app, "Account");
+        assert!(text.iter().any(|text| text == "Create an app"));
+
+        app.settings.web_client_id = Some("test-client".into());
+        let text = settings_text(&ctx, &mut app, "Account");
+        assert!(text.iter().any(|text| text == "Create an app"));
+        assert!(
+            text.iter()
+                .any(|text| text == "Authorize your personal app")
+        );
+
+        app.web_app = Some("test-client".into());
+        let text = settings_text(&ctx, &mut app, "Account");
+        assert!(text.iter().any(|text| text == "Personal app ready"));
+        assert!(!text.iter().any(|text| text == "Create an app"));
+        assert!(!text.iter().any(|text| text == "Setup guide"));
+        app.backend.shutdown();
+    }
+
+    #[test]
     fn settings_search_keeps_apply_available_after_a_playback_edit() {
         use egui::accesskit::{Action as AccessibleAction, Role};
         let (ctx, mut app) = accessible_app("settings-search-apply");

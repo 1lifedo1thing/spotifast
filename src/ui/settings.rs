@@ -156,7 +156,8 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
         RowText::new(
             "Create an app",
             "Create one for free in Spotify's developer dashboard.",
-        ),
+        )
+        .when(!in_use),
         RowText::new(
             "Personal app ready",
             "Supported requests use your app. Other requests use the shared app.",
