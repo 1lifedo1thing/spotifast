@@ -90,6 +90,12 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   playback before Web API metadata arrives (available since 0.8.0).
   On `main`, after 0.8.0, an album, single, or EP's **Add to queue** adds all
   its playable songs in album order, on this computer or another device.
+- **Radio.** On `main`, after 0.9.1, **Go to song radio** in a song's menu, and
+  **Go to playlist radio**, **Go to album radio**, or **Go to artist radio** in
+  their **…** menus, open a page of 50 songs Spotify picks to go with them.
+  **Play** plays exactly those songs, **Refresh** in **…** asks for a new mix,
+  and **Save as playlist** keeps the mix as a private playlist. Radio needs
+  playback on this computer to be set up.
 - **Edit your playlists.** Create, rename, describe, reorder, and delete them.
   Since 0.8.0, hold a dragged song near the playlist's top or bottom
   edge to scroll to rows beyond the screen. The Library sidebar scrolls while

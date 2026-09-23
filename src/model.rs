@@ -106,6 +106,9 @@ pub enum Page {
     Album(String),
     Artist(String),
     Show(String),
+    /// Spotify's radio seeded by a song, playlist, album, or artist, by the
+    /// seed's URI.
+    Radio(String),
     Queue,
     Settings,
 }
@@ -125,6 +128,7 @@ impl Page {
             Page::Album(id) => format!("album:{id}"),
             Page::Artist(id) => format!("artist:{id}"),
             Page::Show(id) => format!("show:{id}"),
+            Page::Radio(seed) => format!("radio:{seed}"),
             Page::Queue => "queue".into(),
             Page::Settings => "settings".into(),
         }
@@ -149,6 +153,7 @@ impl Page {
                     "album" => Page::Album(id.into()),
                     "artist" => Page::Artist(id.into()),
                     "show" => Page::Show(id.into()),
+                    "radio" if crate::util::station_uri(id).is_some() => Page::Radio(id.into()),
                     _ => return None,
                 }
             }
@@ -720,6 +725,19 @@ pub struct ArtistPage {
     pub show_all_top: bool,
 }
 
+/// A radio page: the songs Spotify mixed for its seed, which are the songs
+/// its Play button plays.
+#[derive(Default)]
+pub struct RadioPage {
+    pub songs: Loadable<Vec<Track>>,
+    /// The name and artwork known when the page opened, kept should the
+    /// seed's own details be let go while the page stays.
+    pub name: Option<String>,
+    pub images: Vec<crate::api::models::Image>,
+    /// Identifies the request whose answer may fill `songs`.
+    pub generation: u64,
+}
+
 #[derive(Default)]
 pub struct ShowPage {
     pub show: Loadable<Show>,
@@ -785,7 +803,7 @@ pub struct DragTrack {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PlayingFrom {
     pub name: String,
-    /// The page that opens on click. A song radio has none.
+    /// The page that opens on click, when there is one.
     pub page: Option<Page>,
 }
 
@@ -871,8 +889,6 @@ pub enum Action {
         uri: String,
         index: u32,
     },
-    /// Spotify's station seeded by this song.
-    PlayTrackRadio(String),
     ShufflePlay(String),
     TogglePlay,
     Next,
@@ -952,6 +968,8 @@ pub enum Action {
     ClearQueue,
     /// Save the current and upcoming queue as a playlist.
     SaveQueueAsPlaylist,
+    /// Save a radio page's songs to a new playlist, by the seed's URI.
+    SaveRadio(String),
     RefreshQueue,
     CopyLink(String),
     /// Open a web page in the browser.

@@ -375,6 +375,17 @@ pub fn populate(app: &mut App) {
         .absorb(0, page((0..15).map(|index| episode(index, 0)).collect()));
     app.show_pages.insert("sh0".into(), show_page);
 
+    // Radio pages, for a song and for a playlist.
+    for (seed, first) in [("spotify:track:trk0", 1), ("spotify:playlist:pl1", 8)] {
+        app.radio_pages.insert(
+            seed.into(),
+            RadioPage {
+                songs: Loadable::Loaded(tracks.iter().skip(first).take(30).cloned().collect()),
+                ..RadioPage::default()
+            },
+        );
+    }
+
     // Library.
     app.library.liked.absorb(
         0,

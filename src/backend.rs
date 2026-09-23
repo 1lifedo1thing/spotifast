@@ -6,7 +6,7 @@
 //! the interface with `request_repaint`, so the app stays event-driven and
 //! idle when nothing is happening.
 
-use std::collections::{BTreeSet, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashSet, VecDeque};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -40,6 +40,8 @@ const ENGINE_CONNECT_TIMEOUT: Duration = Duration::from_secs(75);
 const MAX_PENDING_ALBUM_TYPES: usize = 50;
 // Saved shows asked about in one extended-metadata request.
 const AUDIOBOOK_BATCH: usize = 50;
+/// How long resolving a radio station and its songs may take.
+const RADIO_TIMEOUT: Duration = Duration::from_secs(20);
 pub const PLAYLIST_PAGE_SIZE: u32 = 50;
 const RECONNECT_WINDOW: Duration = Duration::from_secs(600);
 const RECONNECT_LIMIT: usize = 6;
@@ -674,6 +676,18 @@ pub enum Command {
     AlbumTypes(Vec<String>),
     /// Ask the streaming session which saved shows are audiobooks.
     AudiobookShows(Vec<String>),
+    /// Resolve Spotify's radio seeded by `seed` through the streaming session.
+    Radio {
+        seed: String,
+        generation: u64,
+    },
+    /// Internal: a radio finished resolving for the session it started in.
+    RadioResolved {
+        session_generation: u64,
+        seed: String,
+        generation: u64,
+        result: Result<Vec<crate::api::models::Track>, String>,
+    },
     /// Internal: an audiobook lookup finished for the session it started in.
     AudiobookShowsResolved {
         session_generation: u64,
@@ -769,6 +783,12 @@ pub enum Event {
     /// Saved shows that Spotify's metadata marks as audiobooks. librespot
     /// cannot play them, so the Podcasts shelf leaves them out.
     AudiobookShows(Vec<String>),
+    /// The songs of the radio seeded by `seed`, for the request `generation`.
+    Radio {
+        seed: String,
+        generation: u64,
+        result: Result<Vec<crate::api::models::Track>, String>,
+    },
     /// Whether Spotify's internal metadata positively identifies an album as an EP.
     AlbumType {
         uri: String,
@@ -1272,6 +1292,8 @@ struct Worker {
     album_type_lookup: AlbumTypeLookup,
     /// Saved shows waiting for the streaming session to say which are audiobooks.
     audiobook_lookup: BTreeSet<String>,
+    /// Radios asked for before the streaming session was ready, by seed.
+    radio_waiting: BTreeMap<String, u64>,
     /// True while a playback grant or engine connection is in flight, so a
     /// second attempt does not pile up.
     engine_busy: bool,
@@ -1335,6 +1357,7 @@ impl Worker {
             rootlist_pending: false,
             album_type_lookup: AlbumTypeLookup::default(),
             audiobook_lookup: BTreeSet::new(),
+            radio_waiting: BTreeMap::new(),
             engine_busy: false,
             search_tasks: Vec::new(),
             engine_restart_pending: false,
@@ -1850,6 +1873,24 @@ impl Worker {
                     self.audiobook_lookup.extend(uris);
                     self.start_audiobook_lookup();
                 }
+                Command::Radio { seed, generation } => {
+                    self.radio_waiting.insert(seed, generation);
+                    self.start_radio();
+                }
+                Command::RadioResolved {
+                    session_generation,
+                    seed,
+                    generation,
+                    result,
+                } => {
+                    if self.signed_in && session_generation == *self.session.borrow() {
+                        self.emit(Event::Radio {
+                            seed,
+                            generation,
+                            result,
+                        });
+                    }
+                }
                 Command::AudiobookShowsResolved {
                     session_generation,
                     audiobooks,
@@ -2319,6 +2360,7 @@ impl Worker {
         self.resume_verify = None;
         self.album_type_lookup.reset_session();
         self.audiobook_lookup.clear();
+        self.radio_waiting.clear();
         if let Some(engine) = self.engine.take() {
             engine.shutdown();
         }
@@ -2652,6 +2694,7 @@ impl Worker {
                 self.emit(Event::Playback(LocalPlayback::Ready { device_id }));
                 self.start_album_type_lookup();
                 self.start_audiobook_lookup();
+                self.start_radio();
             }
             None => {
                 self.resume = None;
@@ -2883,6 +2926,45 @@ impl Worker {
                 audiobooks,
             });
         });
+    }
+
+    /// Resolves the waiting radios once the streaming session is ready; the
+    /// Web API has no stations.
+    fn start_radio(&mut self) {
+        let Some(engine) = self.engine.clone() else {
+            return;
+        };
+        let session_generation = *self.session.borrow();
+        for (seed, generation) in std::mem::take(&mut self.radio_waiting) {
+            let engine = Arc::clone(&engine);
+            let commands = self.commands.clone();
+            tokio::spawn(async move {
+                let result = match crate::util::station_uri(&seed) {
+                    Some(station) => {
+                        match tokio::time::timeout(
+                            RADIO_TIMEOUT,
+                            session_reads::station(engine.session(), &station),
+                        )
+                        .await
+                        {
+                            Ok(Ok(tracks)) => Ok(tracks),
+                            Ok(Err(error)) => {
+                                log::warn!("radio {station} failed: {error:#}");
+                                Err("Couldn't load this radio. Try again.".to_string())
+                            }
+                            Err(_) => Err("Spotify took too long to answer. Try again.".into()),
+                        }
+                    }
+                    None => Err("There is no radio for this item.".into()),
+                };
+                let _ = commands.send(Command::RadioResolved {
+                    session_generation,
+                    seed,
+                    generation,
+                    result,
+                });
+            });
+        }
     }
 
     fn start_album_type_lookup(&mut self) {

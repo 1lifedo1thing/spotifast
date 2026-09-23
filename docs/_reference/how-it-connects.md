@@ -21,7 +21,9 @@ local playback:
    browser approval and keeps an independent reusable credential. Spotify Premium
    is required. While it is signed in, its session also reads the playlists
    the shared app would otherwise be asked for: other people's, and the
-   account's own when there is no personal app.
+   account's own when there is no personal app. Radio pages come only from
+   this session: the Web API has no stations. Opening one resolves the
+   station and reads its songs' details in one batched request.
 
 Local playback authorization stays separate from both Web API grants. Its
 browser approval requests only the streaming permission and always shows the

@@ -157,6 +157,9 @@ pub struct Actions<'a> {
     /// A playlist page can be refreshed from its More menu.
     pub reload: Option<(Page, bool)>,
     pub name: &'a str,
+    /// A radio page offers to save its songs as a playlist, by the seed's
+    /// URI, in place of the Spotify item's own menu.
+    pub save_radio: Option<String>,
 }
 
 /// The big play button and its neighbours; returns the filter text if a
@@ -174,8 +177,10 @@ pub fn actions_row(
             let now_playing_here = app.playing_context_uri().as_deref() == Some(uri.as_str())
                 && app.believed_playing();
             let is_filtered = filter.as_ref().is_some_and(|f| !f.trim().is_empty());
-            let play_view =
-                actions.view.is_some() && (!app.playing_context_shuffle() || is_filtered);
+            // A radio is mixed afresh each time Spotify is asked, so it
+            // always plays the songs on screen.
+            let play_view = actions.view.is_some()
+                && (!app.playing_context_shuffle() || is_filtered || actions.save_radio.is_some());
             let can_start = actions.view.as_ref().is_none_or(|uris| !uris.is_empty());
             let icon = if now_playing_here {
                 Icon::PauseFilled
@@ -260,6 +265,19 @@ pub fn actions_row(
                 app.actions.push(Action::ToggleSaved(uri.clone()));
             }
         }
+        if let Some(seed) = &actions.save_radio
+            && theme::icon_button(
+                ui,
+                Icon::CirclePlus,
+                26.0,
+                palette.secondary,
+                palette.text,
+                "Save as playlist",
+            )
+            .clicked()
+        {
+            app.actions.push(Action::SaveRadio(seed.clone()));
+        }
         if let Some(uri) = &actions.play_uri {
             let more = theme::icon_button(
                 ui,
@@ -272,13 +290,27 @@ pub fn actions_row(
             egui::Popup::menu(&more)
                 .frame(widgets::menu_frame(&palette))
                 .show(|ui| {
-                    widgets::context_menu_items(
-                        ui,
-                        app,
-                        uri,
-                        actions.name,
-                        actions.owned_playlist.as_ref(),
-                    );
+                    if let Some(seed) = &actions.save_radio {
+                        // As narrow as every other item menu.
+                        ui.set_min_width(200.0);
+                        ui.set_max_width(300.0);
+                        if widgets::menu_item(
+                            ui,
+                            &palette,
+                            Some(Icon::CirclePlus),
+                            "Save as playlist",
+                        ) {
+                            app.actions.push(Action::SaveRadio(seed.clone()));
+                        }
+                    } else {
+                        widgets::context_menu_items(
+                            ui,
+                            app,
+                            uri,
+                            actions.name,
+                            actions.owned_playlist.as_ref(),
+                        );
+                    }
                     if let Some((page, loading)) = &actions.reload {
                         widgets::menu_separator(ui, &palette);
                         let clicked = ui
@@ -1456,6 +1488,7 @@ fn playlist_actions<'a>(
         owned_playlist: owned.then(|| playlist.clone()),
         reload,
         name: &playlist.name,
+        save_radio: None,
     }
 }
 
@@ -1469,6 +1502,7 @@ fn album_actions<'a>(album: &'a Album, saved: bool, view: Option<Arc<[String]>>)
         owned_playlist: None,
         reload: None,
         name: &album.name,
+        save_radio: None,
     }
 }
 
@@ -1611,6 +1645,7 @@ pub fn liked(app: &mut App, ui: &mut egui::Ui) {
             owned_playlist: None,
             reload: None,
             name: "Liked Songs",
+            save_radio: None,
         },
         Some(&mut filter),
     );
@@ -2542,6 +2577,84 @@ mod tests {
         );
     }
 
+    /// A radio's More menu is as narrow as every other item menu, not as
+    /// wide as the page.
+    #[test]
+    fn the_radio_menu_keeps_the_width_of_other_menus() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        theme::install(&ctx);
+        let mut app = test_app();
+        let mut frame = |events| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(egui::Pos2::ZERO, vec2(1240.0, 520.0))),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    actions_row(
+                        &mut app,
+                        ui,
+                        Actions {
+                            play_uri: Some("spotify:station:track:seed".into()),
+                            view: Some(vec!["spotify:track:a".to_string()].into()),
+                            saved: None,
+                            saved_icons: (Icon::CirclePlus, Icon::CircleCheck),
+                            saved_tooltips: ("", ""),
+                            owned_playlist: None,
+                            reload: Some((Page::Radio("spotify:track:seed".into()), false)),
+                            name: "Seed Radio",
+                            save_radio: Some("spotify:track:seed".into()),
+                        },
+                        None,
+                    )
+                },
+            );
+            output.textures_delta.clear();
+            output.platform_output.accesskit_update.unwrap()
+        };
+        frame(vec![]);
+        let closed = frame(vec![]);
+        let more = closed
+            .nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some("More"))
+            .and_then(|(_, node)| node.bounds())
+            .expect("a More button");
+        let pos = pos2(
+            ((more.x0 + more.x1) / 2.0) as f32,
+            ((more.y0 + more.y1) / 2.0) as f32,
+        );
+        frame(vec![
+            egui::Event::PointerMoved(pos),
+            egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed: true,
+                modifiers: egui::Modifiers::NONE,
+            },
+            egui::Event::PointerButton {
+                pos,
+                button: egui::PointerButton::Primary,
+                pressed: false,
+                modifiers: egui::Modifiers::NONE,
+            },
+        ]);
+        let open = frame(vec![]);
+        let refresh = open
+            .nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some("Refresh"))
+            .and_then(|(_, node)| node.bounds())
+            .expect("the open menu");
+        assert!(
+            refresh.width() <= 320.0,
+            "the menu must not stretch across the page: {}",
+            refresh.width()
+        );
+    }
+
     #[test]
     fn playlist_refresh_lives_in_more_and_accepts_pointer_and_keyboard() {
         use egui::accesskit::{Action as AccessibleAction, ActionRequest, TreeId};
@@ -2576,6 +2689,7 @@ mod tests {
                                     owned_playlist: None,
                                     reload: Some((Page::Playlist("test".into()), loading)),
                                     name: "Test",
+                                    save_radio: None,
                                 },
                                 Some(&mut filter),
                             )
@@ -2699,6 +2813,7 @@ mod tests {
                         owned_playlist: None,
                         reload: None,
                         name: "Test",
+                        save_radio: None,
                     },
                     None,
                 );
@@ -2761,6 +2876,7 @@ mod tests {
                     owned_playlist: None,
                     reload: None,
                     name: "Test",
+                    save_radio: None,
                 },
                 None,
             );
@@ -2807,6 +2923,7 @@ mod tests {
                     owned_playlist: None,
                     reload: None,
                     name: "Test",
+                    save_radio: None,
                 },
                 None,
             );
@@ -2857,6 +2974,7 @@ mod tests {
                     owned_playlist: None,
                     reload: None,
                     name: "Test",
+                    save_radio: None,
                 },
                 None,
             );
@@ -2903,6 +3021,7 @@ mod tests {
                     owned_playlist: None,
                     reload: None,
                     name: "Test",
+                    save_radio: None,
                 },
                 None,
             );
@@ -2954,6 +3073,7 @@ mod tests {
                     owned_playlist: None,
                     reload: None,
                     name: "Test",
+                    save_radio: None,
                 },
                 Some(&mut filter),
             );
@@ -3000,6 +3120,7 @@ mod tests {
                     owned_playlist: None,
                     reload: None,
                     name: "Test",
+                    save_radio: None,
                 },
                 Some(&mut filter),
             );

@@ -322,6 +322,8 @@ pub struct App {
     pub album_pages: HashMap<String, AlbumPage>,
     pub artist_pages: HashMap<String, ArtistPage>,
     pub show_pages: HashMap<String, ShowPage>,
+    /// Radio pages by the seed's URI.
+    pub radio_pages: HashMap<String, RadioPage>,
     pub track_cache: HashMap<String, Track>,
     track_requests: HashSet<String>,
     /// Album URIs already resolved or attempted through librespot this session.
@@ -717,6 +719,7 @@ impl App {
             album_pages: HashMap::new(),
             artist_pages: HashMap::new(),
             show_pages: HashMap::new(),
+            radio_pages: HashMap::new(),
             track_cache: HashMap::new(),
             track_requests: HashSet::new(),
             album_types_requested: HashSet::new(),
@@ -1804,6 +1807,11 @@ impl App {
                 Event::AudiobookShows(uris) => {
                     self.audiobook_shows.extend(uris);
                 }
+                Event::Radio {
+                    seed,
+                    generation,
+                    result,
+                } => self.receive_radio(&seed, generation, result),
                 Event::AlbumType { uri, result } => match result {
                     Ok(true) => {
                         self.confirmed_ep_albums.insert(uri);
@@ -2203,7 +2211,7 @@ impl App {
                 name: self
                     .station_name(&context)
                     .unwrap_or_else(|| gettext(self.locale, "Radio").into_owned()),
-                page: None,
+                page: util::station_seed(&context).map(Page::Radio),
             });
         }
         let kind = util::uri_kind(&context)?;
@@ -2286,14 +2294,9 @@ impl App {
         })
     }
 
-    /// "<Song> Radio" for a song station whose song is cached.
+    /// "<Name> Radio" for a station whose seed's name is known.
     fn station_name(&self, context: &str) -> Option<String> {
-        let id = context.strip_prefix("spotify:station:track:")?;
-        let track = self.track_cache.get(id)?;
-        Some(
-            // Translators: Keep {track} unchanged. The song title itself is not translated.
-            gettext(self.locale, "{track} Radio").replace("{track}", &track.name),
-        )
+        self.radio_name(&util::station_seed(context)?)
     }
 
     /// Encodes a context as a value accepted by `Page::decode`.
@@ -3446,6 +3449,7 @@ impl App {
                 }
                 self.request_contains(vec![format!("spotify:show:{id}")]);
             }
+            Page::Radio(seed) => self.load_radio(&seed),
             Page::Queue => self.refresh_queue(true),
             Page::Settings => {}
         }
@@ -3850,6 +3854,9 @@ impl App {
             }
             Page::Show(id) => {
                 self.show_pages.remove(id);
+            }
+            Page::Radio(seed) => {
+                self.radio_pages.remove(seed);
             }
             Page::Queue => self.queue = Loadable::NotLoaded,
             _ => {}
@@ -5861,6 +5868,7 @@ impl App {
         const MAX_ALBUM_PAGES: usize = 16;
         const MAX_ARTIST_PAGES: usize = 10;
         const MAX_SHOW_PAGES: usize = 8;
+        const MAX_RADIO_PAGES: usize = 6;
         const MAX_TRACK_CACHE: usize = 800;
 
         let mut protected_playlists = HashSet::new();
@@ -5872,6 +5880,13 @@ impl App {
         let mut protected_albums = HashSet::new();
         let mut protected_artists = HashSet::new();
         let mut protected_shows = HashSet::new();
+        let mut protected_radios = HashSet::new();
+        if let Some(seed) = self
+            .playing_context_uri()
+            .and_then(|uri| util::station_seed(&uri))
+        {
+            protected_radios.insert(seed);
+        }
         match self.page() {
             Page::Playlist(id) => {
                 protected_playlists.insert(id.clone());
@@ -5884,6 +5899,9 @@ impl App {
             }
             Page::Show(id) => {
                 protected_shows.insert(id.clone());
+            }
+            Page::Radio(seed) => {
+                protected_radios.insert(seed.clone());
             }
             _ => {}
         }
@@ -5935,11 +5953,19 @@ impl App {
             &protected_shows,
             MAX_SHOW_PAGES,
         );
+        evict_lru_map(
+            &mut self.radio_pages,
+            &self.page_used,
+            |seed| Page::Radio(seed.to_string()),
+            &protected_radios,
+            MAX_RADIO_PAGES,
+        );
         self.page_used.retain(|page, _| match page {
             Page::Playlist(id) => self.playlist_pages.contains_key(id),
             Page::Album(id) => self.album_pages.contains_key(id),
             Page::Artist(id) => self.artist_pages.contains_key(id),
             Page::Show(id) => self.show_pages.contains_key(id),
+            Page::Radio(seed) => self.radio_pages.contains_key(seed),
             _ => true,
         });
         if self.track_cache.len() > MAX_TRACK_CACHE {
@@ -7418,33 +7444,6 @@ impl App {
                 request.offset_position = offset_index;
                 self.play_request(request, false);
             }
-            Action::PlayTrackRadio(uri) => {
-                // Load the station URI as a 50-track local context. Autoplay
-                // from a bare track fails inside librespot and clears the queue.
-                // The Web API cannot start a station on another device.
-                let id = util::uri_id(&uri).unwrap_or_default();
-                let station = format!("spotify:station:track:{id}");
-                self.local_list = None;
-                self.queue_start_pending = Some(Target::Local);
-                self.backend.player(PlayerCommand::Load(LoadSpec {
-                    context_uri: Some(station.clone()),
-                    play: true,
-                    autoplay: false,
-                    ..LoadSpec::default()
-                }));
-                self.optimistic_playing = Some((true, Instant::now()));
-                // Show the station queue immediately.
-                self.assumed_context = Some(AssumedContext {
-                    uri: station,
-                    shuffle: None,
-                    at: Instant::now(),
-                });
-                if !matches!(self.page(), Page::Queue) && !self.show_queue_panel {
-                    self.show_queue_panel = true;
-                    self.show_lyrics_panel = false;
-                }
-                self.refresh_queue(true);
-            }
             Action::PlayUris { uris, index } => {
                 if uris.is_empty() {
                     return;
@@ -7876,6 +7875,7 @@ impl App {
             }
             Action::ClearQueue => self.clear_queue(),
             Action::SaveQueueAsPlaylist => self.save_queue_as_playlist(),
+            Action::SaveRadio(seed) => self.save_radio(&seed),
             Action::RefreshQueue => self.refresh_queue(true),
             Action::CopyLink(uri) => {
                 if let Some(url) = util::open_spotify_url(&uri) {
@@ -9452,6 +9452,8 @@ fn cover_error(error: &crate::api::client::ApiError) -> String {
         _ => format!("Couldn't upload the cover: {error}. Try again."),
     }
 }
+
+mod radio;
 
 #[cfg(test)]
 mod tests {
@@ -14495,7 +14497,7 @@ mod tests {
                 (
                     "spotify:station:track:xyz",
                     gettext(locale, "{track} Radio").replace("{track}", title),
-                    None,
+                    Some(Page::Radio("spotify:track:xyz".into())),
                 ),
             ] {
                 app.assumed_context = Some(AssumedContext {
@@ -14580,23 +14582,252 @@ mod tests {
             },
         );
         assume(&mut app, "spotify:station:track:xyz");
-        assert_eq!(named(&app), ("Wish You Were Here Radio".into(), None));
+        assert_eq!(
+            named(&app),
+            (
+                "Wish You Were Here Radio".into(),
+                Some(Page::Radio("spotify:track:xyz".into()))
+            )
+        );
         assume(&mut app, "spotify:station:track:uncached");
-        assert_eq!(named(&app), ("Radio".into(), None));
+        assert_eq!(
+            named(&app),
+            (
+                "Radio".into(),
+                Some(Page::Radio("spotify:track:uncached".into()))
+            )
+        );
+        assume(&mut app, "spotify:station:playlist:pl9");
+        assert_eq!(
+            named(&app),
+            (
+                "Long Way Home Radio".into(),
+                Some(Page::Radio("spotify:playlist:pl9".into()))
+            )
+        );
     }
 
-    /// Song radio opens the queue panel.
+    fn radio_song(id: &str, artist: &str) -> Track {
+        Track {
+            id: Some(id.into()),
+            uri: format!("spotify:track:{id}"),
+            name: format!("Song {id}"),
+            duration_ms: 200_000,
+            artists: vec![crate::api::models::ArtistRef {
+                name: artist.into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+    }
+
+    fn draw_radio(
+        ctx: &egui::Context,
+        app: &mut App,
+        seed: &str,
+        events: Vec<egui::Event>,
+    ) -> egui::accesskit::TreeUpdate {
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1240.0, 800.0),
+                )),
+                events,
+                ..Default::default()
+            },
+            |ui| crate::ui::radio::radio(app, ui, seed),
+        );
+        output.textures_delta.clear();
+        app.apply_actions(ctx);
+        output.platform_output.accesskit_update.unwrap()
+    }
+
+    fn click_labelled(
+        ctx: &egui::Context,
+        app: &mut App,
+        seed: &str,
+        label: &str,
+    ) -> egui::accesskit::TreeUpdate {
+        use egui::accesskit::{Action as AccessibleAction, ActionRequest, TreeId};
+        let tree = draw_radio(ctx, app, seed, Vec::new());
+        let id = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some(label))
+            .unwrap_or_else(|| panic!("a {label} control"))
+            .0;
+        draw_radio(
+            ctx,
+            app,
+            seed,
+            vec![egui::Event::AccessKitActionRequest(ActionRequest {
+                target_tree: TreeId::ROOT,
+                target_node: id,
+                action: AccessibleAction::Click,
+                data: None,
+            })],
+        )
+    }
+
+    /// #369: Go to song radio opens the radio's page, as in Spotify's app,
+    /// and plays nothing until asked.
     #[test]
-    fn song_radio_opens_the_queue() {
+    fn song_radio_opens_its_page_without_playing() {
         let ctx = egui::Context::default();
         let mut app = headless_app();
-        app.apply(Action::PlayTrackRadio("spotify:track:xyz".into()), &ctx);
-        assert!(app.show_queue_panel);
+        app.auth = AuthStatus::Connected {
+            username: "test".into(),
+        };
+        app.apply(Action::Open(Page::Radio("spotify:track:xyz".into())), &ctx);
+        assert_eq!(app.page(), &Page::Radio("spotify:track:xyz".into()));
+        assert!(matches!(
+            app.radio_pages["spotify:track:xyz"].songs,
+            Loadable::Loading
+        ));
+        assert!(app.queued_play.is_none());
+        assert!(app.optimistic_playing.is_none());
+        assert!(!app.show_queue_panel);
         assert_eq!(
-            app.playing_context_uri().as_deref(),
-            Some("spotify:station:track:xyz"),
-            "the station is what the interface calls playing"
+            Page::decode(&Page::Radio("spotify:playlist:pl9".into()).encode()),
+            Some(Page::Radio("spotify:playlist:pl9".into()))
         );
+        assert_eq!(Page::decode("radio:spotify:show:abc"), None);
+    }
+
+    /// Spotify mixes a station afresh each time it is asked, so the page's
+    /// Play plays the songs on screen, shuffled or not, as the radio.
+    #[test]
+    fn a_radio_plays_the_songs_it_shows() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        crate::theme::install(&ctx);
+        let seed = "spotify:playlist:pl9";
+        for shuffle in [false, true] {
+            let mut app = headless_app();
+            app.auth = AuthStatus::Connected {
+                username: "test".into(),
+            };
+            app.backend.set_offline(true);
+            app.shuffle_wanted = shuffle;
+            app.apply(Action::Open(Page::Radio(seed.into())), &ctx);
+            let generation = app.radio_pages[seed].generation;
+            let songs = vec![radio_song("a", "Björk"), radio_song("b", "Arca")];
+            app.receive_radio(seed, generation, Ok(songs));
+            click_labelled(&ctx, &mut app, seed, "Play");
+            assert_eq!(
+                app.queued_play.as_ref().expect("a play request").uris,
+                vec!["spotify:track:a".to_string(), "spotify:track:b".into()],
+                "shuffle {shuffle}: the shown songs play"
+            );
+            assert_eq!(
+                app.playing_context_uri().as_deref(),
+                Some("spotify:station:playlist:pl9"),
+                "the queue names the radio"
+            );
+            app.backend.shutdown();
+        }
+    }
+
+    /// An answer for an earlier request does not replace the page, a
+    /// failure can be retried, and Refresh asks for a new mix.
+    #[test]
+    fn a_radio_takes_only_its_latest_answer() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        app.auth = AuthStatus::Connected {
+            username: "test".into(),
+        };
+        let seed = "spotify:album:alb1";
+        app.apply(Action::Open(Page::Radio(seed.into())), &ctx);
+        let first = app.radio_pages[seed].generation;
+        app.receive_radio(
+            seed,
+            first,
+            Err("Couldn't load this radio. Try again.".into()),
+        );
+        assert!(matches!(app.radio_pages[seed].songs, Loadable::Failed(_)));
+        app.apply(Action::Reload(Page::Radio(seed.into())), &ctx);
+        let second = app.radio_pages[seed].generation;
+        assert_ne!(first, second);
+        app.receive_radio(seed, first, Ok(vec![radio_song("old", "Old")]));
+        assert!(matches!(app.radio_pages[seed].songs, Loadable::Loading));
+        app.receive_radio(seed, second, Ok(vec![radio_song("new", "New")]));
+        let songs = app.radio_pages[seed].songs.get().expect("the latest mix");
+        assert_eq!(songs[0].uri, "spotify:track:new");
+        assert!(app.track_cache.contains_key("new"));
+    }
+
+    /// Save as playlist keeps the mix on screen, in order, under the
+    /// radio's name.
+    #[test]
+    fn saving_a_radio_makes_a_playlist_of_its_songs() {
+        let ctx = egui::Context::default();
+        ctx.enable_accesskit();
+        crate::theme::install(&ctx);
+        let mut app = headless_app();
+        app.auth = AuthStatus::Connected {
+            username: "test".into(),
+        };
+        app.backend.set_offline(true);
+        let seed = "spotify:track:xyz";
+        app.track_cache.insert("xyz".into(), {
+            let mut seed_song = radio_song("xyz", "Pink Floyd");
+            seed_song.name = "Wish You Were Here".into();
+            seed_song
+        });
+        app.apply(Action::Open(Page::Radio(seed.into())), &ctx);
+        let generation = app.radio_pages[seed].generation;
+        app.receive_radio(
+            seed,
+            generation,
+            Ok(vec![radio_song("b", "Camel"), radio_song("a", "Yes")]),
+        );
+        let tree = draw_radio(&ctx, &mut app, seed, Vec::new());
+        assert_eq!(
+            app.radio_name(seed).as_deref(),
+            Some("Wish You Were Here Radio"),
+            "the page is named after its song"
+        );
+        let id = tree
+            .nodes
+            .iter()
+            .find(|(_, node)| node.label() == Some("Save as playlist"))
+            .expect("a Save as playlist button")
+            .0;
+        let mut output = ctx.run_ui(
+            egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(1240.0, 800.0),
+                )),
+                events: vec![egui::Event::AccessKitActionRequest(
+                    egui::accesskit::ActionRequest {
+                        target_tree: egui::accesskit::TreeId::ROOT,
+                        target_node: id,
+                        action: egui::accesskit::Action::Click,
+                        data: None,
+                    },
+                )],
+                ..Default::default()
+            },
+            |ui| crate::ui::radio::radio(&mut app, ui, seed),
+        );
+        output.textures_delta.clear();
+        let saved = std::mem::take(&mut app.actions);
+        assert!(matches!(saved.as_slice(), [Action::SaveRadio(uri)] if uri == seed));
+        app.apply(Action::SaveRadio(seed.into()), &ctx);
+        assert!(
+            app.actions.iter().any(|action| matches!(
+                action,
+                Action::CreatePlaylist { name, public: false, add_uris }
+                    if name == "Wish You Were Here Radio"
+                        && add_uris == &["spotify:track:b".to_string(), "spotify:track:a".into()]
+            )),
+            "{:?}",
+            app.actions
+        );
+        app.backend.shutdown();
     }
 
     /// MilkDrop playback keys produce the same actions as the main window.
@@ -17811,6 +18042,7 @@ mod tests {
                         owned_playlist: None,
                         reload: None,
                         name: "Test",
+                        save_radio: None,
                     },
                     None,
                 );

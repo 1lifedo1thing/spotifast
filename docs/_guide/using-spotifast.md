@@ -274,6 +274,22 @@ On Windows, the main window's minimize, maximize, and close buttons share the
 top bar with Spotifast's controls. Drag an empty part of that bar to move or
 snap the window, and drag a window edge or corner to resize it.
 
+## Radio
+
+On `main`, after 0.9.1, **Go to song radio** in a song's menu opens a page
+of songs Spotify picks to go with it, without starting playback. Playlist,
+album, and artist menus have **Go to playlist radio**, **Go to album radio**,
+and **Go to artist radio**.
+
+Spotify mixes a radio afresh each time it is asked, so the page keeps the
+songs it shows: **Play**, **Shuffle**, and a double-clicked row play those
+songs, and the queue names the radio. Choose **Refresh** in the page's **…**
+menu for a new mix. **Save as playlist** creates a private playlist named
+after the radio with the songs on the page.
+
+Radio comes from Spotify's playback service, so it needs playback on this
+computer to be set up; the page can then play on any device.
+
 ## Playlist covers
 
 **In development, not included in 0.8.0:** open a playlist you own and choose
