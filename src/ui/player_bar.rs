@@ -149,7 +149,7 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
         .on_hover_cursor(if song.is_some() {
             egui::CursorIcon::Grab
         } else {
-            egui::CursorIcon::PointingHand
+            egui::CursorIcon::Default
         });
     // Hovering the cover offers to dock the art large at the sidebar's
     // bottom, the way Spotify expands it. (#92)
@@ -168,13 +168,11 @@ fn now_playing_block(app: &mut App, ui: &mut egui::Ui, region: Rect, now: Option
         }
     }
     if offer_expand && (cover_response.hovered() || over_expand) {
-        let expand = ui
-            .interact(
-                expand_rect,
-                egui::Id::new("now-playing-art-expand"),
-                Sense::click(),
-            )
-            .on_hover_cursor(egui::CursorIcon::PointingHand);
+        let expand = ui.interact(
+            expand_rect,
+            egui::Id::new("now-playing-art-expand"),
+            Sense::click(),
+        );
         ui.painter()
             .circle_filled(expand_rect.center(), 9.0, palette.panel.gamma_multiply(0.9));
         Icon::ChevronUp.image(palette.text, 12.0).paint_at(

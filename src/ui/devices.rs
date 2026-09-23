@@ -98,7 +98,6 @@ fn enable_playback_row(app: &mut App, ui: &mut egui::Ui) {
     if response.clicked() && !authorizing {
         app.actions.push(Action::EnablePlayback);
     }
-    response.on_hover_cursor(egui::CursorIcon::PointingHand);
     ui.painter().hline(
         rect.x_range().shrink(6.0),
         rect.bottom(),
@@ -162,7 +161,6 @@ fn receiver_row(app: &mut App, ui: &mut egui::Ui, receiver: &crate::zeroconf::Re
         app.actions
             .push(Action::ActivateReceiver(Box::new(receiver.clone())));
     }
-    response.on_hover_cursor(egui::CursorIcon::PointingHand);
 }
 
 pub fn popup(app: &mut App, ctx: &egui::Context) {
@@ -338,7 +336,6 @@ pub fn popup(app: &mut App, ctx: &egui::Context) {
                             {
                                 app.actions.push(Action::Transfer(id.clone()));
                             }
-                            response.on_hover_cursor(egui::CursorIcon::PointingHand);
                         }
                         for receiver in &waiting {
                             receiver_row(app, ui, receiver);

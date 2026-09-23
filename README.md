@@ -164,6 +164,8 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
 - **Light and dark**, or follow the system.
 - **Native window behaviour.** On macOS, double-click the top bar to use the
   Fill, Zoom, Minimise or Do Nothing action selected in Desktop & Dock.
+  On `main`, after 0.9.1, buttons, rows and cards keep the ordinary arrow
+  pointer; only links, such as artist names, show the hand.
 - **Winamp mini player.** `Ctrl+M` opens a small player for classic `.wsz`
   skins, drawn at 1x to 4x scale. It includes a spectrum analyser, playlist,
   and equalizer. It keeps its shade mode and, where the desktop permits,

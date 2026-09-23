@@ -655,7 +655,6 @@ pub fn icon_button(
         paint_icon(ui, icon, rect, size * scale, tint);
     }
     focus_ring(ui, &response);
-    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
     if tooltip.is_empty() {
         response
     } else {
@@ -715,7 +714,6 @@ pub fn circle_button(
         icon.image(icon_color, icon_size).paint_at(ui, icon_rect);
     }
     focus_ring(ui, &response);
-    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
     if tooltip.is_empty() {
         response
     } else {
@@ -793,7 +791,7 @@ pub fn pill_button(ui: &mut egui::Ui, palette: &Palette, label: &str, primary: b
         ui.painter().galley(pos, galley, color);
     }
     focus_ring(ui, &response);
-    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    response
 }
 
 /// A muted button with an icon and label, for row and header actions.
@@ -889,12 +887,8 @@ fn soft_button_inner(
     focus_ring(ui, &response);
     if let Some(dismiss) = dismiss {
         focus_ring(ui, &dismiss);
-        dismiss.on_hover_cursor(egui::CursorIcon::PointingHand);
     }
-    (
-        response.on_hover_cursor(egui::CursorIcon::PointingHand),
-        dismissed,
-    )
+    (response, dismissed)
 }
 
 /// An animated busy indicator paced independently of the graphics driver.
@@ -1000,6 +994,40 @@ pub fn subtle(ui: &mut egui::Ui, palette: &Palette, label: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Native desktop apps keep the arrow over buttons and switch to the
+    /// hand only over links (#508).
+    #[test]
+    fn only_links_show_the_hand_cursor() {
+        let ctx = egui::Context::default();
+        install(&ctx);
+        let palette = Palette::dark();
+        let draw = |ctx: &egui::Context, pointer: Option<egui::Pos2>| {
+            let mut rects = (egui::Rect::NOTHING, egui::Rect::NOTHING);
+            let input = egui::RawInput {
+                screen_rect: Some(egui::Rect::from_min_size(
+                    egui::Pos2::ZERO,
+                    egui::vec2(400.0, 200.0),
+                )),
+                events: pointer
+                    .map(|at| vec![egui::Event::PointerMoved(at)])
+                    .unwrap_or_default(),
+                ..Default::default()
+            };
+            let mut output = ctx.run_ui(input, |ui| {
+                rects.0 = pill_button(ui, &palette, "Play", true).rect;
+                rects.1 = link(ui, "Bonobo", regular(14.0), palette.text).rect;
+            });
+            output.textures_delta.clear();
+            (rects, output.platform_output.cursor_icon)
+        };
+        draw(&ctx, None);
+        let ((button, link_rect), _) = draw(&ctx, None);
+        let (_, over_button) = draw(&ctx, Some(button.center()));
+        assert_eq!(over_button, egui::CursorIcon::Default);
+        let (_, over_link) = draw(&ctx, Some(link_rect.center()));
+        assert_eq!(over_link, egui::CursorIcon::PointingHand);
+    }
 
     #[test]
     fn a_local_palette_keeps_spotifasts_widget_style_local() {

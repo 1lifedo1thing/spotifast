@@ -361,9 +361,6 @@ pub fn menu_item_enabled(
     if clicked {
         ui.close();
     }
-    if enabled {
-        response.on_hover_cursor(egui::CursorIcon::PointingHand);
-    }
     clicked
 }
 
@@ -449,7 +446,6 @@ pub fn menu_submenu<R>(
         egui::WidgetInfo::labeled(egui::WidgetType::Button, ui.is_enabled(), label)
     });
     theme::focus_ring(ui, &response);
-    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
     if is_in_menu {
         egui::menu::SubMenu::new().show(ui, &response, add_contents)
     } else {
@@ -1769,10 +1765,7 @@ pub fn table_header(
                 egui::Stroke::NONE,
             ));
         }
-        if response
-            .on_hover_cursor(egui::CursorIcon::PointingHand)
-            .clicked()
-        {
+        if response.clicked() {
             clicked = Some(column);
         }
     };
@@ -1823,11 +1816,7 @@ pub fn table_header(
                 egui::Stroke::NONE,
             ));
         }
-        if response
-            .on_hover_cursor(egui::CursorIcon::PointingHand)
-            .on_hover_text("Original order, reversed")
-            .clicked()
-        {
+        if response.on_hover_text("Original order, reversed").clicked() {
             number_clicked = true;
         }
     }
@@ -1909,11 +1898,7 @@ pub fn table_header(
             egui::Stroke::NONE,
         ));
     }
-    if response
-        .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text("Sort by duration")
-        .clicked()
-    {
+    if response.on_hover_text("Sort by duration").clicked() {
         clicked = Some(SortColumn::Duration);
     }
     ui.painter().hline(
@@ -2092,7 +2077,6 @@ pub fn card(
         }
     }
     crate::autoscroll::row(ui, &response);
-    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
     theme::focus_ring(ui, &response);
     CardResponse {
         clicked: response.clicked() && !play,
@@ -2229,7 +2213,6 @@ pub fn thin_slider(
 ) -> SliderEvent {
     let (_, rect) = ui.allocate_space(vec2(width, 16.0));
     let response = ui.interact(rect, id, Sense::click_and_drag());
-    let response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
     let dragging_value = ui.data(|data| data.get_temp::<f32>(id));
     let pointer_value = response
         .interact_pointer_pos()
@@ -2531,7 +2514,7 @@ pub fn switch(ui: &mut Ui, palette: &Palette, label: &str, on: &mut bool) -> egu
         egui::WidgetInfo::selected(egui::WidgetType::Checkbox, ui.is_enabled(), *on, label)
     });
     theme::focus_ring(ui, &response);
-    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    response
 }
 
 /// A labelled row in a settings section.

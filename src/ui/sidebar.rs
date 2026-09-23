@@ -290,22 +290,18 @@ fn art_panel(app: &mut App, ui: &mut egui::Ui) {
                 Icon::Music,
                 Some(art),
             );
-            let art = ui
-                .interact(rect, egui::Id::new("sidebar-art"), Sense::click())
-                .on_hover_cursor(egui::CursorIcon::PointingHand);
+            let art = ui.interact(rect, egui::Id::new("sidebar-art"), Sense::click());
             let chevron_rect = Rect::from_center_size(
                 pos2(rect.right() - 16.0, rect.top() + 16.0),
                 Vec2::splat(20.0),
             );
             let over_chevron = ui.rect_contains_pointer(chevron_rect);
             if art.hovered() || over_chevron {
-                let chevron = ui
-                    .interact(
-                        chevron_rect,
-                        egui::Id::new("sidebar-art-collapse"),
-                        Sense::click(),
-                    )
-                    .on_hover_cursor(egui::CursorIcon::PointingHand);
+                let chevron = ui.interact(
+                    chevron_rect,
+                    egui::Id::new("sidebar-art-collapse"),
+                    Sense::click(),
+                );
                 ui.painter().circle_filled(
                     chevron_rect.center(),
                     10.0,
@@ -503,7 +499,7 @@ fn nav_row(
         egui::WidgetInfo::selected(egui::WidgetType::Button, ui.is_enabled(), active, label)
     });
     theme::focus_ring(ui, &response);
-    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    response
 }
 
 fn contents(app: &mut App, ui: &mut egui::Ui) {
@@ -1150,9 +1146,6 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                                         Vec2::splat(18.0),
                                     ),
                                 );
-                            if let Some(play) = &play_response {
-                                play.clone().on_hover_cursor(egui::CursorIcon::PointingHand);
-                            }
                         }
                         if let Some(play) = &play_response
                             && play.clicked()
@@ -1300,7 +1293,6 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                         });
                 }
                 crate::autoscroll::row(ui, &response);
-                response.on_hover_cursor(egui::CursorIcon::PointingHand);
             });
             if let Some(slot) = reorder_slot {
                 // A line in the gap the rows opened, so the eye lands

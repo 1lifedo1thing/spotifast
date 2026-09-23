@@ -276,9 +276,7 @@ fn big_button(ui: &mut egui::Ui, app: &App, label: &str) -> bool {
         galley,
         palette.on_accent,
     );
-    response
-        .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .clicked()
+    response.clicked()
 }
 
 #[cfg(test)]
