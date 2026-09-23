@@ -120,6 +120,22 @@ local commits if needed. Before pushing, verify that the commits being added
 contain no merge commits. Rewriting published history requires explicit
 maintainer approval and an exact force-with-lease guard; keep a recovery ref.
 
+## Disk use
+
+Build caches save hours of recompiling, so keep them, but keep them small:
+
+- Use one build cache per project: `target/` in the main checkout. Git
+  worktrees and parallel agents set `CARGO_TARGET_DIR` to that directory
+  instead of building their own; a fresh target costs 20 GB or more.
+- Never put build output or large scratch files in `/tmp`. It is a small
+  in-memory filesystem with a per-user quota, and filling it breaks every
+  shell on the machine.
+- Rotate the cache: `cargo sweep --time 14` (from `cargo install cargo-sweep`)
+  removes artifacts unused for two weeks. If `target/` still exceeds about
+  60 GB, run `cargo clean`.
+- Delete one-off QA, packaging, and release-validation directories (under
+  `.cache/` or `~/.cache/`) once their result is recorded.
+
 ## Definition of done
 
 - Add focused regression tests for changed behaviour. Use the `demo` feature
