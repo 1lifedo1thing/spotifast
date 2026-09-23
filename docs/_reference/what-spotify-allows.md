@@ -113,3 +113,6 @@ The Web API and librespot do not provide these features:
 - **Friend activity, private-session status, and similar social features.**
   Spotify has no public API for them.
 - **Canvas videos and video podcasts.** librespot does not provide them.
+- **Play counts.** Spotify shows them only through a private endpoint its own
+  apps use. The Web API has no play counts, and librespot does not provide
+  them. See [issue #543](https://github.com/crmne/spotifast/issues/543).
