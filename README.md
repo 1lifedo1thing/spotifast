@@ -419,7 +419,7 @@ play a focused song. On `main`, after 0.8.0, `Space` always plays or pauses
 the current song unless a text field has focus. In a playlist, album or Liked
 Songs, up and down arrows move focus between whole song rows in the displayed order and scroll them
 into view. Tab still reaches the artist links, Like and More controls.
-On `main`, after 0.9.2, `Ctrl+A` selects every song the list shows,
+On `main`, after 0.9.1, `Ctrl+A` selects every song the list shows,
 `Ctrl+C` copies the selected songs' links one per line, and `Ctrl+V` adds
 the song links on the clipboard to the end of a playlist you can edit.
 A focused text field keeps these keys for its own text.

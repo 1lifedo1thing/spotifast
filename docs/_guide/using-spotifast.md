@@ -54,7 +54,7 @@ playlist still moves one song at a time.
 
 ## Copying and pasting songs
 
-On `main`, after 0.9.2, press `Ctrl+A` (`Cmd+A` on macOS) in a playlist,
+On `main`, after 0.9.1, press `Ctrl+A` (`Cmd+A` on macOS) in a playlist,
 album or Liked Songs to select every song the list shows. A
 filter narrows the selection to the matching songs. In a long playlist that
 is still loading, it selects the songs loaded so far.
