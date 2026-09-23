@@ -88,6 +88,15 @@ struct TrackIntent {
     confirmation: TrackConfirmation,
 }
 
+/// What saving the edit dialog sends: only the details that changed.
+struct PlaylistDetailChanges {
+    name: Option<String>,
+    description: Option<String>,
+    public: Option<bool>,
+    /// The description was cleared, which Spotify doesn't allow.
+    kept_description: bool,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum TrackConfirmation {
     Local,
@@ -7742,13 +7751,24 @@ impl App {
                 public,
             } => {
                 self.dialog = None;
-                self.playlist_busy = true;
-                self.backend.api(ApiRequest::UpdatePlaylist {
-                    id,
-                    name: Some(name),
-                    description: Some(description),
-                    public,
-                });
+                let changes = self.changed_playlist_details(&id, name, description, public);
+                if changes.kept_description {
+                    self.toast_error(
+                        "Spotify doesn't let apps remove a playlist description, so it was kept",
+                    );
+                }
+                if changes.name.is_some()
+                    || changes.description.is_some()
+                    || changes.public.is_some()
+                {
+                    self.playlist_busy = true;
+                    self.backend.api(ApiRequest::UpdatePlaylist {
+                        id,
+                        name: changes.name,
+                        description: changes.description,
+                        public: changes.public,
+                    });
+                }
             }
             Action::DeletePlaylist(id) => {
                 self.dialog = None;
@@ -8302,6 +8322,45 @@ impl App {
                 self.quit_requested = true;
                 ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             }
+        }
+    }
+
+    /// The details the edit dialog actually changed, compared with the
+    /// playlist it was opened from. Spotify rejects an empty description
+    /// with "Attribute description is empty", so clearing one sends nothing
+    /// for it rather than failing the rename saved alongside. The dialog
+    /// shows the description without its HTML, so an untouched one is not
+    /// sent back stripped either.
+    fn changed_playlist_details(
+        &self,
+        id: &str,
+        name: String,
+        description: String,
+        public: Option<bool>,
+    ) -> PlaylistDetailChanges {
+        let original = self
+            .playlist_pages
+            .get(id)
+            .and_then(|page| page.playlist.get())
+            .or_else(|| {
+                self.library
+                    .playlists
+                    .get()
+                    .and_then(|playlists| playlists.iter().find(|playlist| playlist.id == id))
+            });
+        let original_description = original
+            .and_then(|playlist| playlist.description.as_deref())
+            .map(util::strip_html)
+            .unwrap_or_default();
+        let cleared = description.is_empty();
+        PlaylistDetailChanges {
+            name: original
+                .is_none_or(|playlist| playlist.name != name)
+                .then_some(name),
+            kept_description: cleared && !original_description.is_empty(),
+            description: (!cleared && description != original_description).then_some(description),
+            public: public
+                .filter(|public| original.is_none_or(|playlist| playlist.public != Some(*public))),
         }
     }
 
@@ -9961,6 +10020,70 @@ mod tests {
         };
         assert_eq!(save(&mut app, None), None);
         assert_eq!(save(&mut app, Some(false)), Some(false));
+    }
+
+    /// Saving sends only what the dialog changed. Spotify refuses an empty
+    /// description, so clearing one keeps it and says why instead of
+    /// failing a rename saved at the same time.
+    #[test]
+    fn saving_playlist_details_sends_only_what_changed() {
+        let mut app = headless_app();
+        let ctx = egui::Context::default();
+        app.library.playlists = Loadable::Loaded(vec![Playlist {
+            id: "pl1".into(),
+            name: "Mix".into(),
+            description: Some("<b>Old</b> notes".into()),
+            public: Some(true),
+            ..Playlist::default()
+        }]);
+        let save = |app: &mut App, name: &str, description: &str, public| {
+            app.apply(
+                Action::UpdatePlaylist {
+                    id: "pl1".into(),
+                    name: name.into(),
+                    description: description.into(),
+                    public,
+                },
+                &ctx,
+            );
+            match app.backend.take_playlist_add_requests().as_slice() {
+                [] => None,
+                [
+                    ApiRequest::UpdatePlaylist {
+                        name,
+                        description,
+                        public,
+                        ..
+                    },
+                ] => Some((name.clone(), description.clone(), *public)),
+                sent => panic!("{sent:?}"),
+            }
+        };
+
+        assert_eq!(
+            save(&mut app, "Renamed", "Old notes", Some(true)),
+            Some((Some("Renamed".into()), None, None)),
+            "an untouched description is not sent back without its HTML"
+        );
+        assert_eq!(
+            save(&mut app, "Mix", "New notes", Some(true)),
+            Some((None, Some("New notes".into()), None))
+        );
+        assert_eq!(
+            save(&mut app, "Mix", "Old notes", Some(false)),
+            Some((None, None, Some(false)))
+        );
+
+        app.playlist_busy = false;
+        let toasts = app.toasts.len();
+        assert_eq!(save(&mut app, "Mix", "", Some(true)), None);
+        assert!(!app.playlist_busy, "nothing was sent, so nothing waits");
+        assert_eq!(app.toasts.len(), toasts + 1);
+        assert_eq!(
+            save(&mut app, "Renamed", "", Some(true)),
+            Some((Some("Renamed".into()), None, None)),
+            "clearing the description does not fail the rename"
+        );
     }
 
     /// A header read over the streaming session carries no public flag,

@@ -273,7 +273,9 @@ snap the window, and drag a window edge or corner to resize it.
 JPEG or PNG, check the preview, then choose **Upload cover**. Cancelling the
 picker leaves your previous selection intact. An upload error keeps the
 preview so you can try again. Uploading the cover is separate from **Save**,
-which saves the playlist name, description, and visibility.
+which saves the playlist name, description, and visibility. Spotify doesn't
+let apps remove a description, so clearing the field keeps the current one.
+You can replace it with other text instead.
 
 If Spotify refuses permission, sign in again and approve image uploads. If you
 use a personal Spotify app, reconnect it in Settings as well.
