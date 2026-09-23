@@ -4052,7 +4052,18 @@ impl App {
         }
         let item = queue.queue.remove(0);
         let uri = item.uri().to_string();
+        // The queue row already has the song's details, so the player bar
+        // can name it now instead of waiting for the engine to load it.
+        let track = match &item {
+            crate::api::models::PlayableItem::Track(track) => Some(track.clone()),
+            crate::api::models::PlayableItem::Episode(_) => None,
+        };
         queue.currently_playing = Some(item);
+        if let Some(track) = track
+            && let Some(id) = util::uri_id(&uri)
+        {
+            self.track_cache.entry(id.to_owned()).or_insert(track);
+        }
         self.consume_manual_queue_head(&uri);
         self.queue_start_pending = Some(self.target());
         self.expect_track(uri, 0);
@@ -10845,6 +10856,32 @@ mod tests {
             Some("spotify:track:b"),
             "the popped row is already the one the interface marks as playing"
         );
+    }
+
+    /// Next names the next song in the player bar at once, from the queue
+    /// row, even when the song was never loaded anywhere else.
+    #[test]
+    fn next_shows_the_next_songs_title_before_the_engine_loads_it() {
+        let mut app = headless_app();
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: "spotify:track:a".into(),
+            ..Default::default()
+        });
+        app.local.playback = Playback::Playing;
+        app.queue = Loadable::Loaded(Queue {
+            currently_playing: Some(queued_song("spotify:track:a")),
+            queue: vec![crate::api::models::PlayableItem::Track(Track {
+                id: Some("b".into()),
+                uri: "spotify:track:b".into(),
+                name: "Second Song".into(),
+                ..Default::default()
+            })],
+        });
+        assert!(!app.track_cache.contains_key("b"));
+        app.apply(Action::Next, &egui::Context::default());
+        let now = app.now_playing().expect("the next song is on show");
+        assert_eq!(now.uri, "spotify:track:b");
+        assert_eq!(now.title, "Second Song");
     }
 
     #[test]
