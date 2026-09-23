@@ -902,6 +902,9 @@ impl App {
         self.wants_show = false;
         self.switch_intent = false;
         self.winamp_level_reassert = 0;
+        // A new window starts titled "Spotifast"; name the playing song
+        // again rather than trust what the replaced window was told.
+        self.window_title.clear();
         if let Some(tray) = &mut self.tray {
             tray.attach();
         }
@@ -14968,6 +14971,22 @@ mod tests {
                 "Long Way Home Radio".into(),
                 Some(Page::Radio("spotify:playlist:pl9".into()))
             )
+        );
+    }
+
+    /// A replaced window, as when the mini player's taskbar setting
+    /// changes, is titled with the playing song again, not left as
+    /// "Spotifast".
+    #[test]
+    fn a_new_window_is_titled_with_the_playing_song() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        app.attach(&ctx);
+        app.window_title = "Bonobo - Rosewood".into();
+        app.attach(&ctx);
+        assert!(
+            app.window_title.is_empty(),
+            "the next frame sends the title again"
         );
     }
 
