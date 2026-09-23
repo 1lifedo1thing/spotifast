@@ -230,7 +230,7 @@ main fields are:
 | `sidebar_compact` | `false` | Names only in the library sidebar, no covers |
 | `tracklist_compact` | `false` | One-line track rows without covers |
 | `winamp_window` | `false` | The window is the Winamp mini player |
-| `winamp_show_taskbar` | `true` | Windows only, since 0.8.0: show the Winamp window's taskbar button; the main window always keeps its button |
+| `winamp_show_taskbar` | `true` | Windows since 0.8.0, and Linux X11 sessions: show the Winamp window's taskbar button; the main window always keeps its button. Wayland and macOS ignore it |
 | `custom_titlebar` | `false` | Windows only, on `main` after 0.9.1: draw Spotifast's own title bar and window buttons instead of the standard Windows ones |
 | `skin` | none | File or folder name in the skins folder; blank uses the built-in skin |
 | `skin_scale` | by display | Screen pixels per skin pixel, 1 to 4 |

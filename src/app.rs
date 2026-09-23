@@ -268,6 +268,9 @@ pub struct App {
     pub locale: crate::i18n::Locale,
     /// Whether this window's native backend can keep it above other windows.
     pub window_level_supported: bool,
+    /// Whether this window's native backend can leave the mini player out of
+    /// the taskbar: Windows and X11.
+    pub taskbar_hiding_supported: bool,
     #[cfg(any(test, feature = "demo"))]
     pub demo_windows_controls: bool,
     applied_dark: Option<bool>,
@@ -684,6 +687,7 @@ impl App {
             palette,
             locale: crate::i18n::Locale::English,
             window_level_supported: true,
+            taskbar_hiding_supported: cfg!(windows),
             #[cfg(any(test, feature = "demo"))]
             demo_windows_controls: false,
             applied_dark: None,
@@ -3243,6 +3247,11 @@ impl App {
         {
             cfg!(windows)
         }
+    }
+
+    /// Whether to offer hiding the mini player's taskbar entry.
+    pub fn taskbar_setting_visible(&self) -> bool {
+        self.taskbar_hiding_supported || self.windows_controls_visible()
     }
 
     fn sync_media_controls(&mut self, ctx: &egui::Context) {

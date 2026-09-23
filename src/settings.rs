@@ -239,7 +239,7 @@ pub struct Settings {
     pub zoom: f32,
     /// The Winamp window is open.
     pub winamp_window: bool,
-    /// Windows: keep a taskbar button while the Winamp window is visible.
+    /// Windows and X11: keep a taskbar button while the Winamp window is visible.
     pub winamp_show_taskbar: bool,
     /// Windows: draw Spotifast's own title bar and window buttons instead of
     /// the standard Windows frame.

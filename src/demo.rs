@@ -2625,6 +2625,25 @@ mod tests {
         app.backend.shutdown();
     }
 
+    /// X11 can hide the mini player's taskbar entry, so it gets the same row
+    /// and menu item as Windows; Wayland and macOS never show them.
+    #[test]
+    fn the_taskbar_setting_follows_the_window_backend() {
+        let (ctx, mut app) = accessible_app("x11-taskbar-setting");
+        app.taskbar_hiding_supported = true;
+        let text = settings_text(&ctx, &mut app, "Show in taskbar");
+        assert!(text.iter().any(|text| text == "Winamp skins"));
+        assert!(text.iter().any(|text| text == "Show in taskbar"));
+
+        app.taskbar_hiding_supported = false;
+        let text = settings_text(&ctx, &mut app, "Show in taskbar");
+        assert_eq!(
+            text.iter().any(|text| text == "Winamp skins"),
+            cfg!(windows)
+        );
+        app.backend.shutdown();
+    }
+
     #[test]
     fn wayland_on_top_setting_is_disabled_and_does_not_look_active() {
         use egui::accesskit::{Role, Toggled};

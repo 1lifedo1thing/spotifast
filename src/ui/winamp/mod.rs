@@ -709,7 +709,7 @@ fn options_menu(app: &mut App, ui: &mut Ui, unit: f32) {
             app.actions.push(Action::ToggleWinampOnTop);
         }
     });
-    if app.windows_controls_visible() {
+    if app.taskbar_setting_visible() {
         let mut visible = app.settings.winamp_show_taskbar;
         if ui.checkbox(&mut visible, "Show in taskbar").changed() {
             app.actions.push(Action::SetWinampTaskbar(visible));

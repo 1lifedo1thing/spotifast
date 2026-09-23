@@ -191,8 +191,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   starts at a default position on the current desktop.
   Clicking or double-clicking the Windows tray icon brings the window forward;
   the tray menu still offers Show or hide.
-  On Windows, since 0.8.0, hide its taskbar button from Settings or the mini
-  player's options menu while keeping the window and tray controls available.
+  On Windows, since 0.8.0, and in Linux X11 sessions, hide its taskbar button
+  from Settings or the mini player's options menu while keeping the window
+  and tray controls available.
   On Wayland, use the desktop's Keep Above shortcut or rule; the app's
   Always on top controls are unavailable there.
 

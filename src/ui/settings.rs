@@ -973,7 +973,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
             "Show in taskbar",
             "Keep a taskbar button for the mini player. The tray icon stays available when hidden.",
         )
-        .when(app.windows_controls_visible()),
+        .when(app.taskbar_setting_visible()),
         RowText::new(
             "Installed skins",
             app.winamp
@@ -1095,7 +1095,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     });
                 },
             );
-            if app.windows_controls_visible() {
+            if app.taskbar_setting_visible() {
                 filtered_row(
                     ui,
                     &palette,

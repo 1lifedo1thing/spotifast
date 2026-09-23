@@ -245,8 +245,11 @@ The choice survives restarts. The mini player stays visible; the tray icon,
 **Ctrl+M**, the skin logo, and launching Spotifast again remain ways to reach
 the app. Returning to the main window always restores its taskbar button.
 Changing the option while the mini player is open replaces that window while
-playback continues. This setting is available on Windows; it does not change
-Linux panels or the macOS Dock.
+playback continues. This setting is available on Windows and in Linux X11
+sessions, where it hides the mini player from panels and task switchers that
+follow the window manager's skip-taskbar state. Wayland has no standard way
+for an app to leave the taskbar, so the option is not offered there; use your
+desktop's window rules instead. It does not change the macOS Dock.
 
 On Windows, since 0.8.0, the mini player starts on the current desktop if its
 saved title bar is outside every connected monitor’s work area. Positions on
