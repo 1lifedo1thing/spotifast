@@ -82,6 +82,11 @@ including repeated entries. Play is disabled when the view has no playable
 songs; it never falls back to the unfiltered playlist in that case. Clearing
 the filter restores the original view. Existing Shuffle behavior is unchanged.
 
+Right-clicking a song in an editable playlist offers **Remove from this
+playlist** even when the list is sorted or filtered, since removal does not
+depend on position. **Move up**, **Move down**, and drag-reorder stay on the
+default order, where the rows on screen match the order saved on Spotify.
+
 ## Refreshing a playlist
 
 Since 0.8.0, choose **Refresh** in a playlist's **…** menu to reload

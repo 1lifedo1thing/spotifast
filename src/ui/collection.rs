@@ -209,6 +209,9 @@ pub fn actions_row(
                         context: RowContext::View {
                             uris: Arc::clone(&uris),
                             context_uri: uri.clone(),
+                            // Header playback needs no edit rights; row
+                            // menus carry theirs via the table conversion.
+                            editable_playlist: None,
                         },
                         uri: String::new(),
                         index: 0,
@@ -511,6 +514,24 @@ pub fn prepare_table_view(
     }
 }
 
+fn view_context(base: &RowContext, view_uris: Option<&Arc<[String]>>) -> RowContext {
+    if let Some(uris) = view_uris {
+        match base {
+            RowContext::Context {
+                uri,
+                editable_playlist,
+            } => RowContext::View {
+                uris: Arc::clone(uris),
+                context_uri: uri.clone(),
+                editable_playlist: editable_playlist.clone(),
+            },
+            _ => RowContext::Uris(Arc::clone(uris)),
+        }
+    } else {
+        base.clone()
+    }
+}
+
 pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
     let palette = app.palette;
     let needle = table.filter.trim().to_lowercase();
@@ -580,17 +601,7 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
     // What is displayed is what plays: a sorted view plays in its own
     // order, as a plain list of tracks, and its rows cannot edit server
     // positions that no longer match the screen.
-    let context = if let Some(uris) = &entry.view_uris {
-        match &table.context {
-            RowContext::Context { uri, .. } => RowContext::View {
-                uris: Arc::clone(uris),
-                context_uri: uri.clone(),
-            },
-            _ => RowContext::Uris(Arc::clone(uris)),
-        }
-    } else {
-        table.context.clone()
-    };
+    let context = view_context(&table.context, entry.view_uris.as_ref());
     let sorted = sort.is_some();
     // Positional playlist edits require the displayed rows to match server order.
     let move_playlist = (sort.is_none() && needle.is_empty())
@@ -2221,6 +2232,46 @@ mod tests {
         assert_eq!(absolute_row_index(6_900, 6) + 1, 6_907);
     }
 
+    #[test]
+    fn sorted_view_context_keeps_playlist_remove_rights() {
+        let uris: Arc<[String]> = Arc::from(["spotify:track:a".to_string()]);
+        let editable = Some(("pl1".to_string(), None));
+
+        let base = RowContext::Context {
+            uri: "spotify:playlist:pl1".into(),
+            editable_playlist: editable.clone(),
+        };
+        assert_eq!(
+            view_context(&base, Some(&uris)),
+            RowContext::View {
+                uris: Arc::clone(&uris),
+                context_uri: "spotify:playlist:pl1".into(),
+                editable_playlist: editable.clone(),
+            }
+        );
+
+        let readonly = RowContext::Context {
+            uri: "spotify:playlist:pl1".into(),
+            editable_playlist: None,
+        };
+        assert_eq!(
+            view_context(&readonly, Some(&uris)),
+            RowContext::View {
+                uris: Arc::clone(&uris),
+                context_uri: "spotify:playlist:pl1".into(),
+                editable_playlist: None,
+            }
+        );
+
+        let loose = RowContext::Uris(Arc::from(["spotify:track:b".to_string()]));
+        assert_eq!(
+            view_context(&loose, Some(&uris)),
+            RowContext::Uris(Arc::clone(&uris))
+        );
+
+        assert_eq!(view_context(&base, None), base);
+    }
+
     fn test_app() -> App {
         let root = std::env::temp_dir().join(format!(
             "spotifast-table-cache-{}-{}",
@@ -2866,7 +2917,7 @@ mod tests {
             matches!(
                 app.actions.as_slice(),
                 [Action::PlayFromRow {
-                    context: RowContext::View { uris, context_uri },
+                    context: RowContext::View { uris, context_uri, .. },
                     index: 0,
                     ..
                 }] if uris.as_ref() == ["spotify:track:1", "spotify:track:2"] && context_uri == "spotify:playlist:test"
@@ -2963,7 +3014,7 @@ mod tests {
             matches!(
                 app.actions.as_slice(),
                 [Action::PlayFromRow {
-                    context: RowContext::View { uris, context_uri },
+                    context: RowContext::View { uris, context_uri, .. },
                     index: 0,
                     ..
                 }] if uris.as_ref() == ["spotify:track:1", "spotify:track:2"] && context_uri == "spotify:playlist:test"

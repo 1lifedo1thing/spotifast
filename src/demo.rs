@@ -2820,7 +2820,7 @@ mod tests {
                 },
                 |ui| {
                     if show_parent {
-                        crate::ui::widgets::picked_menu(ui, app, &songs);
+                        crate::ui::widgets::picked_menu(ui, app, &songs, None);
                     }
                 },
             );
@@ -3192,6 +3192,28 @@ mod tests {
                 modifiers: egui::Modifiers::NONE,
             },
         ]
+    }
+
+    /// Painted labels of a freshly drawn menu, for asserting which entries
+    /// a context offers.
+    fn menu_text(output: &egui::FullOutput) -> Vec<(String, egui::Rect)> {
+        fn walk(shape: &egui::epaint::Shape, text: &mut Vec<(String, egui::Rect)>) {
+            match shape {
+                egui::epaint::Shape::Text(shape) => text.push((
+                    shape.galley.job.text.clone(),
+                    shape.galley.rect.translate(shape.pos.to_vec2()),
+                )),
+                egui::epaint::Shape::Vec(shapes) => {
+                    shapes.iter().for_each(|shape| walk(shape, text));
+                }
+                _ => {}
+            }
+        }
+        let mut text = Vec::new();
+        for shape in &output.shapes {
+            walk(&shape.shape, &mut text);
+        }
+        text
     }
 
     #[test]
@@ -5973,6 +5995,145 @@ mod tests {
         assert_eq!(order(&app), expected);
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn sorted_playlist_view_keeps_remove_but_not_moves() {
+        let (ctx, mut app) = accessible_app("sorted-remove-menu");
+        app.backend.set_offline(true);
+        let item = PlayableItem::Track(track(0));
+        let uri = item.uri().to_string();
+        let editable = Some(("pl1".to_string(), None));
+        let unsorted = RowContext::Context {
+            uri: "spotify:playlist:pl1".into(),
+            editable_playlist: editable.clone(),
+        };
+        let sorted = RowContext::View {
+            uris: Arc::from([uri.clone()]),
+            context_uri: "spotify:playlist:pl1".into(),
+            editable_playlist: editable.clone(),
+        };
+        let paint = |ctx: &egui::Context,
+                     app: &mut App,
+                     item: &PlayableItem,
+                     context: &RowContext,
+                     events: Vec<egui::Event>| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(760.0, 620.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    crate::ui::widgets::item_menu(ui, app, item, Some(context), Some(1));
+                },
+            );
+            output.textures_delta.clear();
+            menu_text(&output)
+        };
+        // The unsorted menu offers positional moves and removal.
+        let painted = paint(&ctx, &mut app, &item, &unsorted, vec![]);
+        for label in ["Move up", "Move down", "Remove from this playlist"] {
+            assert!(
+                painted.iter().any(|(text, _)| text == label),
+                "unsorted menu is missing {label}"
+            );
+        }
+        // A sorted view keeps the URI-based removal but drops the
+        // positional moves: screen positions no longer match the server's.
+        let painted = paint(&ctx, &mut app, &item, &sorted, vec![]);
+        assert!(
+            painted
+                .iter()
+                .any(|(text, _)| text == "Remove from this playlist"),
+            "sorted menu lost its removal"
+        );
+        for label in ["Move up", "Move down"] {
+            assert!(
+                !painted.iter().any(|(text, _)| text == label),
+                "sorted menu must not offer {label}"
+            );
+        }
+        // Clicking the sorted removal removes that song by URI.
+        let remove = painted
+            .iter()
+            .find(|(text, _)| text == "Remove from this playlist")
+            .unwrap()
+            .1
+            .center();
+        app.actions.clear();
+        paint(
+            &ctx,
+            &mut app,
+            &item,
+            &sorted,
+            pointer_click(remove, egui::PointerButton::Primary),
+        );
+        assert!(
+            matches!(app.actions.as_slice(), [Action::RemoveFromPlaylist { playlist_id, uris }] if playlist_id == "pl1" && uris == std::slice::from_ref(&uri))
+        );
+        // A view without edit rights offers no removal at all.
+        let readonly = RowContext::View {
+            uris: Arc::from([uri.clone()]),
+            context_uri: "spotify:playlist:pl1".into(),
+            editable_playlist: None,
+        };
+        let painted = paint(&ctx, &mut app, &item, &readonly, vec![]);
+        assert!(
+            !painted
+                .iter()
+                .any(|(text, _)| text == "Remove from this playlist"),
+            "a read-only view must not offer removal"
+        );
+        // The multi-select menu removes the whole selection by URI too.
+        let songs = vec![PlayableItem::Track(track(0)), PlayableItem::Track(track(1))];
+        let frame = |ctx: &egui::Context,
+                     app: &mut App,
+                     songs: &[PlayableItem],
+                     events: Vec<egui::Event>| {
+            let mut output = ctx.run_ui(
+                egui::RawInput {
+                    screen_rect: Some(egui::Rect::from_min_size(
+                        egui::Pos2::ZERO,
+                        egui::vec2(760.0, 620.0),
+                    )),
+                    events,
+                    ..Default::default()
+                },
+                |ui| {
+                    crate::ui::widgets::picked_menu(
+                        ui,
+                        app,
+                        songs,
+                        Some(&("pl1".to_string(), None)),
+                    );
+                },
+            );
+            output.textures_delta.clear();
+            menu_text(&output)
+        };
+        let text = frame(&ctx, &mut app, &songs, vec![]);
+        let remove = text
+            .iter()
+            .find(|(text, _)| text == "Remove from this playlist")
+            .expect("multi-select menu lost its removal")
+            .1
+            .center();
+        app.actions.clear();
+        frame(
+            &ctx,
+            &mut app,
+            &songs,
+            pointer_click(remove, egui::PointerButton::Primary),
+        );
+        let expected: Vec<String> = songs.iter().map(|song| song.uri().to_string()).collect();
+        assert!(
+            matches!(app.actions.as_slice(), [Action::RemoveFromPlaylist { playlist_id, uris }] if playlist_id == "pl1" && *uris == expected)
+        );
+        app.backend.shutdown();
     }
 
     /// The custom order is a setting like any other: it survives the trip

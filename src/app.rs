@@ -7474,7 +7474,9 @@ impl App {
                     self.play_request(request, false);
                 }
                 RowContext::Queue => self.play_queue_item(index as usize, uri),
-                RowContext::View { uris, context_uri } => {
+                RowContext::View {
+                    uris, context_uri, ..
+                } => {
                     let (uris, index) = cap_uris(uris.as_ref(), index);
                     if let Some(uri) = uris.get(index as usize) {
                         self.cache_track_from_context(&context_uri, uri);
@@ -17960,6 +17962,7 @@ mod tests {
                 context: RowContext::View {
                     context_uri: "spotify:playlist:mix".into(),
                     uris: vec![first.uri.clone(), "spotify:track:other".into()].into(),
+                    editable_playlist: None,
                 },
                 uri: String::new(),
                 index: 0,
