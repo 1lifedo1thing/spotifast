@@ -290,6 +290,8 @@ choose **Follow** to resume it, or choose a line to jump to that part of the son
 full screen. Press **Esc** or choose the shrink button to return to your previous
 window size. Full-screen lyrics scroll smoothly and highlight the playing line
 automatically. Scrolling by hand pauses following; choose **Follow** to resume.
+On `main`, after 0.9.1, quitting while lyrics are full screen no longer leaves
+the next launch stuck in full screen: the window returns to its previous size.
 
 | Dark theme | Light theme |
 | --- | --- |
