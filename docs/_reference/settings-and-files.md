@@ -180,8 +180,8 @@ positions. Playlist edits and refreshes invalidate other cached windows because
 their server positions may have changed. Only contiguous playlist prefixes are
 saved on disk.
 
-Large playlist pages also have a **Go to song** control. Entering a song
-number scrolls to that row and loads its 50-item page if needed. Filtering or
+On `main`, after 0.9.1, large playlist pages no longer show a **Go to song**
+control; drag the scrollbar to reach a distant song instead. Filtering or
 sorting returns to the beginning and loads remaining pages as needed, since
 local search and ordering require the track metadata. A failed window stops
 automatic requests and shows a Retry button in the reserved row space.

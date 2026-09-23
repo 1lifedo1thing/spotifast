@@ -324,36 +324,6 @@ pub fn actions_row(
     ui.add_space(14.0);
 }
 
-fn playlist_position_jump(
-    app: &mut App,
-    ui: &mut egui::Ui,
-    id: &str,
-    total: u32,
-    base_offset: u32,
-    position: &mut u32,
-) {
-    if *position == 0 || *position > total {
-        *position = base_offset.saturating_add(1).min(total);
-    }
-    ui.horizontal(|ui| {
-        theme::text(ui, "Go to song", theme::medium(13.0), app.palette.secondary);
-        let field = ui.add(
-            egui::DragValue::new(position)
-                .range(1..=total)
-                .speed(10)
-                .max_decimals(0),
-        );
-        let submitted = field.lost_focus() && ui.input(|input| input.key_pressed(egui::Key::Enter));
-        if submitted || theme::soft_button(ui, &app.palette, None, "Go", false).clicked() {
-            app.actions.push(Action::JumpToPlaylistPosition {
-                id: id.to_string(),
-                position: *position,
-            });
-        }
-    });
-    ui.add_space(8.0);
-}
-
 /// A track table with virtualised rows and paging.
 pub struct Table<'a> {
     pub items: &'a [TableItem],
@@ -381,7 +351,6 @@ pub struct TablePagination<'a> {
     /// Local server positions of playable items. Null playlist entries still
     /// occupy a slot even though they cannot be played or selected.
     pub positions: Option<&'a [usize]>,
-    pub scroll_to: Option<u32>,
 }
 
 #[derive(Clone)]
@@ -619,13 +588,6 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
     // Calculate the nearest drop slot from fixed row height because virtualized
     // rows are not all available during drawing.
     let list_top = ui.cursor().top();
-    if let Some(position) = finite.and_then(|page| page.scroll_to) {
-        let top = list_top + position as f32 * row_height;
-        ui.scroll_to_rect(
-            Rect::from_min_size(pos2(ui.cursor().left(), top), vec2(1.0, row_height)),
-            Some(Align::Center),
-        );
-    }
     let move_slot = move_playlist.as_ref().and_then(|_| {
         egui::DragAndDrop::payload::<DragTrack>(ui.ctx())?;
         if !ui.rect_contains_pointer(ui.clip_rect()) {
@@ -1226,16 +1188,6 @@ pub fn playlist(app: &mut App, ui: &mut egui::Ui, id: &str) {
                 app.actions
                     .push(Action::LoadMore(Page::Playlist(id.to_string())));
             }
-            if count > crate::backend::PLAYLIST_PAGE_SIZE && sort.is_none() && needle.is_empty() {
-                playlist_position_jump(
-                    app,
-                    ui,
-                    id,
-                    count,
-                    page.items.base_offset,
-                    &mut page.jump_position,
-                );
-            }
             let editable = app
                 .can_edit_playlist(playlist)
                 .then(|| (playlist.id.clone(), playlist.snapshot_id.clone()));
@@ -1249,7 +1201,6 @@ pub fn playlist(app: &mut App, ui: &mut egui::Ui, id: &str) {
                         total: page.items.total.unwrap_or(count),
                         loaded_count: page.items.items.len(),
                         positions: Some(&positions),
-                        scroll_to: page.scroll_to.take(),
                     }),
                     context: RowContext::Context {
                         uri: playlist.uri.clone(),
@@ -1359,7 +1310,6 @@ pub fn album(app: &mut App, ui: &mut egui::Ui, id: &str) {
                             .unwrap_or(items.len() as u32),
                         loaded_count: items.len(),
                         positions: None,
-                        scroll_to: None,
                     }),
                     context: RowContext::Context {
                         uri: album.uri.clone(),
@@ -1929,7 +1879,6 @@ mod tests {
                                 total: 1000,
                                 loaded_count: 0,
                                 positions: None,
-                                scroll_to: None,
                             }),
                             context: RowContext::Context {
                                 uri: "spotify:playlist:retry".into(),

@@ -645,9 +645,6 @@ pub struct PlaylistPage {
     pub cache_restored_through: Option<u32>,
     /// Items read from disk, waiting for the live snapshot to confirm.
     pub pending_cache: Option<PlaylistCache>,
-    /// One-based position entered in the direct page control.
-    pub jump_position: u32,
-    pub scroll_to: Option<u32>,
     /// Songs added here that may sit beyond the loaded prefix. They are known
     /// members immediately, even before Spotify's next read catches up.
     pub local_additions: std::collections::BTreeSet<String>,
@@ -970,10 +967,6 @@ pub enum Action {
         position: u32,
     },
     RetryWindow(Page),
-    JumpToPlaylistPosition {
-        id: String,
-        position: u32,
-    },
     LoadMoreRecents,
     ReloadRecents,
     SetQueueTab(QueueTab),

@@ -3778,23 +3778,6 @@ impl App {
         });
     }
 
-    fn jump_to_playlist_position(&mut self, id: &str, position: u32) {
-        let Some(total) = self
-            .playlist_pages
-            .get(id)
-            .and_then(|page| page.items.total)
-            .filter(|total| *total > 0)
-        else {
-            return;
-        };
-        let position = position.clamp(1, total);
-        if let Some(page) = self.playlist_pages.get_mut(id) {
-            page.jump_position = position;
-            page.scroll_to = Some(position - 1);
-        }
-        self.load_window(Page::Playlist(id.to_string()), position - 1);
-    }
-
     fn reload(&mut self, page: Page) {
         match &page {
             Page::Home => self.load_home(true),
@@ -7899,9 +7882,6 @@ impl App {
             Action::LoadMore(page) => self.load_more(page),
             Action::LoadWindow { page, position } => self.load_window(page, position),
             Action::RetryWindow(page) => self.retry_window(page),
-            Action::JumpToPlaylistPosition { id, position } => {
-                self.jump_to_playlist_position(&id, position)
-            }
             Action::LoadMoreRecents => self.load_more_recents(),
             Action::ReloadRecents => self.reload_recents(),
             Action::SetQueueTab(tab) => {
@@ -17326,10 +17306,11 @@ mod tests {
         );
         let _ = app.backend.take_playlist_item_requests();
 
+        // Dragging the scrollbar far down asks for that window directly.
         app.apply(
-            Action::JumpToPlaylistPosition {
-                id: "large".into(),
-                position: 6_907,
+            Action::LoadWindow {
+                page: Page::Playlist("large".into()),
+                position: 6_906,
             },
             &egui::Context::default(),
         );
