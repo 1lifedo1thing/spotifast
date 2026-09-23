@@ -9311,6 +9311,25 @@ impl App {
         self.apply_actions(ctx);
         self.sync_media_controls(ctx);
         self.sync_window_title(ctx);
+        self.schedule_next_pass(ctx);
+    }
+
+    /// Asks for the next pass that playback, pending plays and polling need.
+    ///
+    /// This runs with the logic, not the drawing: eframe skips drawing a
+    /// hidden, minimised or occluded window but still runs its logic, so
+    /// a hidden window keeps polling and keeps media controls current.
+    fn schedule_next_pass(&self, ctx: &egui::Context) {
+        let playing = self.now_playing().is_some_and(|now| now.playing);
+        if playing {
+            ctx.request_repaint_after(Duration::from_millis(250));
+        }
+        if self.any_play_pending() {
+            ctx.request_repaint_after(Duration::from_millis(120));
+        }
+        if self.is_connected() {
+            ctx.request_repaint_after(self.connected_repaint_interval());
+        }
     }
 
     /// Records a track after enough active listening time.
@@ -9452,18 +9471,8 @@ impl App {
             }
         }
 
-        let playing = self.now_playing().is_some_and(|now| now.playing);
-        if playing {
-            ctx.request_repaint_after(Duration::from_millis(250));
-        }
         if !self.toasts.is_empty() {
             ctx.request_repaint_after(TOAST_FRAME);
-        }
-        if self.any_play_pending() {
-            ctx.request_repaint_after(Duration::from_millis(120));
-        }
-        if self.is_connected() {
-            ctx.request_repaint_after(self.connected_repaint_interval());
         }
         if ctx.input(|input| input.viewport().close_requested())
             && !self.quit_requested
@@ -17236,6 +17245,45 @@ mod tests {
         assert!(
             !app.playlist_pages.contains_key("late"),
             "a page that arrived after browsing still counts toward the cap"
+        );
+    }
+
+    /// eframe runs only the logic of a hidden, minimised or occluded window,
+    /// so the logic pass alone must ask for the next one. Otherwise a window
+    /// on another workspace sleeps until something else wakes it, and stops
+    /// polling the playing device and updating the media controls.
+    #[test]
+    fn logic_pass_alone_schedules_the_next_one_while_playing() {
+        let mut app = headless_app();
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: "spotify:track:a".into(),
+            ..Default::default()
+        });
+        app.local.playback = Playback::Playing;
+        assert!(app.now_playing().is_some_and(|now| now.playing));
+
+        let ctx = egui::Context::default();
+        let delays = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let seen = std::sync::Arc::clone(&delays);
+        ctx.set_request_repaint_callback(move |info| {
+            seen.lock().unwrap().push(info.delay);
+        });
+        // The first pass settles start-up work (zoom, fonts) that asks for an
+        // immediate pass of its own; the steady state is what matters.
+        for _ in 0..3 {
+            delays.lock().unwrap().clear();
+            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+                app.background_frame(ui.ctx());
+            });
+            output.textures_delta.clear();
+        }
+
+        let soonest = delays.lock().unwrap().iter().copied().min();
+        assert!(
+            soonest
+                .is_some_and(|delay| delay > Duration::ZERO && delay <= Duration::from_millis(250)),
+            "a hidden window's logic must wake again within 250 ms while playing, \
+             without spinning; asked for {soonest:?}"
         );
     }
 
