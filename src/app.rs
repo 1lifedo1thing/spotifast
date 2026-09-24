@@ -7979,6 +7979,18 @@ impl App {
                 let request = PlayRequest::tracks(uris).starting_at_index(index);
                 self.play_request(request, false);
             }
+            Action::PlayEpisode { uri, resume_ms } => {
+                // A started episode continues from the place the row or card
+                // showed as time left. The playing episode is left where it
+                // is playing, not sent back to a saved position older than it.
+                let mut request = PlayRequest::tracks(vec![uri.clone()]).starting_at_index(0);
+                if self.now_playing().is_none_or(|now| now.uri != uri)
+                    && let Some(position_ms) = resume_ms
+                {
+                    request.position_ms = position_ms;
+                }
+                self.play_request(request, false);
+            }
             Action::PlayFromRow {
                 context,
                 uri,
@@ -10150,7 +10162,7 @@ mod tests {
 
     use super::*;
     use crate::api::models::{
-        Episode, Image, Page as ApiPage, SavedEpisode, SavedTrack, SearchResults,
+        Episode, Image, Page as ApiPage, ResumePoint, SavedEpisode, SavedTrack, SearchResults,
     };
 
     #[test]
@@ -11918,6 +11930,80 @@ mod tests {
             request.position_ms, 19_566,
             "the song resumes where it stopped, not at zero"
         );
+    }
+
+    /// Play on an in-progress episode continues from the place the row or
+    /// card showed as time left. The playing episode stays where it plays.
+    #[test]
+    fn playing_an_in_progress_episode_continues_from_its_resume_point() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        let in_progress = "spotify:episode:mid";
+        let play = |app: &mut App, uri: &str, resume_ms: Option<u32>| {
+            app.queued_play = None;
+            app.apply(
+                Action::PlayEpisode {
+                    uri: uri.into(),
+                    resume_ms,
+                },
+                &ctx,
+            );
+            app.queued_play
+                .as_ref()
+                .expect("play is held for the engine")
+                .position_ms
+        };
+        assert_eq!(play(&mut app, in_progress, Some(600_000)), 600_000);
+        assert_eq!(play(&mut app, "spotify:episode:new", None), 0);
+
+        app.frame_now = Some(NowPlaying {
+            local: true,
+            device_name: None,
+            uri: in_progress.into(),
+            id: None,
+            title: String::new(),
+            artists: Vec::new(),
+            subtitle: String::new(),
+            album_name: String::new(),
+            album_id: None,
+            show_id: None,
+            art_url: None,
+            art_small: None,
+            duration_ms: 2_400_000,
+            position_ms: 1_000_000,
+            playing: true,
+            loading: false,
+            shuffle: false,
+            repeat: RepeatMode::Off,
+            volume_percent: 50,
+            can_control: true,
+            is_episode: true,
+            resuming: false,
+        });
+        assert_eq!(
+            play(&mut app, in_progress, Some(600_000)),
+            0,
+            "the playing episode is not sent back to an older saved place"
+        );
+    }
+
+    /// A started episode resumes where Spotify left it; a finished or
+    /// unstarted one starts over, and a place past the end stays inside it.
+    #[test]
+    fn an_episode_resumes_only_where_it_was_left_unfinished() {
+        let episode = |fully_played: bool, resume_position_ms: u32| Episode {
+            duration_ms: 2_400_000,
+            resume_point: Some(ResumePoint {
+                fully_played,
+                resume_position_ms,
+            }),
+            ..Episode::default()
+        };
+        assert_eq!(episode(false, 900_000).resume_ms(), Some(900_000));
+        assert_eq!(episode(true, 2_390_000).resume_ms(), None);
+        assert_eq!(episode(false, 0).resume_ms(), None);
+        assert_eq!(episode(false, 9_000_000).resume_ms(), Some(2_399_999));
+        assert_eq!(Episode::default().resume_ms(), None);
     }
 
     /// A media key can arrive before startup has reported that the saved
