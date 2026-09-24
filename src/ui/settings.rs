@@ -77,6 +77,28 @@ fn filtered_row(
     }
 }
 
+/// `filtered_row` for a control that needs `control_width` points.
+fn filtered_row_sized(
+    ui: &mut egui::Ui,
+    palette: &Palette,
+    needle: &str,
+    section: &str,
+    row: &RowText<'_>,
+    control_width: f32,
+    control: impl FnOnce(&mut egui::Ui),
+) {
+    if row.matches(needle, section) {
+        widgets::setting_row_sized(
+            ui,
+            palette,
+            &row.title,
+            &row.description,
+            control_width,
+            control,
+        );
+    }
+}
+
 /// Forget the search text, so a flow that lands on a specific row (like
 /// the Personal App setup) always finds that row visible and focusable.
 pub(crate) fn clear_search(ctx: &egui::Context) {
@@ -479,19 +501,33 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                     playback_dirty = true;
                 }
             });
-            filtered_row(ui, &palette, &needle, &playback, &playback_rows[2], |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 6.0;
-                    for (kbps, label) in [
-                        (320u16, gettext(locale, "Very high · 320 kbps")),
-                        (160, gettext(locale, "High · 160 kbps")),
-                        (96, gettext(locale, "Normal · 96 kbps")),
-                    ] {
+            // Normal to Very high, left to right when side by side and top
+            // to bottom in a column.
+            let choices = [
+                (96u16, gettext(locale, "Normal · 96 kbps")),
+                (160, gettext(locale, "High · 160 kbps")),
+                (320, gettext(locale, "Very high · 320 kbps")),
+            ];
+            let choice_gap = 6.0;
+            let choices_width = choices
+                .iter()
+                .map(|(_, label)| theme::soft_button_width(ui, label))
+                .sum::<f32>()
+                + choice_gap * (choices.len() - 1) as f32;
+            filtered_row_sized(
+                ui,
+                &palette,
+                &needle,
+                &playback,
+                &playback_rows[2],
+                choices_width,
+                |ui| {
+                    let mut choose = |ui: &mut egui::Ui, kbps: u16, label: &str| {
                         if theme::soft_button(
                             ui,
                             &palette,
                             None,
-                            &label,
+                            label,
                             app.settings.bitrate == kbps,
                         )
                         .clicked()
@@ -501,9 +537,26 @@ pub fn show(app: &mut App, ui: &mut egui::Ui) {
                             changed = true;
                             playback_dirty = true;
                         }
+                    };
+                    if ui.available_width() >= choices_width {
+                        // Laid right to left, so the last choice goes first.
+                        ui.horizontal(|ui| {
+                            ui.spacing_mut().item_spacing.x = choice_gap;
+                            for (kbps, label) in choices.iter().rev() {
+                                choose(ui, *kbps, label);
+                            }
+                        });
+                    } else {
+                        // Too narrow even for a line of their own: a column.
+                        ui.with_layout(Layout::top_down(Align::Max), |ui| {
+                            ui.spacing_mut().item_spacing.y = choice_gap;
+                            for (kbps, label) in &choices {
+                                choose(ui, *kbps, label);
+                            }
+                        });
                     }
-                });
-            });
+                },
+            );
             filtered_row(ui, &palette, &needle, &playback, &playback_rows[3], |ui| {
                 if widgets::switch(
                     ui,
