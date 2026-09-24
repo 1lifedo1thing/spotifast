@@ -1049,6 +1049,81 @@ mod tests {
         (ctx, app)
     }
 
+    /// #576: the Library heading never runs under the header's buttons. It
+    /// shrinks a little for a long translation and gives way entirely in
+    /// the narrowest sidebar, but stays where there is room.
+    #[test]
+    fn the_library_heading_never_overlaps_its_buttons() {
+        fn texts(shape: &egui::epaint::Shape, out: &mut Vec<(String, egui::Rect)>) {
+            match shape {
+                egui::epaint::Shape::Text(text) => out.push((
+                    text.galley.job.text.clone(),
+                    text.galley.rect.translate(text.pos.to_vec2()),
+                )),
+                egui::epaint::Shape::Vec(shapes) => {
+                    shapes.iter().for_each(|shape| texts(shape, out));
+                }
+                _ => {}
+            }
+        }
+        for locale in [crate::i18n::Locale::English, crate::i18n::Locale::German] {
+            for width in [210.0, 250.0, 420.0] {
+                let (ctx, mut app) = accessible_app("library-heading");
+                app.locale = locale;
+                app.settings.sidebar_width = width;
+                let heading = crate::i18n::gettext(locale, "Library").into_owned();
+                let search = crate::i18n::gettext(locale, "Search Your Library").into_owned();
+                let mut last = None;
+                for _ in 0..2 {
+                    let mut output = ctx.run_ui(
+                        egui::RawInput {
+                            screen_rect: Some(egui::Rect::from_min_size(
+                                egui::Pos2::ZERO,
+                                egui::vec2(1280.0, 800.0),
+                            )),
+                            ..Default::default()
+                        },
+                        |ui| app.frame_ui(ui),
+                    );
+                    output.textures_delta.clear();
+                    last = Some(output);
+                }
+                let output = last.unwrap();
+                let mut drawn = Vec::new();
+                output
+                    .shapes
+                    .iter()
+                    .for_each(|shape| texts(&shape.shape, &mut drawn));
+                let label = drawn
+                    .iter()
+                    .find(|(text, rect)| *text == heading && rect.top() < 300.0)
+                    .map(|(_, rect)| *rect);
+                let tree = output.platform_output.accesskit_update.unwrap();
+                let button = tree
+                    .nodes
+                    .iter()
+                    .find(|(_, node)| node.label() == Some(search.as_str()))
+                    .and_then(|(_, node)| node.bounds())
+                    .expect("the Search Your Library button");
+                if let Some(label) = label {
+                    assert!(
+                        f64::from(label.right()) <= button.x0,
+                        "{locale:?} at {width}: the heading ends at {} but the button starts at {}",
+                        label.right(),
+                        button.x0
+                    );
+                }
+                if width >= 250.0 {
+                    assert!(
+                        label.is_some(),
+                        "{locale:?} at {width}: the heading has room"
+                    );
+                }
+                app.backend.shutdown();
+            }
+        }
+    }
+
     #[test]
     fn change_cover_button_dispatches_the_native_picker_action() {
         let (ctx, mut app) = accessible_app("cover-button");
