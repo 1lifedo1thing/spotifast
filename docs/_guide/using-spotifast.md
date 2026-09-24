@@ -27,7 +27,7 @@ the surrounding page stays put. Release `Shift` to scroll the page normally.
 
 ## Podcasts on Home
 
-On `main`, after 0.9.1, Home has a **Your podcasts** shelf below Recently
+Since 0.10.0, Home has a **Your podcasts** shelf below Recently
 played. It lists episodes you have started and not finished, with the time
 left, followed by each podcast's newest episode if it came out in the last 30
 days and you have not started it, marked **New**. It covers the eight podcasts
@@ -64,7 +64,7 @@ playlist still moves one song at a time.
 
 ## Copying and pasting songs
 
-On `main`, after 0.9.1, press `Ctrl+A` (`Cmd+A` on macOS) in a playlist,
+Since 0.10.0, press `Ctrl+A` (`Cmd+A` on macOS) in a playlist,
 album or Liked Songs to select every song the list shows. A
 filter narrows the selection to the matching songs. In a long playlist that
 is still loading, it selects the songs loaded so far.
@@ -182,7 +182,7 @@ links and each row's Like and More controls.
 Left and right arrows adjust a focused volume slider by five percentage
 points, or the seek slider by one percent of the song. Screen readers can
 also read and set these sliders' values. `Ctrl+F` (`Cmd+F` on macOS) focuses
-search. On `main`, after 0.8.0, `Space` plays or pauses the current song even
+search. Since 0.9.0, `Space` plays or pauses the current song even
 when a song row or control has focus. Text fields keep Space for typing.
 Unmodified letter shortcuts still yield to the focused control.
 
@@ -315,7 +315,7 @@ snap the window, and drag a window edge or corner to resize it.
 
 ## Radio
 
-On `main`, after 0.9.1, **Go to song radio** in a song's menu opens a page
+Since 0.10.0, **Go to song radio** in a song's menu opens a page
 of songs Spotify picks to go with it, without starting playback. Playlist,
 album, and artist menus have **Go to playlist radio**, **Go to album radio**,
 and **Go to artist radio**.
@@ -353,7 +353,7 @@ choose **Follow** to resume it, or choose a line to jump to that part of the son
 full screen. Press **Esc** or choose the shrink button to return to your previous
 window size. Full-screen lyrics scroll smoothly and highlight the playing line
 automatically. Scrolling by hand pauses following; choose **Follow** to resume.
-On `main`, after 0.9.1, quitting while lyrics are full screen no longer leaves
+Since 0.10.0, quitting while lyrics are full screen no longer leaves
 the next launch stuck in full screen: the window returns to its previous size.
 
 | Dark theme | Light theme |

@@ -79,11 +79,11 @@ stay visible. A failed page stops automatic loading. Spotify custom playlist
 order uses the existing account-scoped rootlist from local playback; sorting
 and dragging never write that order back to Spotify.
 
-On `main`, after 0.8.0, a playlist-folder and invitation-permission read requested
+Since 0.9.0, a playlist-folder and invitation-permission read requested
 before local playback connects waits for that connection instead of being lost.
 Sign-out discards the waiting read and any result from the previous session.
 
-On `main`, after 0.8.0, a dropped active playback session retains its resolved
+Since 0.9.0, a dropped active playback session retains its resolved
 contexts and queue in memory. The replacement session restores them after
 Connect registration instead of loading only the interrupted song. Unresolved
 context pages continue through the new session. The snapshot contains no login
@@ -149,7 +149,7 @@ with its current-track pickup.
 
 ## Collection loading and artwork
 
-On `main`, after 0.8.0, opening a playlist, album, artist, or podcast keeps any
+Since 0.9.0, opening a playlist, album, artist, or podcast keeps any
 title, summary, and cover Spotifast already knows while the complete page is
 requested. Controls that need unfinished details stay disabled, and a loading
 indicator marks the unfinished content. If the request fails, the known header
@@ -212,7 +212,7 @@ existing playlist requests and adds no periodic polling.
 
 ## Podcasts on Home
 
-On `main`, after 0.9.1, Home's **Your podcasts** shelf reads the first page of
+Since 0.10.0, Home's **Your podcasts** shelf reads the first page of
 saved shows, the same request the library's Podcasts shelf makes, if it has
 not been read yet. It then asks for the five newest episodes of each of the
 eight most recently saved shows, one show at a time, through the normal
@@ -224,7 +224,7 @@ remaining shows for that refresh; the shelf keeps what it showed before.
 
 ## Album queueing
 
-On `main`, after 0.8.0, adding an album, single, or EP to the queue resolves
+Since 0.9.0, adding an album, single, or EP to the queue resolves
 its songs before sending playback commands. A complete album already loaded
 in the app needs no catalogue request. Otherwise, the existing album-track
 endpoint is read in pages of 50, with the normal personal/shared app routing
@@ -242,7 +242,7 @@ append might already have succeeded.
 
 ## Playlist cover uploads
 
-On `main`, after 0.8.0, **Edit details → Change cover** opens the native file
+Since 0.9.0, **Edit details → Change cover** opens the native file
 picker. Spotifast reads only the selected JPEG or PNG, preserves its aspect ratio, flattens transparent
 pixels onto white, and encodes a JPEG preview. Files must be smaller than 20 MB
 and no larger than 8192 pixels per side, within a 128 MB decoding budget.
@@ -296,7 +296,7 @@ Playback runs on a separate runtime. Librespot maintains the Spotify Connect
 session, exposes this computer as a device, receives transfers, and reports
 playback state. If the session drops, it reconnects with the stored credential.
 
-On `main`, after 0.8.0, selecting this computer in the device picker asks
+Since 0.9.0, selecting this computer in the device picker asks
 librespot to transfer playback from the active Connect device. Spotify supplies
 the current song, position, playing or paused state, context, and queue together.
 This uses the existing playback session's Connect transfer request and needs
@@ -339,7 +339,7 @@ connector. The change adds no destination or background polling.
 
 ## Proxy
 
-On `main`, after 0.8.0, Settings → Proxy has four modes:
+Since 0.9.0, Settings → Proxy has four modes:
 
 - **Off**: a direct connection. Environment proxy variables are ignored.
 - **System**: `HTTP_PROXY` / `HTTPS_PROXY` / `ALL_PROXY`, and on macOS and

@@ -4,12 +4,12 @@ description: Download the app for macOS, Windows, or Linux, with install instruc
 nav_order: 1
 ---
 
-Spotifast was previously called **Fastpotify**. Version 0.9.1 completes the
+Spotifast was previously called **Fastpotify**. Version 0.9.1 completed the
 profile and package rename. Choose Spotifast when installing or updating.
 Your settings and sign-ins carry over, except when
 [switching the Flatpak installation](/renaming/#flatpak).
-This is the final release with old-named compatibility downloads for older
-updaters. See the [upgrade guide](/renaming/) before skipping this release.
+If you use a version older than 0.9.1, see the [upgrade guide](/renaming/)
+before updating: 0.9.1 was the last release older updaters can install.
 
 {% assign v = site.spotifast_version %}
 {% assign base = "https://github.com/crmne/spotifast/releases/download/v" | append: v %}

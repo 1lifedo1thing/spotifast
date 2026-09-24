@@ -23,7 +23,7 @@ Spotifast uses the Web API for:
   also save and remove items.
 - **Playlists:** reading, creating, renaming, changing the description and
   visibility, adding and removing songs, reordering songs, and following and
-  unfollowing. Custom playlist cover uploads are on `main`, after 0.8.0.
+  unfollowing. Custom playlist cover uploads are available since 0.9.0.
 - **Catalogue:** albums, artists, tracks, shows, episodes, search, and
   recommendations. Artist pages include top tracks, releases, and related
   artists.
@@ -106,7 +106,7 @@ The Web API and librespot do not provide these features:
   audio for a `spotify:local:` entry. Playing files from disk would require a
   separate player. See [issue #3](https://github.com/crmne/spotifast/issues/3).
 - **Audiobooks.** librespot does not play them. Spotify lists some
-  audiobooks among saved shows; on `main`, after 0.9.1, Spotifast asks the
+  audiobooks among saved shows; since 0.10.0, Spotifast asks the
   librespot session which ones and leaves them out of the Podcasts shelf.
 - **Google Cast.** Spotify's own apps find Cast speakers on the local
   network and start Spotify's receiver on them. librespot has no Cast

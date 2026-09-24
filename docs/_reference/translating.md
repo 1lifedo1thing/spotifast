@@ -7,7 +7,7 @@ nav_order: 6
 Spotifast follows your computer's language when it has a translation for it,
 and uses English otherwise. **Settings → Appearance → Language** picks another
 language, listed under its own name, and applies it at once; **System** follows
-the computer again. This arrives in the release after 0.9.2. Corrections from
+the computer again. This arrived in 0.10.0. Corrections from
 fluent speakers are welcome.
 
 Translations are stored in `.po` files, a common format supported by editors

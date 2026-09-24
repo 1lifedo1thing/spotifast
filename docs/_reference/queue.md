@@ -23,7 +23,7 @@ Starting and resuming are separate actions. With Shuffle off, a playlist's
 Double-clicking a row starts there, including with Shuffle on. **Play** in
 the player bar resumes the current song at its paused position.
 
-On `main`, after 0.9.1, the Shuffle button on a collection page changes the
+Since 0.10.0, the Shuffle button on a collection page changes the
 global playback mode without starting that collection. It can be selected
 before a playback device is active; the next **Play** uses the selection.
 While another collection plays, toggling Shuffle changes that playback's mode
@@ -43,15 +43,15 @@ repeated song starts that occurrence. A filtered playlist or Liked Songs view
 plays its matching songs in displayed order, including duplicates. An empty or entirely
 unplayable view disables Play instead of starting the unfiltered context.
 
-On `main`, after 0.8.0, starting another song on this computer keeps the
+Since 0.9.0, starting another song on this computer keeps the
 selected Repeat mode, with Shuffle on or off. Loading a playlist no longer
 silently disables repeat in the playback engine.
 
-On `main`, after 0.8.0, silencing the old song during a local track change
+Since 0.9.0, silencing the old song during a local track change
 keeps the decoder paced while the replacement loads. Cached audio no longer
 races to the end and causes an unwanted extra skip during that handoff.
 
-On `main`, after 0.8.0, an unexpected local playback disconnect retains the
+Since 0.9.0, an unexpected local playback disconnect retains the
 engine's in-memory playback state before closing the session. Reconnection
 restores the same song and position, paused or playing, with its playlist
 context, exact shuffle order, manually queued songs (including duplicates),
@@ -59,7 +59,7 @@ repeat settings, and pending context pages. This also works when the current
 song came from the manual queue rather than the playlist. Playback started
 on the replacement engine takes precedence over recovery.
 
-On `main`, after 0.8.0, switching from another Connect device back to this
+Since 0.9.0, switching from another Connect device back to this
 computer transfers that device's current song, position, and queue, including
 manually queued copies. A paused session stays paused. The handoff itself does
 not consume a queue row or restore an older queue saved on this computer.
@@ -72,7 +72,7 @@ not consume a queue row or restore an older queue saved on this computer.
    the same song twice and it plays twice. A double-click only counts
    once.
 
-   On `main`, after 0.8.0, an album's **Add to queue** adds its playable songs
+   Since 0.9.0, an album's **Add to queue** adds its playable songs
    in album order, including repeated songs. This also works for singles and
    EPs. A fully loaded album appears immediately. Otherwise, a loading notice
    appears while all its track pages are fetched, then its songs are appended

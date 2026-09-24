@@ -43,7 +43,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   another computer from the device picker, and keep controlling it: play,
   pause, skip, seek, shuffle, repeat, volume. The picker expands upward to
   show several devices at once, fitting the window; longer lists scroll.
-  On `main`, after 0.8.0, switching back to this computer transfers the active
+  Since 0.9.0, switching back to this computer transfers the active
   Connect session with its song, position, queue, and paused or playing state.
 - **Finds speakers on your network.** Spotifast finds librespot, spotifyd,
   and supported hardware receivers over mDNS. Once connected, they appear as
@@ -51,9 +51,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   combines entries with the same device ID.
 - **Library.** Browse playlists, Liked Songs, saved albums, followed artists,
   podcasts, and saved episodes. Filter, pin, and reorder sidebar items.
-  On `main`, after 0.9.1, the Library header switches between a list and a
+  Since 0.10.0, the Library header switches between a list and a
   responsive cover grid.
-  On `main`, after 0.9.1, with local playback enabled, audiobooks saved in
+  Since 0.10.0, with local playback enabled, audiobooks saved in
   Spotify stay out of Podcasts, since they can't be played here.
   Since 0.8.0, double-click a playlist row in Library to start playback;
   a single click opens it. In the grid, a card's corner button plays it.
@@ -61,7 +61,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   separators between its name, artists and added date.
   Since 0.8.0, choose name, recent plays, or saved-date order where
   available. Follow Spotify’s playlist order or keep a separate local arrangement.
-  Spotify doesn't let apps change its order, so on `main`, after 0.9.1,
+  Spotify doesn't let apps change its order, so since 0.10.0,
   dragging a playlist while following it switches to the local arrangement
   and says so.
   Move Liked Songs among your pins or unpin it and choose its local position;
@@ -83,7 +83,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   badges in narrow windows; hover their icons to read the labels.
 - **Home** with Made for you, Recently played, your top artists and songs, and
   recommendations. Right-click playlist shortcuts and shelf cards for their actions.
-  On `main`, after 0.9.1, **Your podcasts** lists episodes of your saved
+  Since 0.10.0, **Your podcasts** lists episodes of your saved
   podcasts that you have started, then new ones you have not.
 - **Artist pages** with popular songs, a filterable discography, and related
   artists. **Album**, **playlist**, and **podcast** pages support playback
@@ -92,9 +92,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   Discography and related-artist cards also have right-click menus (available since 0.8.0).
   Artist names in the player bar open their pages, including during local
   playback before Web API metadata arrives (available since 0.8.0).
-  On `main`, after 0.8.0, an album, single, or EP's **Add to queue** adds all
+  Since 0.9.0, an album, single, or EP's **Add to queue** adds all
   its playable songs in album order, on this computer or another device.
-- **Radio.** On `main`, after 0.9.1, **Go to song radio** in a song's menu, and
+- **Radio.** Since 0.10.0, **Go to song radio** in a song's menu, and
   **Go to playlist radio**, **Go to album radio**, or **Go to artist radio** in
   their **…** menus, open a page of 50 songs Spotify picks to go with them.
   **Play** plays exactly those songs, **Refresh** in **…** asks for a new mix,
@@ -104,7 +104,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   Since 0.8.0, hold a dragged song near the playlist's top or bottom
   edge to scroll to rows beyond the screen. The Library sidebar scrolls while
   dragging toward offscreen playlists too.
-  On `main`, after 0.8.0, upload a JPEG or PNG cover from
+  Since 0.9.0, upload a JPEG or PNG cover from
   **Edit details → Change cover**.
   Add songs from a row menu, or drag a row or the currently playing song to a
   playlist in the sidebar. Since 0.8.0, dragging a selected row
@@ -118,7 +118,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   Drop it on an empty playlist to add its first song.
   A playlist a friend shared with you takes songs too,
   as Spotify's own apps allow. Filter the **Add to playlist** menu by name to
-  find the destination quickly. On `main`, after 0.8.0, playlist folders and
+  find the destination quickly. Since 0.9.0, playlist folders and
   invitation permissions also load when the library finishes before local
   playback connects.
 - **Opens Spotify links.** Spotifast registers for `spotify:` links, so a
@@ -159,7 +159,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   another Spotify client.
   Large playlist checkpoints read and write their JSON through a small background
   buffer, preserving the existing cache format without another full JSON copy.
-- On `main`, after 0.9.1, the **Shuffle** button beside a collection's **Play**
+- Since 0.10.0, the **Shuffle** button beside a collection's **Play**
   button sets the global mode without starting that collection. Choose it before
   a playback device is active; the next **Play** uses that selection. While
   another collection plays, it changes that playback's mode without switching
@@ -175,27 +175,27 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   colour to the next rather than switching in a single frame. Turn it off in
   Settings.
 - **Light and dark**, or follow the system.
-- **Repeat stays selected.** On `main`, after 0.8.0, starting another song
+- **Repeat stays selected.** Since 0.9.0, starting another song
   locally preserves Repeat, with Shuffle on or off.
-- **Song changes keep the selected song.** On `main`, after 0.9.1, the default
+- **Song changes keep the selected song.** Since 0.10.0, the default
   audio output keeps discarded audio paced while a replacement loads, preventing
   the old cached song from racing to its end and causing an extra skip.
-- **Reconnects keep the queue.** On `main`, after 0.8.0, recovering an
+- **Reconnects keep the queue.** Since 0.9.0, recovering an
   interrupted local playback session restores its playlist position,
   queued songs, shuffle order, and Repeat mode.
 - **Light and dark**, or follow the system.
 - **Native window behaviour.** On macOS, double-click the top bar to use the
   Fill, Zoom, Minimise or Do Nothing action selected in Desktop & Dock.
-  On `main`, after 0.9.1, buttons, rows and cards keep the ordinary arrow
+  Since 0.10.0, buttons, rows and cards keep the ordinary arrow
   pointer; only links, such as artist names, show the hand.
 - **Winamp mini player.** `Ctrl+M` opens a small player for classic `.wsz`
   skins, drawn at 1x to 4x scale. It includes a spectrum analyser, playlist,
   and equalizer. It keeps its shade mode and, where the desktop permits,
   its own position when switching views. Drop a skin from the
   [Winamp Skin Museum](https://skins.webamp.org) on either window to add it.
-  On `main`, after 0.8.0, switching to the mini player preserves the main
+  Since 0.9.0, switching to the mini player preserves the main
   window's size even if its native close takes another frame.
-  On Windows, on `main` after 0.9.1, the main window uses the standard
+  On Windows, since 0.10.0, the main window uses the standard
   Windows title bar. **Settings → Appearance → Custom title bar** switches to
   Spotifast's own title bar and window buttons.
   On Windows, since 0.8.0, a mini player saved on a disconnected monitor
@@ -339,14 +339,14 @@ language order set in System Settings, so Chinese titles follow the
 Traditional or Simplified preference set there. Windows includes common
 fonts. On Linux, install `noto-fonts` and `noto-fonts-cjk` (Arch) or
 `fonts-noto` and `fonts-noto-cjk` (Debian or Ubuntu) if titles appear as
-empty boxes. On `main`, after 0.9.1, Spotifast also looks in every font
+empty boxes. Since 0.10.0, Spotifast also looks in every font
 directory named in fontconfig's configuration, so fonts installed through
 NixOS's `fonts.packages` are found too.
 
 Since 0.8.0, long right-to-left titles in song rows and the player
 bar end with an ellipsis inside their text area, including joined Arabic letters.
 
-On `main`, after 0.9.1, the Linux launcher is
+Since 0.10.0, the Linux launcher is
 `packaging/applications/spotifast.desktop`. Its icon and window identity also
 use Spotifast, while existing settings and window positions are preserved.
 After installing it, `xdg-mime default spotifast.desktop x-scheme-handler/spotify`
@@ -373,7 +373,7 @@ addresses when one cannot connect, including a prompt IPv4/IPv6 fallback.
 Socket and proxy tunnel setup have a five-second limit. See
 [how it connects](docs/_reference/how-it-connects.md#the-engine).
 
-On `main`, after 0.9.1, the whole engine connection can take up to 75 seconds,
+Since 0.10.0, the whole engine connection can take up to 75 seconds,
 including server resolution and authentication. A stalled setup may therefore
 remain **Connecting** longer than one five-second attempt; the outer deadline
 does not guarantee that every fallback will be tried.
@@ -426,11 +426,11 @@ including Made for you and Recently played on Home.
 The main window exposes named playback controls, library and song rows,
 menus, sliders, and settings switches to screen readers. Use `Tab` and
 `Shift+Tab` to move focus, then `Enter` to activate a control or
-play a focused song. On `main`, after 0.8.0, `Space` always plays or pauses
+play a focused song. Since 0.9.0, `Space` always plays or pauses
 the current song unless a text field has focus. In a playlist, album or Liked
 Songs, up and down arrows move focus between whole song rows in the displayed order and scroll them
 into view. Tab still reaches the artist links, Like and More controls.
-On `main`, after 0.9.1, `Ctrl+A` selects every song the list shows,
+Since 0.10.0, `Ctrl+A` selects every song the list shows,
 `Ctrl+C` copies the selected songs' links one per line, and `Ctrl+V` adds
 the song links on the clipboard to the end of a playlist you can edit.
 A focused text field keeps these keys for its own text.
@@ -509,7 +509,7 @@ On every platform, `spotifast <link>` opens a Spotify link, a `spotify:`
 URI or an `open.spotify.com` address, in the running app, or starts the
 app on it. This is what the desktop runs when a link is clicked.
 
-On `main`, after 0.8.0, search links open Search with the query filled in,
+Since 0.9.0, search links open Search with the query filled in,
 without starting playback. They work on a fresh launch or an existing window;
 if signed out, the search waits for sign-in. For example:
 
@@ -576,7 +576,7 @@ installations use the download page. Portable archives identify themselves with
 `spotifast-portable.txt`; older archives need one manual upgrade to an
 update-enabled build.
 
-On `main`, after 0.8.0, Off and System proxies apply immediately. HTTP and SOCKS5 apply
+Since 0.9.0, Off and System proxies apply immediately. HTTP and SOCKS5 apply
 when you press **Apply settings**, and can also be set on the sign-in screen.
 A proxy password uses the system credential store, separately from Spotify
 sign-in. Only confirmed proxy settings are saved; editing a form does not
@@ -586,14 +586,14 @@ unauthenticated HTTP proxy; with proxy login or SOCKS5 it connects directly.
 
 Caches (audio, artwork) live under the cache directory and can be deleted at
 any time without signing you out.
-On `main`, after 0.8.0, downloaded artwork uses less temporary memory while
+Since 0.9.0, downloaded artwork uses less temporary memory while
 being saved to the cache. Visible cards and collection covers use sharper
 640-pixel artwork. Loading transitions may retain up to 64 softened previews
 in addition to the existing artwork-cache budget. These previews reuse decoded
 artwork, so keeping a collection open does not repeatedly reload its cover.
 
 For blank or incorrectly drawn windows, include `spotifast.log` in the bug
-report. On `main`, after 0.8.0, it records the app version, platform and active
+report. Since 0.9.0, it records the app version, platform and active
 OpenGL renderer, plus window-creation errors even when launched without a console.
 
 ## How it is built

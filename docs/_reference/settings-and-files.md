@@ -85,7 +85,7 @@ file defaults. Keep these legacy files, their temporary copies, the
 `credentials/` directory, and credential-store exports out of issue attachments
 and diagnostic uploads.
 
-On `main`, after 0.8.0, proxy passwords use a separate protected entry under the same service name.
+Since 0.9.0, proxy passwords use a separate protected entry under the same service name.
 They belong to the configured host, port, and username. Editing any of these
 fields clears the old password; changing only HTTP/SOCKS5 mode keeps it. Off,
 System, and Spotify sign-out retain the saved manual proxy password. Clear the
@@ -116,12 +116,12 @@ file on a background file worker. Saving a large playlist no longer needs a
 second complete JSON buffer in memory. The cache format and checkpoint order
 are unchanged, and a failed write leaves the previous cache in place.
 
-On `main`, for the release after 0.8.0, reading a playlist cache also uses
+Since 0.9.0, reading a playlist cache also uses
 a small buffer on a background file worker. The full JSON file no longer
 stays in memory alongside the loaded songs. Existing caches remain readable;
 missing or invalid caches are ignored and fetched again as before.
 
-On `main`, after 0.9.1, the artwork loader shares downloaded image bytes with
+Since 0.10.0, the artwork loader shares downloaded image bytes with
 the background cache writer instead of making a separate copy. Visible library
 cards and collection covers request 640-pixel artwork for sharper HiDPI output;
 compact rows and softened placeholders keep using 64-pixel thumbnails. Up to 64
@@ -131,8 +131,7 @@ cache write does not prevent the downloaded image from being displayed.
 Softened previews reuse egui's decoded artwork after its encoded bytes have
 been released, without repeatedly reading the disk cache or downloading again.
 
-The following Liked Songs caching behavior is on `main`, for the release
-since 0.8.0.
+The following Liked Songs caching behavior is available since 0.9.0.
 
 Liked Songs metadata is stored separately under `liked-songs/` in the cache
 directory, one JSON file per account. Only the verified account's rows are
@@ -168,7 +167,7 @@ remembered size and position describe an ordinary window and are not applied
 to one that already fills the screen, because sizing or moving such a window
 restores it down.
 
-On `main`, after 0.8.0, a closing main window keeps its own geometry until
+Since 0.9.0, a closing main window keeps its own geometry until
 the native window closes. An extra closing frame cannot resize it to the
 mini player and overwrite its saved size or maximized state.
 
@@ -180,7 +179,7 @@ positions. Playlist edits and refreshes invalidate other cached windows because
 their server positions may have changed. Only contiguous playlist prefixes are
 saved on disk.
 
-On `main`, after 0.9.1, large playlist pages no longer show a **Go to song**
+Since 0.10.0, large playlist pages no longer show a **Go to song**
 control; drag the scrollbar to reach a distant song instead. Filtering or
 sorting returns to the beginning and loads remaining pages as needed, since
 local search and ordering require the track metadata. A failed window stops
@@ -219,7 +218,7 @@ main fields are:
 | `audio_backend` | platform | `pulseaudio` or `rodio` on Linux |
 | `audio_cache_mb` | `1024` | On-disk audio cache budget |
 | `theme` | `system` | Follow the system appearance by default; explicit `dark` and `light` choices remain available |
-| `language` | `system` | On `main` after 0.9.2: the interface language. `system` follows the operating system's preferred languages and falls back to English; a tag such as `es`, `de-DE`, `pt-BR` or `zh-Hant` selects that language. An unknown tag follows the system |
+| `language` | `system` | Since 0.10.0: the interface language. `system` follows the operating system's preferred languages and falls back to English; a tag such as `es`, `de-DE`, `pt-BR` or `zh-Hant` selects that language. An unknown tag follows the system |
 | `custom_theme` | `null` | Selected JSON filename from the `themes` folder |
 | `custom_theme_cache` | absent | Last accepted custom palette; preserves appearance if its file is missing or invalid |
 | `system_theme_cache` | absent | Last accepted Omarchy palette for Follow system; retained across restarts |
@@ -234,7 +233,7 @@ main fields are:
 | `middle_click_autoscroll` | `false` | Linux only: middle-click a list to autoscroll it. Windows always autoscrolls and macOS never does |
 | `winamp_window` | `false` | The window is the Winamp mini player |
 | `winamp_show_taskbar` | `true` | Windows since 0.8.0, and Linux X11 sessions: show the Winamp window's taskbar button; the main window always keeps its button. Wayland and macOS ignore it |
-| `custom_titlebar` | `false` | Windows only, on `main` after 0.9.1: draw Spotifast's own title bar and window buttons instead of the standard Windows ones |
+| `custom_titlebar` | `false` | Windows only, since 0.10.0: draw Spotifast's own title bar and window buttons instead of the standard Windows ones |
 | `skin` | none | File or folder name in the skins folder; blank uses the built-in skin |
 | `skin_scale` | by display | Screen pixels per skin pixel, 1 to 4 |
 | `winamp_on_top` | `false` | Keep the mini player above other windows |
@@ -354,7 +353,7 @@ filename under **Settings → Appearance → Theme**.
 The default is **Follow system**. It uses your desktop’s light/dark appearance,
 or the current Omarchy palette on a packaged Omarchy installation. On Linux,
 the light/dark appearance comes from the desktop portal's `color-scheme`
-setting (GNOME, KDE and Flatpak), and on `main`, after 0.9.1, the app follows
+setting (GNOME, KDE and Flatpak), and since 0.10.0, the app follows
 it when it changes. Saved Dark,
 Light and custom choices are preserved when updating. The picker starts with
 **Follow system**, **Light**, and **Dark**, then a separator. **Omarchy** comes
