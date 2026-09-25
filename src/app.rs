@@ -276,7 +276,7 @@ pub struct App {
     #[cfg(any(test, feature = "demo"))]
     pub demo_windows_controls: bool,
     applied_dark: Option<bool>,
-    pub custom_themes: theme::custom::Catalog,
+    pub custom_themes: theme::Catalog,
 
     pub auth: AuthStatus,
     pub user: Option<User>,
@@ -669,7 +669,7 @@ impl App {
 
         let palette = settings.cached_palette().unwrap_or_else(Palette::dark);
         let mut app = Self {
-            custom_themes: theme::custom::Catalog::default(),
+            custom_themes: theme::Catalog::default(),
             dirs,
             settings,
             applied_proxy,
@@ -3048,17 +3048,31 @@ impl App {
     /// Called at launch or by the local reload command. Construction and window
     /// attachment never scan theme files.
     pub fn load_custom_themes(&mut self, waker: &Waker) {
+        let waker = waker.clone();
         self.custom_themes.start(
             self.dirs.config.join("themes"),
             self.settings.custom_theme.clone(),
-            waker,
+            &fastframe_theme::Waker::new(move || waker.wake()),
         );
     }
 
+    /// Adds the desktop's palettes (Omarchy on Linux) for a normal launch.
+    pub fn enable_desktop_themes(&mut self) {
+        theme::enable_desktop_themes(&mut self.custom_themes, &self.dirs.config.join("themes"));
+    }
+
     fn poll_custom_themes(&mut self, ctx: &egui::Context) {
-        if !self.custom_themes.poll() {
-            return;
+        // The themes folder or Omarchy's current theme changed on disk.
+        if self.custom_themes.needs_reload() {
+            self.actions.push(Action::ReloadThemes);
         }
+        if self.custom_themes.poll() {
+            self.adopt_custom_themes(ctx);
+        }
+    }
+
+    /// Takes the selected and the desktop's palettes from a finished scan.
+    fn adopt_custom_themes(&mut self, ctx: &egui::Context) {
         let mut changed = false;
         if let Some(filename) = &self.settings.custom_theme
             && let Some(theme) = self.custom_themes.find(filename)
@@ -14854,10 +14868,12 @@ mod tests {
             restored.apply_theme(&ctx);
             assert_eq!(restored.palette, expected);
             assert!(
-                restored
-                    .custom_themes
-                    .detail_in(crate::i18n::Locale::English, Some("local.json"))
-                    .contains("last usable")
+                theme::catalog_detail(
+                    &restored.custom_themes,
+                    crate::i18n::Locale::English,
+                    Some("local.json")
+                )
+                .contains("last usable")
             );
             restored.save_settings();
             assert_eq!(Settings::load(&restored.dirs.settings_file()), accepted);
@@ -14895,6 +14911,17 @@ mod tests {
         std::fs::remove_dir_all(app.dirs.config.parent().unwrap()).unwrap();
     }
 
+    /// What a scan reports when Omarchy is (or is not) followed.
+    fn show_system_theme(
+        app: &mut App,
+        ctx: &egui::Context,
+        theme: Option<theme::CustomTheme>,
+        follows: bool,
+    ) {
+        app.custom_themes = theme::Catalog::preview(theme.into_iter().collect(), follows);
+        app.adopt_custom_themes(ctx);
+    }
+
     fn wait_for_custom_themes(app: &mut App, ctx: &egui::Context) {
         let deadline = Instant::now() + Duration::from_secs(3);
         while app.custom_themes.loading() {
@@ -14913,13 +14940,11 @@ mod tests {
         app.window_hidden = true;
         app.resume_track = Some("spotify:track:playing".into());
         app.resume_position_ms = 123_000;
-        let theme = theme::custom::CustomTheme {
+        let theme = theme::CustomTheme {
             filename: "omarchy.json".into(),
             palette: Palette::light(),
         };
-        app.custom_themes
-            .load_system_test(Some(theme.clone()), true);
-        wait_for_custom_themes(&mut app, &ctx);
+        show_system_theme(&mut app, &ctx, Some(theme.clone()), true);
         app.apply_theme(&ctx);
         assert_eq!(app.palette, theme.palette);
         assert_eq!(app.settings.theme, ThemeChoice::System);
@@ -14928,8 +14953,7 @@ mod tests {
         let saved = Settings::load(&app.dirs.settings_file());
         assert_eq!(saved.cached_palette(), Some(theme.palette));
 
-        app.custom_themes.load_system_test(None, true);
-        wait_for_custom_themes(&mut app, &ctx);
+        show_system_theme(&mut app, &ctx, None, true);
         app.apply_theme(&ctx);
         assert_eq!(
             app.palette, theme.palette,
@@ -14942,26 +14966,23 @@ mod tests {
             app.apply(Action::SetTheme(choice), &ctx);
             let mut updated = theme.clone();
             updated.palette.accent = egui::Color32::RED;
-            app.custom_themes.load_system_test(Some(updated), true);
-            wait_for_custom_themes(&mut app, &ctx);
+            show_system_theme(&mut app, &ctx, Some(updated), true);
             app.apply_theme(&ctx);
             assert_eq!(app.palette, expected);
         }
         app.apply(Action::SetTheme(ThemeChoice::System), &ctx);
         assert_eq!(app.palette.accent, egui::Color32::RED);
-        let custom = theme::custom::CustomTheme {
+        let custom = theme::CustomTheme {
             filename: "mine.json".into(),
             palette: Palette::dark(),
         };
-        app.custom_themes = theme::custom::Catalog::from_themes(vec![custom.clone()]);
+        app.custom_themes = theme::Catalog::preview(vec![custom.clone()], false);
         app.apply(Action::SetCustomTheme(custom.filename.clone()), &ctx);
-        app.custom_themes.load_system_test(Some(theme), true);
-        wait_for_custom_themes(&mut app, &ctx);
+        show_system_theme(&mut app, &ctx, Some(theme), true);
         app.apply_theme(&ctx);
         assert_eq!(app.palette, custom.palette);
         app.apply(Action::SetTheme(ThemeChoice::System), &ctx);
-        app.custom_themes.load_system_test(None, false);
-        wait_for_custom_themes(&mut app, &ctx);
+        show_system_theme(&mut app, &ctx, None, false);
         assert!(app.settings.system_theme_cache.is_none());
         assert_eq!(app.theme_preference(), egui::ThemePreference::System);
         assert!(app.window_hidden);
@@ -15055,31 +15076,21 @@ mod tests {
         let mut app = test_app("custom-theme-worker");
         app.backend.shutdown();
         let ctx = egui::Context::default();
+        let directory = app.dirs.config.join("themes");
+        std::fs::create_dir_all(&directory).unwrap();
+        std::fs::write(directory.join("old.json"), br#"{"base":"dark"}"#).unwrap();
         app.settings.custom_theme = Some("old.json".into());
-        let (started, worker) = std::sync::mpsc::channel();
-        let (finish, continue_load) = std::sync::mpsc::channel();
-        app.custom_themes.load_test(move || {
-            started.send(std::thread::current().id()).unwrap();
-            continue_load.recv().unwrap();
-            vec![theme::custom::CustomTheme {
-                filename: "old.json".into(),
-                palette: Palette::dark(),
-            }]
-        });
-        assert_ne!(
-            worker.recv_timeout(Duration::from_secs(3)).unwrap(),
-            std::thread::current().id()
-        );
+        app.load_custom_themes(&Waker::default());
         app.apply(Action::SetTheme(ThemeChoice::Light), &ctx);
         assert_eq!(app.palette, Palette::light());
         assert!(app.custom_themes.loading());
-        finish.send(()).unwrap();
         wait_for_custom_themes(&mut app, &ctx);
         app.apply_theme(&ctx);
         assert_eq!(app.palette, Palette::light());
         assert!(app.custom_themes.find("old.json").is_some());
         assert!(app.settings.custom_theme.is_none());
         assert!(app.settings.custom_theme_cache.is_none());
+        std::fs::remove_dir_all(app.dirs.config.parent().unwrap()).unwrap();
     }
 
     #[test]
@@ -15089,10 +15100,13 @@ mod tests {
         app.settings.theme = ThemeChoice::System;
         let mut palette = Palette::light();
         palette.accent = egui::Color32::RED;
-        app.custom_themes = theme::custom::Catalog::from_themes(vec![theme::custom::CustomTheme {
-            filename: "local.json".into(),
-            palette,
-        }]);
+        app.custom_themes = theme::Catalog::preview(
+            vec![theme::CustomTheme {
+                filename: "local.json".into(),
+                palette,
+            }],
+            false,
+        );
         app.apply(Action::SetCustomTheme("local.json".into()), &ctx);
         assert_eq!(app.palette, palette);
         assert_eq!(

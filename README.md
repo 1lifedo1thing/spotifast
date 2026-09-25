@@ -545,10 +545,11 @@ from Home through JSON preferences; see
 Custom JSON palettes go in a `themes` folder beside `settings.json`.
 Select them in Appearance; `spotifast reload-themes` loads additions and updates
 without interrupting playback. See [custom themes and Omarchy integration](docs/_reference/settings-and-files.md#custom-themes).
-New installations default to **Follow system**. Linux packages include Omarchy
-integration, set up its per-user template and hook automatically on first launch,
-and follow the current palette. Existing theme choices and custom files stay
-intact. The picker lists Follow system, Light and Dark first, then the available Omarchy
+New installations default to **Follow system**. On an Omarchy desktop every
+Linux build follows the current palette, and Linux packages also set up the
+per-user template and hook automatically on first launch. Since 0.10.2, on
+Linux, edited palettes and Omarchy theme changes apply without a reload
+command. Existing theme choices and custom files stay intact. The picker lists Follow system, Light and Dark first, then the available Omarchy
 integration and local palettes. The **Open themes folder** button in Settings
 opens the local JSON palette directory.
 The interface follows the operating system's language when Spotifast has a

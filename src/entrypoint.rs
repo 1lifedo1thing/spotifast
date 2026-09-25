@@ -520,9 +520,8 @@ pub(crate) fn run() -> eframe::Result<()> {
     let desktop_surfaces = options.media_controls;
     #[allow(unused_mut)]
     let mut app = app::App::new(&waker, dirs, settings, options);
-    #[cfg(target_os = "linux")]
     if guarded {
-        app.custom_themes.enable_packaged_omarchy();
+        app.enable_desktop_themes();
     }
     #[cfg(feature = "demo")]
     let load_themes = guarded || cli.demo_data.is_some();

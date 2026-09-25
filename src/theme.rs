@@ -4,11 +4,17 @@
 //! All colors use [`Palette`] so light, dark, and album-art-tinted themes stay
 //! consistent.
 
-pub mod custom;
 #[cfg(target_os = "linux")]
 mod omarchy;
 
+use crate::i18n::{Locale, gettext};
 use egui::{Color32, CornerRadius, Response, Sense, Stroke, Vec2};
+use std::borrow::Cow;
+
+/// A palette file from the themes directory.
+pub type CustomTheme = fastframe_theme::CustomTheme<Palette>;
+/// The palette files, and the Omarchy palette where the desktop has one.
+pub type Catalog = fastframe_theme::Catalog<Palette>;
 
 #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Palette {
@@ -94,6 +100,100 @@ impl Palette {
             )
         };
         Color32::from_rgb((r * 255.0) as u8, (g * 255.0) as u8, (b * 255.0) as u8)
+    }
+}
+
+impl fastframe_theme::Palette for Palette {
+    fn base(base: fastframe_theme::Base) -> Self {
+        match base {
+            fastframe_theme::Base::Dark => Self::dark(),
+            fastframe_theme::Base::Light => Self::light(),
+        }
+    }
+
+    fn set(&mut self, name: &str, color: Color32) -> bool {
+        match name {
+            "window" => self.window = color,
+            "panel" => self.panel = color,
+            "surface" => self.surface = color,
+            "surface_hover" => self.surface_hover = color,
+            "surface_active" => self.surface_active = color,
+            "outline" => self.outline = color,
+            "text" => self.text = color,
+            "secondary" => self.secondary = color,
+            "dim" => self.dim = color,
+            "accent" => self.accent = color,
+            "accent_hover" => self.accent_hover = color,
+            "on_accent" => self.on_accent = color,
+            "danger" => self.danger = color,
+            "warning" => self.warning = color,
+            "overlay" => self.overlay = color,
+            "shadow" => self.shadow = color,
+            _ => return false,
+        }
+        true
+    }
+}
+
+/// Whether a launch may follow the desktop's themes with this themes
+/// folder. An updater trial of the legacy Fastpotify profile does not, so the
+/// old hook and profile stay together until the update is accepted.
+fn desktop_themes_allowed(themes: &std::path::Path) -> bool {
+    themes != crate::paths::AppDirs::legacy().config.join("themes")
+}
+
+/// Adds the desktop's palettes to a normal launch: Omarchy's on Linux, with
+/// the packaged template and hook installed for the user. The shared
+/// palettes fastframe-theme carries stay out of Spotifast's picker.
+pub fn enable_desktop_themes(catalog: &mut Catalog, themes: &std::path::Path) {
+    if !desktop_themes_allowed(themes) {
+        return;
+    }
+    #[cfg(target_os = "linux")]
+    omarchy::upgrade_legacy_hook();
+    catalog.enable_desktop_themes(fastframe_theme::DesktopThemes {
+        slug: "spotifast",
+        omarchy_template: include_str!("../contrib/omarchy/spotifast.json.tpl"),
+        presets: false,
+    });
+}
+
+/// The status line under the Theme setting, empty when all is well.
+pub fn catalog_detail(
+    catalog: &Catalog,
+    locale: Locale,
+    selected: Option<&str>,
+) -> Cow<'static, str> {
+    use fastframe_theme::{Problem, Status};
+    let Some(status) = catalog.status(selected) else {
+        return Cow::Borrowed("");
+    };
+    match status {
+        Status::Loading => gettext(locale, "Loading local themes…"),
+        Status::SelectedUnavailable => gettext(
+            locale,
+            "The selected theme is unavailable. Keeping the last usable appearance. See the log for details.",
+        ),
+        Status::Problem(Problem::Unreadable) => gettext(
+            locale,
+            "The themes folder could not be read. See the log for details.",
+        ),
+        Status::Problem(Problem::TooManyEntries) => gettext(
+            locale,
+            "The themes folder has more than 512 entries. Keep fewer files there to list the custom palettes.",
+        ),
+        Status::Problem(Problem::TooManyThemes) => gettext(
+            locale,
+            "Only 128 custom palettes can be listed. Keep fewer JSON files in the themes folder to see the rest.",
+        ),
+        Status::Problem(Problem::OmarchyUnreadable) => gettext(
+            locale,
+            "The Omarchy palette could not be loaded. Keeping the last usable appearance. See the log for details.",
+        ),
+        Status::Problem(_) => gettext(
+            locale,
+            "Custom themes could not be loaded. Run spotifast reload-themes to try again.",
+        ),
     }
 }
 
@@ -789,6 +889,59 @@ pub fn subtle(ui: &mut egui::Ui, palette: &Palette, label: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Palette files name the sixteen colours every app shares, and only
+    /// those: a typo is an invalid file, not an ignored colour.
+    #[test]
+    fn palette_files_set_every_base_colour() {
+        use fastframe_theme::Palette as _;
+        for name in fastframe_theme::BASE_COLORS {
+            let mut palette = Palette::dark();
+            assert!(palette.set(name, Color32::from_rgb(1, 2, 3)), "{name}");
+            assert_ne!(palette, Palette::dark(), "{name}");
+        }
+        assert!(!Palette::dark().set("typo", Color32::RED));
+        let light: Palette =
+            fastframe_theme::parse_palette(r##"{"base":"light","colors":{"accent":"#8c3fa5"}}"##)
+                .unwrap();
+        assert!(!light.dark);
+        assert_eq!(light.accent, Color32::from_rgb(140, 63, 165));
+        assert_eq!(light.window, Palette::light().window);
+    }
+
+    /// Compared line by line: a Windows checkout may turn the files' line
+    /// endings into CRLF, which no Linux package ships.
+    #[test]
+    fn the_shipped_omarchy_files_are_the_shared_ones() {
+        let lines = |text: &str| text.replace("\r\n", "\n");
+        assert_eq!(
+            lines(include_str!("../contrib/omarchy/spotifast-theme")),
+            lines(&fastframe_theme::omarchy::hook_script("spotifast"))
+        );
+        assert_eq!(
+            lines(include_str!("../contrib/omarchy/spotifast.json.tpl")),
+            lines(fastframe_theme::omarchy::BASE_TEMPLATE)
+        );
+    }
+
+    #[test]
+    fn an_updater_trial_of_the_legacy_profile_leaves_the_desktop_alone() {
+        assert!(!desktop_themes_allowed(
+            &crate::paths::AppDirs::legacy().config.join("themes")
+        ));
+        assert!(desktop_themes_allowed(
+            &crate::paths::AppDirs::discover().config.join("themes")
+        ));
+    }
+
+    #[test]
+    fn every_catalog_problem_has_a_sentence() {
+        let catalog = Catalog::default();
+        assert_eq!(catalog_detail(&catalog, Locale::English, None), "");
+        assert!(
+            catalog_detail(&catalog, Locale::English, Some("gone.json")).contains("last usable")
+        );
+    }
 
     /// A palette replaces egui's visuals, which must not take back the
     /// desktop's text rendering: on Linux, linear coverage in both themes.

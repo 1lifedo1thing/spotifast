@@ -4175,11 +4175,13 @@ mod tests {
         });
         let mut palette = crate::theme::Palette::light();
         palette.accent = egui::Color32::from_rgb(140, 63, 165);
-        app.custom_themes =
-            crate::theme::custom::Catalog::from_themes(vec![crate::theme::custom::CustomTheme {
+        app.custom_themes = crate::theme::Catalog::preview(
+            vec![crate::theme::CustomTheme {
                 filename: "local.json".into(),
                 palette,
-            }]);
+            }],
+            false,
+        );
         for _ in 0..3 {
             view_frame(&ctx, &mut app, vec![], App::frame_ui);
         }
