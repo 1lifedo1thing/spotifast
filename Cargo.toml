@@ -32,13 +32,6 @@ serde_json = "1"
 log = "0.4"
 env_logger = { version = "0.11", default-features = false, features = ["auto-color", "humantime"] }
 directories = "6"
-# A small translation trait for catalogs generated from PO files at build time.
-# No system libintl, global locale, or runtime catalog parsing is needed.
-tr = { version = "0.1.11", default-features = false }
-# The operating system's preferred languages, so the interface can follow
-# them: the preferred-language APIs on macOS and Windows and the POSIX
-# locale variables elsewhere, without platform code of our own.
-sys-locale = "0.3"
 # One protected-store API, with only each target's native provider below.
 # Durable Spotify grants must not be copied into ordinary state JSON.
 keyring-core = "1"
@@ -55,6 +48,9 @@ fastframe-text = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310
 fastframe-fonts = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310052c360f0827957461da7e4ca80f7c" }
 fastframe-icons = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310052c360f0827957461da7e4ca80f7c" }
 fastframe-theme = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310052c360f0827957461da7e4ca80f7c" }
+# Catalogs compiled from PO files at build time (see build.rs) and the
+# system's preferred languages. No libintl or runtime catalog parsing.
+fastframe-i18n = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310052c360f0827957461da7e4ca80f7c" }
 # Reading installed fonts for MilkDrop's overlays, the Winamp playlist's
 # pixel text, and the playlist face. skrifa is the parser epaint already
 # rasterizes with, and the version has to track epaint's or the binary
@@ -178,13 +174,12 @@ zbus = { version = "5", default-features = false, features = ["tokio"] }
 x11rb = { version = "0.13", default-features = false }
 
 [build-dependencies]
-# Validate/filter unfinished PO entries, then compile catalog text and gettext
-# plural expressions to Rust. Ordinary builds do not need gettext tools.
-polib = "0.3"
-include-po = "0.2"
+# Drops unfinished PO entries and compiles catalog text and gettext plural
+# expressions to Rust. Ordinary builds do not need gettext tools.
+fastframe-i18n = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310052c360f0827957461da7e4ca80f7c", features = ["build"] }
 
 [dev-dependencies]
-# Exercise the same PO compiler used by build.rs with partial catalogs.
+# Checks that every catalog covers the template and keeps its placeholders.
 polib = "0.3"
 # Run connection-deadline regressions with a virtual clock.
 tokio = { version = "1", features = ["test-util"] }

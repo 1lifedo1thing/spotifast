@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-25 14:43+0200\n"
+"POT-Creation-Date: 2026-09-25 14:46+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Polish\n"
@@ -75,7 +75,7 @@ msgstr "Folder"
 msgid "Playlist • {owner}"
 msgstr "Playlista • {owner}"
 
-#: src/ui/sidebar.rs:810 src/i18n.rs:302 src/i18n.rs:305 src/ui/keys.rs:245
+#: src/ui/sidebar.rs:810 src/i18n.rs:248 src/i18n.rs:251 src/ui/keys.rs:245
 #: src/ui/topbar.rs:214
 msgid "Home"
 msgstr "Start"
@@ -174,7 +174,7 @@ msgid "Pin to top"
 msgstr "Przypnij na górze"
 
 #. Translators: Keep {count} exactly as written. It becomes the number of liked songs.
-#: src/i18n.rs:195
+#: src/i18n.rs:172
 #, rust-format
 msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
@@ -185,7 +185,7 @@ msgstr[2] "Playlista • {count} utworów"
 #. Translators: Keep {count} exactly as written. It becomes a number of songs.
 #. Translators: Keep {count} exactly as written. It becomes the number of selected songs.
 #. Translators: {count} is a number of songs.
-#: src/i18n.rs:206 src/ui/widgets.rs:511 src/ui/collection.rs:1894
+#: src/i18n.rs:183 src/ui/widgets.rs:511 src/ui/collection.rs:1894
 #, rust-format
 msgid "{count} song"
 msgid_plural "{count} songs"
@@ -194,7 +194,7 @@ msgstr[1] "{count} utwory"
 msgstr[2] "{count} utworów"
 
 #. Translators: Keep {count} exactly as written. It becomes a number of playlists.
-#: src/i18n.rs:217
+#: src/i18n.rs:194
 #, rust-format
 msgid "{count} playlist"
 msgid_plural "{count} playlists"
@@ -203,7 +203,7 @@ msgstr[1] "{count} playlisty"
 msgstr[2] "{count} playlist"
 
 #. Translators: Keep {count} exactly as written. It becomes the number of playlists a folder holds.
-#: src/i18n.rs:228
+#: src/i18n.rs:205
 #, rust-format
 msgid "Folder • {count} playlist"
 msgid_plural "Folder • {count} playlists"
@@ -211,12 +211,12 @@ msgstr[0] "Folder • {count} playlista"
 msgstr[1] "Folder • {count} playlisty"
 msgstr[2] "Folder • {count} playlist"
 
-#: src/i18n.rs:238
+#: src/i18n.rs:215
 #, rust-format
 msgid "{name}, folder, collapsed"
 msgstr "{name}, folder, zwinięty"
 
-#: src/i18n.rs:240
+#: src/i18n.rs:217
 #, rust-format
 msgid "{name}, folder, expanded"
 msgstr "{name}, folder, rozwinięty"
@@ -1916,7 +1916,9 @@ msgstr ""
 msgid ""
 "The Omarchy palette could not be loaded. Keeping the last usable appearance. "
 "See the log for details."
-msgstr "Nie udało się wczytać palety Omarchy. Zachowano ostatni działający wygląd. Szczegóły znajdziesz w dzienniku."
+msgstr ""
+"Nie udało się wczytać palety Omarchy. Zachowano ostatni działający wygląd. "
+"Szczegóły znajdziesz w dzienniku."
 
 #: src/theme.rs:195
 msgid ""

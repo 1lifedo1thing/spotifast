@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-25 14:43+0200\n"
+"POT-Creation-Date: 2026-09-25 14:46+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Simplified Chinese\n"
@@ -74,7 +74,7 @@ msgstr "文件夹"
 msgid "Playlist • {owner}"
 msgstr "歌单 • {owner}"
 
-#: src/ui/sidebar.rs:810 src/i18n.rs:302 src/i18n.rs:305 src/ui/keys.rs:245
+#: src/ui/sidebar.rs:810 src/i18n.rs:248 src/i18n.rs:251 src/ui/keys.rs:245
 #: src/ui/topbar.rs:214
 msgid "Home"
 msgstr "首页"
@@ -173,7 +173,7 @@ msgid "Pin to top"
 msgstr "置顶"
 
 #. Translators: Keep {count} exactly as written. It becomes the number of liked songs.
-#: src/i18n.rs:195
+#: src/i18n.rs:172
 #, rust-format
 msgid "Playlist • {count} song"
 msgid_plural "Playlist • {count} songs"
@@ -182,32 +182,32 @@ msgstr[0] "歌单 • {count} 首歌曲"
 #. Translators: Keep {count} exactly as written. It becomes a number of songs.
 #. Translators: Keep {count} exactly as written. It becomes the number of selected songs.
 #. Translators: {count} is a number of songs.
-#: src/i18n.rs:206 src/ui/widgets.rs:511 src/ui/collection.rs:1894
+#: src/i18n.rs:183 src/ui/widgets.rs:511 src/ui/collection.rs:1894
 #, rust-format
 msgid "{count} song"
 msgid_plural "{count} songs"
 msgstr[0] "{count} 首歌曲"
 
 #. Translators: Keep {count} exactly as written. It becomes a number of playlists.
-#: src/i18n.rs:217
+#: src/i18n.rs:194
 #, rust-format
 msgid "{count} playlist"
 msgid_plural "{count} playlists"
 msgstr[0] "{count} 个歌单"
 
 #. Translators: Keep {count} exactly as written. It becomes the number of playlists a folder holds.
-#: src/i18n.rs:228
+#: src/i18n.rs:205
 #, rust-format
 msgid "Folder • {count} playlist"
 msgid_plural "Folder • {count} playlists"
 msgstr[0] "文件夹 • {count} 个歌单"
 
-#: src/i18n.rs:238
+#: src/i18n.rs:215
 #, rust-format
 msgid "{name}, folder, collapsed"
 msgstr "{name}，文件夹，已折叠"
 
-#: src/i18n.rs:240
+#: src/i18n.rs:217
 #, rust-format
 msgid "{name}, folder, expanded"
 msgstr "{name}，文件夹，已展开"
