@@ -2645,17 +2645,19 @@ pub fn search_field(
             .max_rect(field_rect)
             .layout(Layout::left_to_right(Align::Center)),
     );
-    // A right-to-left query is shown in reading order. The caret keeps
-    // egui's own idea of where it is: at the end of what was typed.
+    // A right-to-left query is shown in reading order. The glyphs stay in
+    // the buffer's order, flagged by direction, so the caret follows them.
     let text_color = palette.text;
     let mut layouter = |ui: &egui::Ui, buffer: &dyn egui::TextBuffer, _wrap_width: f32| {
-        let shown = crate::bidi::display_text(buffer.as_str()).into_owned();
-        ui.painter()
+        let mut galley = ui
+            .painter()
             .layout_job(egui::text::LayoutJob::simple_singleline(
-                shown,
+                buffer.as_str().to_owned(),
                 theme::regular(14.0),
                 text_color,
-            ))
+            ));
+        crate::bidi::reorder(&mut galley);
+        galley
     };
     let response = text_edit(
         &mut child,

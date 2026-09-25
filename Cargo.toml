@@ -165,10 +165,6 @@ mpris-server = { version = "0.10", features = ["tokio"] }
 # launch a Spotify link makes (src/single_instance.rs). Same version, so
 # nothing new is compiled.
 zbus = { version = "5", default-features = false, features = ["tokio"] }
-# Asks the Wayland compositor at startup whether it reports hidden windows as
-# suspended (xdg-shell v6), which decides whether vsync is safe. winit already
-# compiles this version.
-wayland-client = "0.31"
 # Keeps the X11 mini player out of the taskbar with _NET_WM_STATE_SKIP_TASKBAR
 # (src/window.rs), which winit only offers on Windows. winit already
 # compiles this version.
@@ -218,16 +214,35 @@ opt-level = 2
 [profile.dev.package.projectm-sys]
 opt-level = 0
 
+[patch.crates-io]
+# crmne/egui apps-0.36, shared with ZapFast, RekordFlash and TonePush: egui
+# 0.36.1 with right-to-left runs shaped in their bidi direction and digits
+# shaped left to right in text without right-to-left letters
+# (emilk/egui#8577), egui's busy-loop fix (emilk/egui#8398), and eframe pacing
+# Wayland frames by the compositor's frame callbacks so a window the
+# compositor stops showing never blocks in a vsync swap (emilk/egui#8631,
+# #266). Every egui crate comes from the same revision so they share one emath
+# and epaint. Drop this once egui releases all three.
+ecolor = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+eframe = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+egui = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+egui-wgpu = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+egui-winit = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+egui_extras = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+egui_glow = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+emath = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+epaint = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+epaint_default_fonts = { git = "https://github.com/crmne/egui", rev = "0b431145c22ee27b20b0aff7243d74f4b32e9a79" }
+# crmne/winit apps-0.30, shared with the same apps: winit 0.30.13 plus Wayland
+# `Occluded` for the xdg-shell suspended state with commits on the app's behalf
+# while it isn't presenting (rust-windowing/winit#4709, #4710), macOS Quit
+# through close requests behind a feature Spotifast leaves off (winit#4692),
+# and file drag and drop on Wayland. eframe from the fork above calls the
+# Occluded API. Move both forks together with the other apps.
+winit = { git = "https://github.com/crmne/winit", rev = "fc4f39ff0993dd235952b749dd16b856c0194e1f" }
 # projectm-sys 1.2.2 hardcodes the Visual Studio 17 2022 CMake generator,
 # which GitHub's windows-latest images no longer carry; the fork lets an
 # explicit CMAKE_GENERATOR win. Drop when upstream takes the change.
-[patch.crates-io]
-# winit 0.30.13 plus Wayland `Occluded` events for the xdg-shell suspended
-# state, without a redraw request while suspended. eframe then stops painting
-# a hidden window instead of blocking in eglSwapBuffers, so vsync stays safe on
-# Wayland. Proposed upstream for rust-windowing/winit#3442; drop the fork when
-# a release includes it.
-winit = { git = "https://github.com/crmne/winit", rev = "c8df61a52b8b563e1bb65e0f1d8630289d1c1bd6" }
 projectm-sys = { git = "https://github.com/crmne/projectm-rs", branch = "respect-cmake-generator" }
 # hyper-proxy2's unreleased rustls 0.23 update plus our upstream provider
 # compatibility fix. Drop this fork when a release includes both changes.

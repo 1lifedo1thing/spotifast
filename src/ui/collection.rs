@@ -103,12 +103,9 @@ pub(super) fn hero(app: &mut App, ui: &mut egui::Ui, hero: Hero<'_>) {
             ui.add_space(cover_size * 0.08);
             theme::text(ui, hero.kind.as_ref(), theme::medium(12.5), palette.text);
             let mut size = if cover_size > 200.0 { 56.0 } else { 40.0 };
-            // Measured on the display text: the same glyphs, in the order
-            // they are drawn.
-            let display_title = crate::bidi::display_text(hero.title);
             loop {
                 let galley = ui.painter().layout_no_wrap(
-                    display_title.to_string(),
+                    hero.title.to_string(),
                     theme::bold(size),
                     palette.text,
                 );

@@ -30,6 +30,14 @@ These instructions add implementation constraints for coding agents.
 - For dependency fixes, use a maintainer-owned fork pinned to a commit and
   contribute the fix upstream. Use the fork until a release includes the fix;
   do not copy dependency source into this repository.
+- egui and winit come from forks shared with ZapFast, RekordFlash and TonePush
+  (crmne/egui apps-0.36, crmne/winit apps-0.30); move all their crates to a
+  new revision together. On Wayland, eframe from that fork paces frames by
+  the compositor's frame callbacks instead of a vsync swap, so a hidden window
+  cannot freeze the app (#266). Do not add a vsync decision of our own.
+- The egui fork shapes right-to-left runs in their own direction but leaves
+  them in logical order. Pass logical text to `crate::bidi`, which reorders
+  the laid-out runs; never reorder the string before layout.
 
 Read `docs/_reference/how-it-connects.md` before changing authentication,
 Spotify requests, Connect, credential storage, or network behaviour. Read

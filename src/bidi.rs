@@ -1,18 +1,22 @@
-//! Right-to-left text support for egui's left-to-right layout.
+//! Right-to-left text support for egui.
 //!
-//! epaint shapes letters within Arabic and Hebrew words but does not reorder
-//! the words or align the line to the right.
+//! The shared egui fork (crmne/egui apps-0.36, emilk/egui#8577) splits font
+//! runs where the Unicode bidi level changes and shapes each in its resolved
+//! direction, so letters join and brackets mirror, but it still places the
+//! shaped runs left to right in logical order. [`reorder`] moves them into
+//! visual order after layout. The glyph vector stays in logical order with
+//! each glyph's `rtl` flag set, so carets and hit-testing follow the text.
 //!
-//! [`display_text`] applies visual word order while preserving logical letter
-//! order for shaping. [`layout`] handles wrapped and truncated text one row at
-//! a time and places ellipses at the left reading edge.
+//! [`layout`] handles wrapped and truncated text one row at a time and
+//! places ellipses at the left reading edge.
 
-use std::borrow::Cow;
 use std::sync::Arc;
 
+use egui::epaint::text::{Glyph, Row};
+use egui::epaint::{Mesh, Vec2};
 use egui::text::LayoutJob;
 use egui::{Align, Align2, Color32, FontId, Galley, Painter, Pos2, Rect, pos2};
-use unicode_bidi::{BidiClass, BidiInfo, bidi_class};
+use unicode_bidi::{BidiClass, BidiInfo, Level, bidi_class};
 
 /// The character that marks a cut.
 pub const ELLIPSIS: char = '\u{2026}';
@@ -35,6 +39,12 @@ pub fn is_rtl(text: &str) -> bool {
     false
 }
 
+/// Whether the text holds a right-to-left letter anywhere, so its runs need
+/// reordering even when the paragraph reads left to right.
+fn has_rtl(text: &str) -> bool {
+    !text.is_ascii() && text.chars().any(is_strong_rtl)
+}
+
 /// The edge the text should hug.
 pub fn halign_for(text: &str) -> Align {
     if is_rtl(text) {
@@ -44,70 +54,16 @@ pub fn halign_for(text: &str) -> Align {
     }
 }
 
-/// `text` as the engine should receive it: every right-to-left line with
-/// its words reordered. Text that needs no change comes back borrowed.
-pub fn display_text(text: &str) -> Cow<'_, str> {
-    if !text.contains('\n') {
-        return display_line(text);
-    }
-    if !text.split('\n').any(is_rtl) {
-        return Cow::Borrowed(text);
-    }
-    Cow::Owned(
-        text.split('\n')
-            .map(display_line)
-            .collect::<Vec<_>>()
-            .join("\n"),
-    )
-}
-
-/// The reordered text, or `None` when `text` can be used as it is. Saves a
-/// copy where the caller already owns a `String`.
-pub fn reorder(text: &str) -> Option<String> {
-    match display_text(text) {
-        Cow::Owned(owned) => Some(owned),
-        Cow::Borrowed(_) => None,
-    }
-}
-
-/// One line. Punctuation, digits, and an ellipsis marking a cut keep the
-/// places the bidi algorithm gives them; only the letters of each
-/// right-to-left run go back to logical order, for the shaper to mirror.
-fn display_line(line: &str) -> Cow<'_, str> {
-    if !is_rtl(line) || line.chars().all(is_rtl_letter) {
-        return Cow::Borrowed(line);
-    }
-    let line = line.trim_end_matches('\r');
-    let info = BidiInfo::new(line, None);
-    let Some(paragraph) = info.paragraphs.first() else {
-        return Cow::Borrowed(line);
-    };
-    let visual = info.reorder_line(paragraph, paragraph.range.clone());
-    let mut out = String::with_capacity(line.len());
-    let mut letters: Vec<char> = Vec::new();
-    for (index, word) in visual.split_whitespace().enumerate() {
-        if index > 0 {
-            out.push(' ');
-        }
-        for character in word.chars() {
-            if is_rtl_letter(character) {
-                letters.push(character);
-            } else {
-                out.extend(letters.drain(..).rev());
-                out.push(character);
-            }
-        }
-        out.extend(letters.drain(..).rev());
-    }
-    Cow::Owned(out)
-}
-
-/// A letter of a right-to-left script, or a mark that rides on one.
-fn is_rtl_letter(character: char) -> bool {
-    matches!(
-        bidi_class(character),
-        BidiClass::R | BidiClass::AL | BidiClass::NSM
-    )
+/// One line of `text`, unwrapped, in visual order.
+pub fn layout_line(
+    painter: &Painter,
+    text: impl Into<String>,
+    font: FontId,
+    color: Color32,
+) -> Arc<Galley> {
+    let mut galley = painter.layout_no_wrap(text.into(), font, color);
+    reorder(&mut galley);
+    galley
 }
 
 /// Lays `text` out within `wrap_width`, on at most `max_rows` rows, with
@@ -123,18 +79,17 @@ pub fn layout(
     max_rows: usize,
     overflow: Option<char>,
 ) -> Arc<Galley> {
-    if !text.split('\n').any(is_rtl) {
+    if !has_rtl(text) {
         let mut job = LayoutJob::simple(text.to_owned(), font, color, wrap_width);
         job.wrap.max_rows = max_rows;
         job.wrap.break_anywhere = false;
         job.wrap.overflow_character = overflow;
         return painter.layout_job(job);
     }
-    // The rows are found on the logical text, whole words at a time, then
-    // each row is reordered on its own, so a paragraph's first row still
-    // holds its first words. epaint shapes the words itself, so a row's
-    // glyphs say nothing reliable about its characters; measuring words is
-    // the dependable way to know what fits.
+    // The rows are found here, whole words at a time, and each becomes a
+    // paragraph of its own, so a paragraph's first row still holds its first
+    // words and the cut lands where it is read last. Measuring words is the
+    // dependable way to know what fits: epaint shapes them itself.
     let width = |piece: &str| {
         painter
             .layout_no_wrap(piece.to_owned(), font.clone(), color)
@@ -142,14 +97,13 @@ pub fn layout(
             .x
     };
     let rows = break_rows(text, wrap_width, max_rows, overflow, width);
-    let display = rows
-        .iter()
-        .map(|row| display_line(row))
-        .collect::<Vec<_>>()
-        .join("\n");
-    let mut job = LayoutJob::simple(display, font, color, f32::INFINITY);
-    job.halign = Align::RIGHT;
-    painter.layout_job(job)
+    let mut job = LayoutJob::simple(rows.join("\n"), font, color, f32::INFINITY);
+    if text.split('\n').any(is_rtl) {
+        job.halign = Align::RIGHT;
+    }
+    let mut galley = painter.layout_job(job);
+    reorder(&mut galley);
+    galley
 }
 
 /// Fills rows with whole words up to `wrap_width`, at most `max_rows` of
@@ -203,10 +157,11 @@ fn break_rows(
         let last = rows.last_mut().expect("one row at least");
         if cut || last.1 > wrap_width {
             // Each candidate is measured as `layout` will draw it: shaped
-            // whole, mark included, in display order. Letters join and
-            // ligate, so what is left of a word cannot be worked out from
-            // the widths of the letters taken away.
-            let drawn = |row: &str| width(&display_line(&format!("{row}{mark}")));
+            // whole, mark included. Letters join and ligate, so what is left
+            // of a word cannot be worked out from the widths of the letters
+            // taken away. Reordering moves shaped runs without changing their
+            // widths, so logical order measures the same.
+            let drawn = |row: &str| width(&format!("{row}{mark}"));
             while drawn(&last.0) > wrap_width
                 && let Some(at) = last.0.rfind(' ')
             {
@@ -273,17 +228,363 @@ pub fn paint_line(
     font: FontId,
     color: Color32,
 ) -> Rect {
-    if is_rtl(text) {
-        painter.text(
-            pos2(right, y),
-            Align2::RIGHT_CENTER,
-            display_text(text),
-            font,
-            color,
-        )
-    } else {
-        painter.text(pos2(left, y), Align2::LEFT_CENTER, text, font, color)
+    if !has_rtl(text) {
+        return painter.text(pos2(left, y), Align2::LEFT_CENTER, text, font, color);
     }
+    let galley = layout_line(painter, text, font, color);
+    let rect = if is_rtl(text) {
+        Align2::RIGHT_CENTER.anchor_size(pos2(right, y), galley.size())
+    } else {
+        Align2::LEFT_CENTER.anchor_size(pos2(left, y), galley.size())
+    };
+    painter.galley(rect.min, galley, color);
+    rect
+}
+
+/// Puts each row of a galley laid out in logical order into visual order.
+///
+/// Every row is resolved with the bidi levels of its own paragraph. Shaped
+/// runs move as blocks, so letters the fork already shaped right to left keep
+/// their order; the glyph vector returns to logical order afterwards, with
+/// right-to-left glyphs flagged for epaint's cursor code. Galleys with no
+/// right-to-left letter are left untouched and never copied.
+///
+/// Only for galleys without decorations and without an epaint overflow
+/// character: [`layout`] cuts rows itself, so neither happens here.
+pub fn reorder(galley: &mut Arc<Galley>) {
+    if !has_rtl(galley.text())
+        || galley
+            .rows
+            .iter()
+            .all(|placed| placed.row.glyphs.is_empty() || already_visual(&placed.row.glyphs))
+    {
+        return;
+    }
+    let galley = Arc::make_mut(galley);
+    let text = galley.job.text.clone();
+    for placed in &mut galley.rows {
+        reorder_row(Arc::make_mut(&mut placed.row), &text);
+    }
+    refresh_bounds(galley);
+}
+
+fn reorder_row(row: &mut Row, text: &str) {
+    if row.glyphs.is_empty() || already_visual(&row.glyphs) {
+        return;
+    }
+    let Some((start, end)) = line_span(&row.glyphs, text) else {
+        return;
+    };
+    let (levels, end) = line_levels(text, start, end);
+    let line = &text[start..end];
+    let visual_of_logical = visual_indices(&levels);
+    let char_at_byte = char_starts(line);
+    let visual_key = |glyph: &Glyph| {
+        (glyph.cluster as usize)
+            .checked_sub(start)
+            .and_then(|offset| char_at_byte.get(offset).copied())
+            .map(|logical| visual_of_logical.get(logical).copied().unwrap_or(logical))
+    };
+
+    let visual_keys: Vec<usize> = row
+        .glyphs
+        .iter()
+        .map(|glyph| visual_key(glyph).unwrap_or(usize::MAX))
+        .collect();
+    let mut atoms: Vec<Atom> = split_atoms(&row.glyphs, &visual_keys)
+        .into_iter()
+        .filter_map(|glyphs| {
+            let slice = &row.glyphs[glyphs.clone()];
+            let key = slice.iter().filter_map(visual_key).min()?;
+            let min_x = slice
+                .iter()
+                .map(|glyph| glyph.pos.x)
+                .fold(f32::INFINITY, f32::min);
+            let max_x = slice
+                .iter()
+                .map(Glyph::max_x)
+                .fold(f32::NEG_INFINITY, f32::max);
+            (min_x.is_finite() && max_x.is_finite()).then_some(Atom {
+                glyphs,
+                key,
+                min_x,
+                width: (max_x - min_x).max(0.0),
+            })
+        })
+        .collect();
+    atoms.sort_by(|a, b| a.key.cmp(&b.key).then(a.glyphs.start.cmp(&b.glyphs.start)));
+
+    let mut cursor = 0.0_f32;
+    for atom in &atoms {
+        let delta = cursor - atom.min_x;
+        if delta.abs() > 0.01 {
+            for glyph in &mut row.glyphs[atom.glyphs.clone()] {
+                glyph.pos.x += delta;
+                shift_glyph_mesh(&mut row.visuals.mesh, glyph, egui::vec2(delta, 0.0));
+            }
+        }
+        cursor += atom.width;
+    }
+
+    for glyph in &mut row.glyphs {
+        let logical = (glyph.cluster as usize)
+            .checked_sub(start)
+            .and_then(|offset| char_at_byte.get(offset).copied());
+        glyph.rtl = logical
+            .and_then(|index| levels.get(index))
+            .is_some_and(|level| level.is_rtl());
+    }
+    let mut order: Vec<usize> = (0..row.glyphs.len()).collect();
+    order.sort_by(|&left, &right| {
+        row.glyphs[left]
+            .cluster
+            .cmp(&row.glyphs[right].cluster)
+            .then(left.cmp(&right))
+    });
+    let glyphs = std::mem::take(&mut row.glyphs);
+    row.glyphs = order.into_iter().map(|index| glyphs[index]).collect();
+    repack_glyph_vertices(row);
+    let content_right = row.glyphs.iter().map(Glyph::max_x).fold(0.0_f32, f32::max);
+    row.size.x = row.size.x.max(content_right).max(cursor);
+}
+
+/// Glyphs that move together, and where they sat before.
+struct Atom {
+    glyphs: std::ops::Range<usize>,
+    key: usize,
+    min_x: f32,
+    width: f32,
+}
+
+/// True when a previous pass already stored logical order and bidi levels.
+fn already_visual(glyphs: &[Glyph]) -> bool {
+    glyphs.iter().any(|glyph| glyph.rtl)
+        && glyphs
+            .windows(2)
+            .all(|pair| pair[0].cluster <= pair[1].cluster)
+}
+
+/// The byte range of `text` a row's glyphs cover.
+fn line_span(glyphs: &[Glyph], text: &str) -> Option<(usize, usize)> {
+    let start = glyphs.iter().map(|glyph| glyph.cluster as usize).min()?;
+    if start > text.len() {
+        return None;
+    }
+    let mut end = start;
+    for glyph in glyphs {
+        let byte = glyph.cluster as usize;
+        let next = text.get(byte..)?.chars().next()?.len_utf8();
+        end = end.max(byte + next);
+    }
+    (end <= text.len()).then_some((start, end))
+}
+
+/// Levels of the characters in `text[start..end]`, with the end clipped to
+/// their paragraph. Levels come from the whole paragraph, so a row keeps its
+/// paragraph's base direction instead of guessing one from its first word.
+fn line_levels(text: &str, start: usize, end: usize) -> (Vec<Level>, usize) {
+    let paragraph_start = text[..start].rfind('\n').map_or(0, |at| at + 1);
+    let paragraph_end = text[start..].find('\n').map_or(text.len(), |at| start + at);
+    let end = end.min(paragraph_end);
+    let info = BidiInfo::new(&text[paragraph_start..paragraph_end], None);
+    let line = start - paragraph_start..end - paragraph_start;
+    let mut by_byte = vec![Level::ltr(); line.len()];
+    for paragraph in &info.paragraphs {
+        let overlap = paragraph.range.start.max(line.start)..paragraph.range.end.min(line.end);
+        if overlap.is_empty() {
+            continue;
+        }
+        let levels = info.reordered_levels(paragraph, overlap.clone());
+        by_byte[overlap.start - line.start..overlap.end - line.start]
+            .copy_from_slice(&levels[overlap]);
+    }
+    let levels = text[start..end]
+        .char_indices()
+        .map(|(byte, _)| by_byte[byte])
+        .collect();
+    (levels, end)
+}
+
+/// The character index at each byte offset of `text`.
+fn char_starts(text: &str) -> Vec<usize> {
+    let mut starts = vec![0; text.len() + 1];
+    for (index, (byte, _)) in text.char_indices().enumerate() {
+        starts[byte] = index;
+    }
+    starts
+}
+
+/// The visual position of each logical character.
+fn visual_indices(levels: &[Level]) -> Vec<usize> {
+    let map = BidiInfo::reorder_visual(levels);
+    let mut logical_to_visual = vec![0; map.len()];
+    for (visual, &logical) in map.iter().enumerate() {
+        if logical < logical_to_visual.len() {
+            logical_to_visual[logical] = visual;
+        }
+    }
+    logical_to_visual
+}
+
+/// Shaped runs to move as a block.
+///
+/// A descending cluster sequence is one font run that harfrust already shaped
+/// right to left. Splitting it would reverse Arabic letters a second time.
+/// A single Hebrew letter has no descent, so it stays its own run and can
+/// still move relative to the neighbouring space.
+fn split_atoms(glyphs: &[Glyph], visual_keys: &[usize]) -> Vec<std::ops::Range<usize>> {
+    let mut atoms = Vec::new();
+    let mut index = 0;
+    while index < glyphs.len() {
+        if let Some(end) = rtl_run_end(glyphs, index) {
+            atoms.push(index..end);
+            index = end;
+            continue;
+        }
+        if is_strong_rtl(glyphs[index].chr) {
+            let end = same_cluster_end(glyphs, index);
+            atoms.push(index..end);
+            index = end;
+            continue;
+        }
+        // Keep a left-to-right run together only while its visual order
+        // matches the buffer. A space before a number is earlier in the
+        // buffer and later on screen, so it has to move on its own.
+        let start = index;
+        let mut previous = visual_keys.get(index).copied().unwrap_or(usize::MAX);
+        index += 1;
+        while index < glyphs.len()
+            && rtl_run_end(glyphs, index).is_none()
+            && !is_strong_rtl(glyphs[index].chr)
+        {
+            let key = visual_keys.get(index).copied().unwrap_or(usize::MAX);
+            if key < previous {
+                break;
+            }
+            previous = key;
+            index += 1;
+        }
+        atoms.push(start..index);
+    }
+    atoms
+}
+
+/// End of the shaped cluster starting at `start`.
+///
+/// A ligature such as لا is one glyph followed by zero-width continuation
+/// glyphs for the letters it absorbed. Those carry their own letters' byte
+/// offsets, which are higher than the ligature's, so they belong to the
+/// cluster before them rather than breaking a descending right-to-left run.
+fn same_cluster_end(glyphs: &[Glyph], start: usize) -> usize {
+    let mut end = start + 1;
+    while end < glyphs.len()
+        && (glyphs[end].cluster == glyphs[start].cluster || is_continuation(&glyphs[end]))
+    {
+        end += 1;
+    }
+    end
+}
+
+/// A zero-width stand-in epaint emits for a character its shaped cluster covers.
+fn is_continuation(glyph: &Glyph) -> bool {
+    glyph.advance_width == 0.0 && glyph.uv_rect.is_nothing()
+}
+
+fn rtl_run_end(glyphs: &[Glyph], start: usize) -> Option<usize> {
+    let mut previous = start;
+    let mut end = same_cluster_end(glyphs, start);
+    if end >= glyphs.len() || glyphs[end].cluster >= glyphs[previous].cluster {
+        return None;
+    }
+    while end < glyphs.len() && glyphs[end].cluster < glyphs[previous].cluster {
+        previous = end;
+        end = same_cluster_end(glyphs, end);
+    }
+    Some(end)
+}
+
+fn refresh_bounds(galley: &mut Galley) {
+    let mut rect: Option<Rect> = None;
+    let mut mesh_bounds: Option<Rect> = None;
+    for placed in &mut galley.rows {
+        let row = Arc::make_mut(&mut placed.row);
+        row.visuals.mesh_bounds = row.visuals.mesh.calc_bounds();
+        let row_rect = Rect::from_min_size(placed.pos, row.size);
+        rect = Some(rect.map_or(row_rect, |rect| rect.union(row_rect)));
+        let moved = row.visuals.mesh_bounds.translate(placed.pos.to_vec2());
+        mesh_bounds = Some(mesh_bounds.map_or(moved, |bounds| bounds.union(moved)));
+    }
+    if let Some(rect) = rect {
+        galley.rect = rect;
+    }
+    if let Some(bounds) = mesh_bounds {
+        galley.mesh_bounds = bounds;
+    }
+}
+
+fn shift_glyph_mesh(mesh: &mut Mesh, glyph: &Glyph, delta: Vec2) {
+    if glyph.uv_rect.is_nothing() || delta == Vec2::ZERO {
+        return;
+    }
+    let start = glyph.first_vertex as usize;
+    let end = (start + 4).min(mesh.vertices.len());
+    for vertex in &mut mesh.vertices[start..end] {
+        vertex.pos += delta;
+    }
+}
+
+/// Packs glyph quads into logical order so selection vertex ranges stay
+/// contiguous.
+fn repack_glyph_vertices(row: &mut Row) {
+    let range = row.visuals.glyph_vertex_range.clone();
+    if range.start > range.end || range.end > row.visuals.mesh.vertices.len() {
+        return;
+    }
+    let mut packed = Vec::new();
+    let mut remap = vec![u32::MAX; row.visuals.mesh.vertices.len()];
+    for (index, slot) in remap.iter_mut().enumerate().take(range.start) {
+        *slot = index as u32;
+    }
+    for glyph in &mut row.glyphs {
+        let source = glyph.first_vertex as usize;
+        let count = if glyph.uv_rect.is_nothing() { 0 } else { 4 };
+        glyph.first_vertex = (range.start + packed.len()) as u32;
+        if count == 0 || source.saturating_add(count) > row.visuals.mesh.vertices.len() {
+            continue;
+        }
+        for offset in 0..count {
+            remap[source + offset] = (range.start + packed.len()) as u32;
+            packed.push(row.visuals.mesh.vertices[source + offset]);
+        }
+    }
+    let shift = packed.len() as i64 - (range.end - range.start) as i64;
+    for (index, slot) in remap.iter_mut().enumerate().skip(range.end) {
+        *slot = (index as i64 + shift) as u32;
+    }
+    let mut vertices =
+        Vec::with_capacity(range.start + packed.len() + remap.len().saturating_sub(range.end));
+    vertices.extend_from_slice(&row.visuals.mesh.vertices[..range.start]);
+    vertices.extend(packed);
+    vertices.extend_from_slice(&row.visuals.mesh.vertices[range.end..]);
+    row.visuals.mesh.vertices = vertices;
+    for index in &mut row.visuals.mesh.indices {
+        if let Some(mapped) = remap.get(*index as usize)
+            && *mapped != u32::MAX
+        {
+            *index = *mapped;
+        }
+    }
+    let glyph_len = row
+        .glyphs
+        .iter()
+        .map(|glyph| usize::from(!glyph.uv_rect.is_nothing()) * 4)
+        .sum::<usize>();
+    row.visuals.glyph_vertex_range = range.start..range.start + glyph_len;
+}
+
+/// A letter of a right-to-left script.
+fn is_strong_rtl(character: char) -> bool {
+    matches!(bidi_class(character), BidiClass::R | BidiClass::AL)
 }
 
 #[cfg(test)]
@@ -376,7 +677,8 @@ mod tests {
                         );
                         let text = galley.text();
                         assert_eq!(galley.rows.len(), 1, "{text:?}");
-                        assert!(text.starts_with(ELLIPSIS), "{text:?}");
+                        assert!(text.ends_with(ELLIPSIS), "{text:?}");
+                        assert_mark_drawn_leftmost(&galley);
                         let drawn = galley.rows[0].size.x;
                         assert!(
                             drawn <= wrap_width,
@@ -413,49 +715,6 @@ mod tests {
         assert!(!is_rtl("   "));
         assert!(!is_rtl("123"));
         assert!(!is_rtl("Ça va"));
-    }
-
-    #[test]
-    fn reorders_words_of_rtl_lines() {
-        assert_eq!(display_text("غيوم في السماء"), "السماء في غيوم");
-        assert_eq!(display_text("مرحبا بالعالم"), "بالعالم مرحبا");
-        assert_eq!(display_text("واحد اثنان ثلاثة"), "ثلاثة اثنان واحد");
-        // A single word is already right.
-        assert_eq!(display_text("غيوم"), "غيوم");
-        assert!(matches!(display_text("غيوم"), Cow::Borrowed(_)));
-        // Left-to-right text, even with a right-to-left word in it, stays.
-        assert_eq!(display_text("Hello غيوم"), "Hello غيوم");
-        assert!(matches!(display_text("Hello world"), Cow::Borrowed(_)));
-        // A Latin run inside a right-to-left line keeps its own order.
-        assert_eq!(display_text("غيوم Hello"), "Hello غيوم");
-    }
-
-    #[test]
-    fn ellipsis_moves_to_the_reading_end() {
-        assert_eq!(display_text("غيوم في\u{2026}"), "\u{2026}في غيوم");
-        assert_eq!(display_text("غيوم\u{2026}"), "\u{2026}غيوم");
-        assert_eq!(display_text("Hello\u{2026}"), "Hello\u{2026}");
-    }
-
-    /// Punctuation and numbers follow their word on its left, where a
-    /// right-to-left reader expects what comes after it.
-    #[test]
-    fn punctuation_and_digits_stay_after_their_word() {
-        assert_eq!(display_text("الحلقة الأولى: كيف"), "كيف :الأولى الحلقة");
-        assert_eq!(display_text("وإدارة شركتك. يقدمه"), "يقدمه .شركتك وإدارة");
-        assert_eq!(display_text("الكلمة1 الكلمة2"), "2الكلمة 1الكلمة");
-        assert_eq!(display_text("شركة 37signals كل"), "كل 37signals شركة");
-    }
-
-    #[test]
-    fn lines_are_reordered_one_by_one() {
-        assert_eq!(
-            display_text("غيوم في السماء\nHello world\nمرحبا بالعالم"),
-            "السماء في غيوم\nHello world\nبالعالم مرحبا"
-        );
-        assert!(matches!(display_text("Hello\nworld"), Cow::Borrowed(_)));
-        assert_eq!(reorder("Hello world"), None);
-        assert_eq!(reorder("غيوم في").as_deref(), Some("في غيوم"));
     }
 
     #[test]
@@ -514,12 +773,23 @@ mod tests {
             let lines: Vec<&str> = galley.text().split('\n').collect();
             assert_eq!(lines.len(), 2, "{lines:?}");
             assert!(
-                lines[0].ends_with("واحد"),
-                "first row ends with the first word: {lines:?}"
+                lines[0].starts_with("واحد"),
+                "first row holds the first word: {lines:?}"
             );
             assert!(
-                lines[1].starts_with(ELLIPSIS),
-                "the cut is at the left end: {lines:?}"
+                lines[1].ends_with(ELLIPSIS),
+                "the cut ends the text: {lines:?}"
+            );
+            assert_mark_drawn_leftmost(&galley);
+            let first = &galley.rows[0].row.glyphs;
+            let rightmost = first
+                .iter()
+                .max_by(|a, b| a.pos.x.total_cmp(&b.pos.x))
+                .expect("glyphs");
+            assert_eq!(
+                galley.text()[rightmost.cluster as usize..].chars().next(),
+                Some('و'),
+                "the first word is read first, on the right"
             );
             let plain = layout(
                 painter,
@@ -532,6 +802,238 @@ mod tests {
             );
             assert_eq!(plain.job.halign, Align::LEFT);
             assert_eq!(plain.text(), "Hello world");
+        });
+        output.textures_delta.clear();
+    }
+    /// The last row's ellipsis is its leftmost glyph: where a right-to-left
+    /// reader reaches the cut.
+    fn assert_mark_drawn_leftmost(galley: &Galley) {
+        let last = &galley.rows.last().expect("rows").row.glyphs;
+        let leftmost = last
+            .iter()
+            .filter(|glyph| glyph.advance_width > 0.01)
+            .min_by(|a, b| a.pos.x.total_cmp(&b.pos.x))
+            .expect("glyphs");
+        assert_eq!(leftmost.chr, ELLIPSIS, "{:?}", galley.text());
+    }
+
+    /// Checks every row against `unicode-bidi`'s reordered line for its
+    /// paragraph: the drawn glyphs, left to right, spell the reordered line,
+    /// less the characters that draw nothing of their own. ASCII paired
+    /// brackets must also face their resolved direction: the glyph's ink in
+    /// the font atlas leans the way a mirrored or unmirrored bracket would.
+    fn assert_rows_follow_uba(galley: &Galley, atlas: &egui::ColorImage) {
+        use unicode_bidi::BidiDataSource as _;
+        let text = galley.text();
+        // Rows hold one glyph per character in logical order, so a row's
+        // text follows from glyph counts alone.
+        let byte_at: Vec<usize> = text
+            .char_indices()
+            .map(|(byte, _)| byte)
+            .chain(std::iter::once(text.len()))
+            .collect();
+        let mut first_char = 0usize;
+        for (index, placed) in galley.rows.iter().enumerate() {
+            let glyphs = &placed.row.glyphs;
+            let row_chars = first_char..first_char + glyphs.len();
+            first_char = row_chars.end + usize::from(placed.ends_with_newline);
+            if glyphs.is_empty() {
+                continue;
+            }
+            let (start, end) = (byte_at[row_chars.start], byte_at[row_chars.end]);
+            let paragraph_start = text[..start].rfind('\n').map_or(0, |at| at + 1);
+            let paragraph_end = text[start..].find('\n').map_or(text.len(), |at| start + at);
+            let paragraph = &text[paragraph_start..paragraph_end];
+            let info = BidiInfo::new(paragraph, None);
+            let line = start - paragraph_start..end.min(paragraph_end) - paragraph_start;
+            let resolved = info
+                .paragraphs
+                .iter()
+                .find(|candidate| candidate.range.contains(&line.start))
+                .expect("bidi paragraph for the row");
+            let levels = info.reordered_levels(resolved, line);
+            let row_text: Vec<char> = text[start..end].chars().collect();
+            let row_levels: Vec<Level> = (0..row_text.len())
+                .map(|offset| levels[byte_at[row_chars.start + offset] - paragraph_start])
+                .collect();
+            // Marks, joiners, and the letters a ligature absorbs draw no
+            // glyph of their own, so only glyphs that advance are compared.
+            let expected: String = BidiInfo::reorder_visual(&row_levels)
+                .into_iter()
+                .filter(|&offset| glyphs[offset].advance_width > 0.01)
+                .map(|offset| row_text[offset])
+                .collect();
+            let mut drawn: Vec<&Glyph> = glyphs
+                .iter()
+                .filter(|glyph| glyph.advance_width > 0.01)
+                .collect();
+            drawn.sort_by(|a, b| a.pos.x.total_cmp(&b.pos.x));
+            let visual: String = drawn.iter().map(|glyph| glyph.chr).collect();
+            assert_eq!(visual, expected, "row {index} of {paragraph:?}");
+            for (offset, glyph) in glyphs.iter().enumerate() {
+                let Some(bracket) =
+                    unicode_bidi::HardcodedBidiData.bidi_matched_opening_bracket(glyph.chr)
+                else {
+                    continue;
+                };
+                if !glyph.chr.is_ascii() || glyph.uv_rect.is_nothing() {
+                    continue;
+                }
+                let rtl = levels[byte_at[row_chars.start + offset] - paragraph_start].is_rtl();
+                // An opening bracket's ink sits left of centre; mirrored, right.
+                assert_eq!(
+                    ink_leans_right(atlas, glyph),
+                    bracket.is_open == rtl,
+                    "{:?} faces the wrong way in row {index} of {paragraph:?}",
+                    glyph.chr
+                );
+            }
+        }
+    }
+
+    /// Whether the glyph's middle bulges right of its tips, as `)`, `]`, and
+    /// `}` do.
+    fn ink_leans_right(atlas: &egui::ColorImage, glyph: &Glyph) -> bool {
+        let [left, top] = glyph.uv_rect.min;
+        let [right, bottom] = glyph.uv_rect.max;
+        let height = bottom - top;
+        assert!(height >= 4, "{:?} is too small to inspect", glyph.chr);
+        let centre_of = |rows: &mut dyn Iterator<Item = u16>| {
+            let mut mass = 0.0f32;
+            let mut moment = 0.0f32;
+            for y in rows {
+                for x in left..right {
+                    let alpha =
+                        f32::from(atlas.pixels[y as usize * atlas.size[0] + x as usize].a());
+                    mass += alpha;
+                    moment += alpha * f32::from(x);
+                }
+            }
+            assert!(mass > 0.0, "{:?} has no ink in the atlas", glyph.chr);
+            moment / mass
+        };
+        let quarter = height / 4;
+        let tips = centre_of(&mut (top..top + quarter).chain(bottom - quarter..bottom));
+        let middle = centre_of(&mut (top + quarter..bottom - quarter));
+        middle > tips
+    }
+
+    /// Lays out each sample with the app's fonts through `lay`, and checks
+    /// what is drawn against the Unicode bidi algorithm.
+    fn check_drawn_order(samples: &[&str], lay: impl Fn(&Painter, &str) -> Arc<Galley>) {
+        let ctx = egui::Context::default();
+        crate::theme::install(&ctx);
+        // Fonts set on a context take effect from its next pass.
+        ctx.run_ui(egui::RawInput::default(), |_| {})
+            .textures_delta
+            .clear();
+        let galleys = std::cell::RefCell::new(Vec::new());
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            for text in samples {
+                galleys.borrow_mut().push(lay(ui.painter(), text));
+            }
+        });
+        output.textures_delta.clear();
+        let atlas = ctx.fonts(|fonts| fonts.image());
+        for galley in galleys.into_inner() {
+            assert_rows_follow_uba(&galley, &atlas);
+        }
+    }
+
+    /// Words, punctuation, digits, Latin runs, and brackets land where the
+    /// bidi algorithm puts them. Spotifast once reordered words itself for
+    /// stock egui; with the fork shaping each run in its own direction, that
+    /// reversed punctuation next to a space a second time.
+    #[test]
+    fn lines_are_drawn_in_bidi_order() {
+        let samples = [
+            "غيوم في السماء",
+            "מה נשמע",
+            "الحلقة الأولى: كيف",
+            "وإدارة شركتك. يقدمه",
+            "الكلمة1 الكلمة2",
+            "شركة 37signals كل",
+            "שיר 2024, גרסה",
+            "(שלום) עולם",
+            "אבג - דהו",
+            "Hello (עולם) there",
+            "Hello غيوم في",
+            "غيوم Hello world",
+            "لا بأس",
+            "إلى السطر التالي",
+        ];
+        check_drawn_order(&samples, |painter, text| {
+            layout_line(painter, text, FontId::proportional(18.0), Color32::WHITE)
+        });
+        check_drawn_order(&samples, |painter, text| {
+            layout(
+                painter,
+                text,
+                FontId::proportional(18.0),
+                Color32::WHITE,
+                1000.0,
+                1,
+                Some(ELLIPSIS),
+            )
+        });
+    }
+
+    /// Wrapped and cut rows keep bidi order row by row.
+    #[test]
+    fn wrapped_and_cut_rows_are_drawn_in_bidi_order() {
+        check_drawn_order(
+            &[
+                "הכלב הגדול (קפץ) מעל החתול, והמשיך לרוץ לאורך הרחוב",
+                "هذا نص عربي طويل: يختبر ترتيب الأسطر عندما تلتف الكلمات",
+            ],
+            |painter, text| {
+                layout(
+                    painter,
+                    text,
+                    FontId::proportional(14.0),
+                    Color32::WHITE,
+                    120.0,
+                    3,
+                    Some(ELLIPSIS),
+                )
+            },
+        );
+    }
+
+    /// Text without right-to-left letters is never copied or moved.
+    #[test]
+    fn left_to_right_galleys_are_left_alone() {
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let original = ui.painter().layout_no_wrap(
+                "Hello (world)".into(),
+                FontId::default(),
+                Color32::WHITE,
+            );
+            let mut galley = original.clone();
+            reorder(&mut galley);
+            assert!(Arc::ptr_eq(&original, &galley));
+        });
+        output.textures_delta.clear();
+    }
+
+    /// A second pass over a reordered galley changes nothing.
+    #[test]
+    fn reordering_twice_is_harmless() {
+        let ctx = egui::Context::default();
+        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
+            let mut galley = layout_line(
+                ui.painter(),
+                "שיר 2024, גרסה",
+                FontId::default(),
+                Color32::WHITE,
+            );
+            let once: Vec<f32> = galley.rows[0].row.glyphs.iter().map(|g| g.pos.x).collect();
+            let before = galley.clone();
+            reorder(&mut galley);
+            assert!(Arc::ptr_eq(&before, &galley));
+            let twice: Vec<f32> = galley.rows[0].row.glyphs.iter().map(|g| g.pos.x).collect();
+            assert_eq!(once, twice);
         });
         output.textures_delta.clear();
     }
