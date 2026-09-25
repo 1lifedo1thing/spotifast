@@ -261,6 +261,22 @@ fn apply_to_style(style: &mut egui::Style, palette: &Palette) {
     style.url_in_tooltip = false;
 }
 
+/// Fits Inter's stems to the pixel grid and places each glyph on a whole
+/// pixel. egui's default hinting keeps linear metrics, so it never snaps
+/// stems horizontally, and sub-pixel binning then moves glyphs by quarter
+/// pixels: at a fractional scale such as 133% every vertical stem straddled
+/// two pixels and text looked soft. Line breaks are unchanged, since egui
+/// lays text out from the unhinted advances.
+fn crisp(tweak: &mut egui::epaint::text::FontTweak) {
+    use egui::epaint::text::{HintingTarget, SmoothHinting};
+    tweak.hinting_target = HintingTarget::Smooth(SmoothHinting {
+        light: false,
+        symmetric_rendering: true,
+        preserve_linear_metrics: false,
+    });
+    tweak.subpixel_binning = Some(false);
+}
+
 fn install_fonts(ctx: &egui::Context) {
     use egui::epaint::text::VariationCoords;
     use egui::{FontData, FontDefinitions, FontFamily};
@@ -271,6 +287,7 @@ fn install_fonts(ctx: &egui::Context) {
     let weighted = |weight: f32| {
         let mut data = FontData::from_static(inter);
         data.tweak.coords = VariationCoords::new([(b"wght", weight)]);
+        crisp(&mut data.tweak);
         Arc::new(data)
     };
     fonts.font_data.insert("inter".to_owned(), weighted(400.0));
@@ -1003,6 +1020,24 @@ pub fn subtle(ui: &mut egui::Ui, palette: &Palette, label: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inter_snaps_to_whole_pixels() {
+        use egui::epaint::text::{FontTweak, HintingTarget, SmoothHinting};
+        let mut tweak = FontTweak::default();
+        crisp(&mut tweak);
+        // Stems fit the pixel grid horizontally, and glyphs are not moved
+        // by fractions of a pixel afterwards (soft text at 133%).
+        assert!(matches!(
+            tweak.hinting_target,
+            HintingTarget::Smooth(SmoothHinting {
+                light: false,
+                preserve_linear_metrics: false,
+                ..
+            })
+        ));
+        assert_eq!(tweak.subpixel_binning, Some(false));
+    }
 
     /// Native desktop apps keep the arrow over buttons and switch to the
     /// hand only over links (#508).
