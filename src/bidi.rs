@@ -323,7 +323,8 @@ fn reorder_row(row: &mut Row, text: &str, pixels_per_point: f32) {
         // Both ends on whole physical pixels. epaint rasterizes each glyph
         // for its place on the pixel grid; moving the quad by a fraction
         // left the moved runs between pixels, blurred (0.21 px at 133%).
-        let delta = snap(cursor, pixels_per_point) - snap(atom.min_x, pixels_per_point);
+        let delta = fastframe_text::snap_to_pixels(cursor, pixels_per_point)
+            - fastframe_text::snap_to_pixels(atom.min_x, pixels_per_point);
         if delta.abs() > 0.01 {
             for glyph in &mut row.glyphs[atom.glyphs.clone()] {
                 glyph.pos.x += delta;
@@ -595,11 +596,6 @@ fn repack_glyph_vertices(row: &mut Row) {
         .map(|glyph| usize::from(!glyph.uv_rect.is_nothing()) * 4)
         .sum::<usize>();
     row.visuals.glyph_vertex_range = range.start..range.start + glyph_len;
-}
-
-/// Rounds a coordinate in points to the nearest physical pixel.
-fn snap(points: f32, pixels_per_point: f32) -> f32 {
-    (points * pixels_per_point).round() / pixels_per_point
 }
 
 /// A letter of a right-to-left script.

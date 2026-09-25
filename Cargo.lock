@@ -1823,6 +1823,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastframe-text"
+version = "0.1.0"
+source = "git+https://github.com/crmne/fastframe?rev=81e7d2d310052c360f0827957461da7e4ca80f7c#81e7d2d310052c360f0827957461da7e4ca80f7c"
+dependencies = [
+ "egui",
+ "zbus",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5625,6 +5634,7 @@ dependencies = [
  "egui",
  "egui_extras",
  "env_logger",
+ "fastframe-text",
  "flate2",
  "glutin",
  "glutin-winit",

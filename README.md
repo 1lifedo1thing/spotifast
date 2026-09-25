@@ -279,7 +279,7 @@ emerge --ask --autounmask-write media-sound/fastpotify::niko-overlays
 Review and apply any proposed keyword changes with `dispatch-conf`, then
 repeat the final `emerge` command.
 
-Everywhere else, build the single binary with Rust 1.95 or newer:
+Everywhere else, build the single binary with Rust 1.98 or newer:
 
 ```bash
 cargo install --path . --locked

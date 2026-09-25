@@ -143,6 +143,22 @@ pub fn bold(size: f32) -> egui::FontId {
     egui::FontId::new(size, egui::FontFamily::Name(INTER_BOLD.into()))
 }
 
+/// How the desktop renders text, read once per process.
+///
+/// Tests use the platform's default instead of asking the desktop, so they
+/// neither wait on D-Bus nor depend on the machine's settings.
+pub fn text_rendering() -> fastframe_text::TextRendering {
+    static RENDERING: std::sync::OnceLock<fastframe_text::TextRendering> =
+        std::sync::OnceLock::new();
+    *RENDERING.get_or_init(|| {
+        if cfg!(test) {
+            fastframe_text::TextRendering::platform_default()
+        } else {
+            fastframe_text::detect()
+        }
+    })
+}
+
 /// Install fonts, icons, and the base style once.
 pub fn install(ctx: &egui::Context) {
     install_fonts(ctx);
@@ -171,11 +187,10 @@ fn apply_to_style(style: &mut egui::Style, palette: &Palette) {
         egui::Visuals::light()
     };
     visuals.dark_mode = palette.dark;
-    // Glyph coverage as the rasterizer produced it, in both themes. egui's
-    // dark default (2c - c²) thickens light text on dark backgrounds, while
-    // the desktop (FreeType and cairo, GTK, browsers) draws coverage as is;
-    // side by side Spotifast's text looked heavier than the rest.
-    visuals.text_options.color_transfer_function = egui::epaint::FontColorTransferFunction::Off;
+    // Glyph coverage, hinting and sub-pixel positions as the desktop draws
+    // them: linear coverage in both themes on Linux, where egui's dark curve
+    // (2c - c²) made text heavier than GTK's.
+    text_rendering().apply_to_visuals(visuals);
     visuals.panel_fill = palette.panel;
     visuals.window_fill = palette.overlay;
     visuals.extreme_bg_color = palette.surface;
@@ -341,6 +356,7 @@ fn install_fonts(ctx: &egui::Context) {
         }
     }
 
+    text_rendering().apply_to(&mut fonts);
     ctx.set_fonts(fonts);
 }
 
@@ -1009,20 +1025,27 @@ pub fn subtle(ui: &mut egui::Ui, palette: &Palette, label: &str) -> Response {
 mod tests {
     use super::*;
 
+    /// A palette replaces egui's visuals, which must not take back the
+    /// desktop's text rendering: on Linux, linear coverage in both themes.
     #[test]
-    fn text_coverage_is_linear_in_both_themes() {
+    fn palettes_keep_the_desktops_text_rendering() {
         for palette in [Palette::dark(), Palette::light()] {
             let ctx = egui::Context::default();
             apply(&ctx, &palette);
+            let options = ctx.global_style().visuals.text_options;
             assert_eq!(
-                ctx.global_style()
-                    .visuals
-                    .text_options
-                    .color_transfer_function,
-                egui::epaint::FontColorTransferFunction::Off,
+                options.color_transfer_function,
+                text_rendering().color_transfer_function(palette.dark),
                 "dark: {}",
                 palette.dark
             );
+            if cfg!(target_os = "linux") {
+                assert_eq!(
+                    options.color_transfer_function,
+                    egui::epaint::FontColorTransferFunction::Off
+                );
+            }
+            assert!(options.subpixel_binning);
         }
     }
 
