@@ -262,13 +262,14 @@ pub fn reorder(galley: &mut Arc<Galley>) {
     }
     let galley = Arc::make_mut(galley);
     let text = galley.job.text.clone();
+    let pixels_per_point = galley.pixels_per_point;
     for placed in &mut galley.rows {
-        reorder_row(Arc::make_mut(&mut placed.row), &text);
+        reorder_row(Arc::make_mut(&mut placed.row), &text, pixels_per_point);
     }
     refresh_bounds(galley);
 }
 
-fn reorder_row(row: &mut Row, text: &str) {
+fn reorder_row(row: &mut Row, text: &str, pixels_per_point: f32) {
     if row.glyphs.is_empty() || already_visual(&row.glyphs) {
         return;
     }
@@ -316,7 +317,10 @@ fn reorder_row(row: &mut Row, text: &str) {
 
     let mut cursor = 0.0_f32;
     for atom in &atoms {
-        let delta = cursor - atom.min_x;
+        // Both ends on whole physical pixels. epaint rasterizes each glyph
+        // for its place on the pixel grid; moving the quad by a fraction
+        // left the moved runs between pixels, blurred (0.21 px at 133%).
+        let delta = snap(cursor, pixels_per_point) - snap(atom.min_x, pixels_per_point);
         if delta.abs() > 0.01 {
             for glyph in &mut row.glyphs[atom.glyphs.clone()] {
                 glyph.pos.x += delta;
@@ -580,6 +584,11 @@ fn repack_glyph_vertices(row: &mut Row) {
         .map(|glyph| usize::from(!glyph.uv_rect.is_nothing()) * 4)
         .sum::<usize>();
     row.visuals.glyph_vertex_range = range.start..range.start + glyph_len;
+}
+
+/// Rounds a coordinate in points to the nearest physical pixel.
+fn snap(points: f32, pixels_per_point: f32) -> f32 {
+    (points * pixels_per_point).round() / pixels_per_point
 }
 
 /// A letter of a right-to-left script.
@@ -998,6 +1007,50 @@ mod tests {
                 )
             },
         );
+    }
+
+    /// Runs moved into visual order stay on whole physical pixels at
+    /// fractional scales, where epaint rasterized them, instead of landing
+    /// between pixels and blurring.
+    #[test]
+    fn reordered_runs_stay_on_whole_pixels() {
+        for pixels_per_point in [4.0 / 3.0, 1.6] {
+            let ctx = egui::Context::default();
+            crate::theme::install(&ctx);
+            let mut input = egui::RawInput::default();
+            input
+                .viewports
+                .entry(egui::ViewportId::ROOT)
+                .or_default()
+                .native_pixels_per_point = Some(pixels_per_point);
+            ctx.run_ui(input.clone(), |_| {}).textures_delta.clear();
+            let mut output = ctx.run_ui(input, |ui| {
+                for text in ["Song 12 שיר ישן, part 3", "غيوم في السماء (Live) 2024"]
+                {
+                    let galley = layout_line(
+                        ui.painter(),
+                        text,
+                        FontId::proportional(13.0),
+                        Color32::WHITE,
+                    );
+                    assert_eq!(galley.pixels_per_point, pixels_per_point);
+                    let on_grid = |x: f32| {
+                        let pixels = x * pixels_per_point;
+                        (pixels - pixels.round()).abs() < 1e-3
+                    };
+                    let row = &galley.rows[0].row;
+                    assert!(row.glyphs.iter().any(|glyph| glyph.rtl), "{text}");
+                    for glyph in &row.glyphs {
+                        assert!(on_grid(glyph.pos.x), "{text}: {glyph:?}");
+                    }
+                    for vertex in &row.visuals.mesh.vertices[row.visuals.glyph_vertex_range.clone()]
+                    {
+                        assert!(on_grid(vertex.pos.x), "{text} at {pixels_per_point}");
+                    }
+                }
+            });
+            output.textures_delta.clear();
+        }
     }
 
     /// Text without right-to-left letters is never copied or moved.
