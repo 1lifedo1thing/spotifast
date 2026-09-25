@@ -58,6 +58,8 @@ fastframe-log = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d3100
 fastframe-tray = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310052c360f0827957461da7e4ca80f7c" }
 # Keeps the app running without a window around eframe::run_native.
 fastframe-shell = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310052c360f0827957461da7e4ca80f7c" }
+# The macOS title-bar double-click setting (does nothing elsewhere).
+fastframe-macos = { git = "https://github.com/crmne/fastframe", rev = "81e7d2d310052c360f0827957461da7e4ca80f7c" }
 # Reading installed fonts for MilkDrop's overlays, the Winamp playlist's
 # pixel text, and the playlist face. skrifa is the parser epaint already
 # rasterizes with, and the version has to track epaint's or the binary
@@ -153,8 +155,8 @@ objc2 = { version = "0.6", features = ["exception"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSEvent", "NSMenu", "NSMenuItem", "NSResponder", "NSRunningApplication", "NSWindow"] }
 # NSAppleEventManager and NSAppleEventDescriptor carry the Spotify links
 # macOS hands an app registered for the scheme (src/mac_links.rs), and
-# NSUserDefaults reads its title-bar double-click action.
-objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSAppleEventDescriptor", "NSAppleEventManager", "NSObjCRuntime", "NSString", "NSUserDefaults"] }
+# NSRunLoop has the delayed perform the title bar uses (src/window.rs).
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSAppleEventDescriptor", "NSAppleEventManager", "NSObjCRuntime", "NSRunLoop", "NSString"] }
 
 [target.'cfg(windows)'.dependencies]
 windows-native-keyring-store = { version = "1.1", default-features = false }
