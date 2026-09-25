@@ -63,7 +63,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       CMAKE_GENERATOR: Ninja
-    timeout-minutes: 30
+    # A cold mbx cache on Windows (projectM through cmake) needs about 30
+    # minutes before the action saves the cache; warm runs take far less.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
