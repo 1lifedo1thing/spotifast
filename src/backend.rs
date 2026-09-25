@@ -836,30 +836,11 @@ pub enum LocalPlayback {
     Failed(String),
 }
 
-/// Wakes whichever window currently exists, if any.
-///
 /// Background services (the runtime, MPRIS, the tray) outlive individual
 /// windows: the window is destroyed when it closes to the tray and created
-/// again on demand. They therefore hold this handle instead of an
-/// `egui::Context`.
-#[derive(Clone, Default)]
-pub struct Waker(Arc<std::sync::Mutex<Option<egui::Context>>>);
-
-impl Waker {
-    pub fn attach(&self, ctx: &egui::Context) {
-        *self.0.lock().unwrap_or_else(|p| p.into_inner()) = Some(ctx.clone());
-    }
-
-    pub fn detach(&self) {
-        *self.0.lock().unwrap_or_else(|p| p.into_inner()) = None;
-    }
-
-    pub fn wake(&self) {
-        if let Some(ctx) = self.0.lock().unwrap_or_else(|p| p.into_inner()).as_ref() {
-            ctx.request_repaint();
-        }
-    }
-}
+/// again on demand. They therefore hold this handle, which repaints
+/// whichever window exists, instead of an `egui::Context`.
+pub use fastframe_shell::Waker;
 
 /// The interface's handle to the runtime.
 pub struct Backend {

@@ -601,6 +601,46 @@ const TRAY_NEXT: &str = "next";
 const TRAY_PREVIOUS: &str = "previous";
 const TRAY_QUIT: &str = "quit";
 
+/// What the shell around `eframe::run_native` does with the app between
+/// windows.
+impl fastframe_shell::Resident for App {
+    /// Quit wins; switching between the main window and the mini player
+    /// opens the other at once; closing to the tray runs without a window.
+    fn closed(&self) -> fastframe_shell::Closed {
+        use fastframe_shell::Closed;
+        if self.quit_requested {
+            Closed::Quit
+        } else if self.switch_intent {
+            Closed::Reopen
+        } else if self.hide_intent {
+            Closed::Hide
+        } else {
+            Closed::Quit
+        }
+    }
+
+    fn window_gone(&mut self) {
+        App::window_gone(self);
+    }
+
+    /// Audio, MPRIS, the tray and polling keep running until Show or Quit.
+    fn headless_frame(&mut self, ctx: &egui::Context) -> fastframe_shell::Headless {
+        use fastframe_shell::Headless;
+        self.background_frame(ctx);
+        if self.quit_requested {
+            Headless::Quit
+        } else if self.wants_show {
+            Headless::Show
+        } else {
+            Headless::Wait
+        }
+    }
+
+    fn shutdown(&mut self) {
+        App::shutdown(self);
+    }
+}
+
 /// The tray menu's Play or Pause entry, for what is playing.
 fn play_pause_label(playing: bool) -> &'static str {
     if playing { "Pause" } else { "Play" }
@@ -14959,6 +14999,31 @@ mod tests {
     ) {
         app.custom_themes = theme::Catalog::preview(theme.into_iter().collect(), follows);
         app.adopt_custom_themes(ctx);
+    }
+
+    /// Quit wins over everything, a switch between the main window and the
+    /// mini player reopens at once, and closing to the tray runs headless
+    /// until Show or Quit.
+    #[test]
+    fn the_shell_learns_what_a_closed_window_means() {
+        use fastframe_shell::{Closed, Headless, Resident};
+        let mut app = headless_app();
+        let ctx = egui::Context::default();
+        assert_eq!(app.closed(), Closed::Quit);
+        app.hide_intent = true;
+        assert_eq!(app.closed(), Closed::Hide);
+        app.switch_intent = true;
+        assert_eq!(app.closed(), Closed::Reopen);
+        app.quit_requested = true;
+        assert_eq!(app.closed(), Closed::Quit);
+        app.quit_requested = false;
+        Resident::window_gone(&mut app);
+        assert!(app.window_hidden && !app.hide_intent);
+        assert_eq!(app.headless_frame(&ctx), Headless::Wait);
+        app.wants_show = true;
+        assert_eq!(app.headless_frame(&ctx), Headless::Show);
+        app.quit_requested = true;
+        assert_eq!(app.headless_frame(&ctx), Headless::Quit);
     }
 
     fn wait_for_custom_themes(app: &mut App, ctx: &egui::Context) {
