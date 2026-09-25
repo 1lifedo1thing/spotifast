@@ -61,13 +61,8 @@ jobs:
       - name: MSVC environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
-      - uses: Swatinem/rust-cache@v2
-        with:
-          # v2: caches from before the projectm-sys fork replay its stale
-          # build output instead of compiling the fork.
-          prefix-key: v2
-          key: ${{ matrix.target }}
-
+      # No compiler cache: published binaries never build from outputs
+      # restored from an Actions cache.
       - run: cargo build --release --target ${{ matrix.target }} ${{ matrix.features }}
 
       # The zip and installer must run on a clean Windows machine without a
@@ -167,10 +162,7 @@ jobs:
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
       - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: macos-universal
-
+      # No compiler cache, as in the build job above.
       - name: Build both architectures
         run: |
           cargo build --release --target aarch64-apple-darwin
