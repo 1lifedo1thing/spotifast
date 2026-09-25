@@ -2505,10 +2505,7 @@ mod tests {
 
     #[test]
     fn update_window_keeps_downloads_running_and_waits_for_restart() {
-        use crate::updates::{
-            DownloadState,
-            install::{Installation, Kind, Prepared},
-        };
+        use crate::updates::{DownloadState, Installation, Kind, Prepared};
         use egui::accesskit::{Action as AccessibleAction, Role};
         let (ctx, mut app) = accessible_app("update-window");
         app.update = Some(crate::updates::Release {
@@ -2546,13 +2543,8 @@ mod tests {
             app.update_download,
             DownloadState::Downloading { .. }
         ));
-        app.update_download = DownloadState::Ready(Box::new(Prepared {
-            installation,
-            directory: "/test/stage".into(),
-            payload: "/test/stage/payload".into(),
-            version: "9.9.9".into(),
-            sha256: String::new(),
-        }));
+        app.update_download =
+            DownloadState::Ready(Box::new(Prepared::sample(installation, "9.9.9")));
         accessible_frame(&ctx, &mut app, vec![]);
         assert!(!app.show_update);
         assert!(matches!(app.update_download, DownloadState::Ready(_)));
@@ -8053,10 +8045,7 @@ mod tests {
     /// that it never does.
     #[test]
     fn the_top_bar_badges_never_cover_the_search_field() {
-        use crate::updates::{
-            DownloadState,
-            install::{Installation, Kind, Prepared},
-        };
+        use crate::updates::{DownloadState, Installation, Kind, Prepared};
         use egui::accesskit::{Action as AccessibleAction, Role};
         // `widgets::search_field` insets its text this far from the pill's
         // right edge, so the pill reaches past the rect the field reports.
@@ -8078,16 +8067,13 @@ mod tests {
                 ),
                 (
                     Some("Update ready"),
-                    DownloadState::Ready(Box::new(Prepared {
-                        installation: Installation {
+                    DownloadState::Ready(Box::new(Prepared::sample(
+                        Installation {
                             executable: "/test/fastpotify".into(),
                             kind: Kind::Portable,
                         },
-                        directory: "/test/stage".into(),
-                        payload: "/test/stage/payload".into(),
-                        version: "9.9.9".into(),
-                        sha256: String::new(),
-                    })),
+                        "9.9.9",
+                    ))),
                 ),
             ] {
                 app.update_download = state;

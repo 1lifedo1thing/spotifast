@@ -1923,6 +1923,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastframe-update"
+version = "0.1.0"
+source = "git+https://github.com/crmne/fastframe?rev=81e7d2d310052c360f0827957461da7e4ca80f7c#81e7d2d310052c360f0827957461da7e4ca80f7c"
+dependencies = [
+ "anyhow",
+ "reqwest",
+ "ring",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "url",
+ "windows-sys 0.60.2",
+]
+
+[[package]]
 name = "fastrand"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5809,6 +5824,7 @@ dependencies = [
  "fastframe-text",
  "fastframe-theme",
  "fastframe-tray",
+ "fastframe-update",
  "flate2",
  "glutin",
  "glutin-winit",

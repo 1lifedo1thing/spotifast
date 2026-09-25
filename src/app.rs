@@ -556,9 +556,9 @@ pub struct App {
     pub show_update: bool,
     pub update_download: crate::updates::DownloadState,
     pub update_source: crate::updates::Source,
-    pub update_support: Option<Result<crate::updates::install::Installation, String>>,
+    pub update_support: Option<Result<crate::updates::Installation, String>>,
     pub update_restart_arguments: Vec<String>,
-    pub update_receipt: Option<PathBuf>,
+    pub update_receipt: Option<fastframe_update::Receipt>,
     /// Winamp window state and active skin.
     pub winamp: crate::winamp::WinampState,
 }
@@ -1804,7 +1804,7 @@ impl App {
     fn handle_backend_events(&mut self, events: Vec<Event>) {
         for event in events {
             if self.offline
-                && (matches!(self.update_source, crate::updates::Source::GitHub)
+                && (self.update_source.is_github()
                     || !matches!(
                         &event,
                         Event::UpdateChecked { .. }
@@ -8790,12 +8790,17 @@ impl App {
                 }
             }
             Action::InstallUpdate => {
-                if let crate::updates::DownloadState::Ready(prepared) = &self.update_download {
+                if matches!(
+                    self.update_download,
+                    crate::updates::DownloadState::Ready(_)
+                ) && let crate::updates::DownloadState::Ready(prepared) = std::mem::replace(
+                    &mut self.update_download,
+                    crate::updates::DownloadState::Installing,
+                ) {
                     self.backend.send(Command::InstallUpdate {
-                        prepared: prepared.clone(),
+                        prepared,
                         arguments: self.update_restart_arguments.clone(),
                     });
-                    self.update_download = crate::updates::DownloadState::Installing;
                 }
             }
             Action::SetLibrarySort { shelf, sort } => {
@@ -9241,7 +9246,7 @@ impl App {
 
     fn check_for_updates(&mut self, manual: bool) {
         if self.update_checking
-            || (self.offline && matches!(self.update_source, crate::updates::Source::GitHub))
+            || (self.offline && self.update_source.is_github())
             || !matches!(
                 self.update_download,
                 crate::updates::DownloadState::Idle | crate::updates::DownloadState::Failed(_)

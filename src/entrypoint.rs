@@ -26,12 +26,6 @@ struct Cli {
     #[arg(short, long)]
     verbose: bool,
 
-    #[arg(long, hide = true)]
-    update_receipt: Option<std::path::PathBuf>,
-
-    #[arg(long, hide = true)]
-    update_error: Option<String>,
-
     /// Start with sample data and no Spotify connection (for screenshots).
     #[cfg(feature = "demo")]
     #[arg(long)]
@@ -348,14 +342,10 @@ fn format_devices(snapshot: &str) -> String {
 pub(crate) fn run() -> eframe::Result<()> {
     #[cfg(target_os = "linux")]
     configure_pulseaudio_properties();
-    let arguments: Vec<_> = std::env::args_os().collect();
-    if arguments.len() == 3 && arguments[1] == "--apply-update" {
-        let result = spotifast::updates::install::run_helper(std::path::Path::new(&arguments[2]));
-        if let Err(error) = &result {
-            eprintln!("{error:#}");
-        }
-        std::process::exit(if result.is_ok() { 0 } else { 1 });
-    }
+    // First of all: `--apply-update <job>` makes this process the update
+    // helper, which installs and exits; otherwise the receipt and error an
+    // update relaunch carries are taken out of the arguments.
+    let launch = fastframe_update::intercept(&spotifast::updates::CONFIG);
     // A MilkDrop child launch is a bare visualiser window, not the app: it has
     // its own event loop and OpenGL context, reads the sound from a shared
     // buffer, and never touches the app's state. Handle it before anything
@@ -368,7 +358,8 @@ pub(crate) fn run() -> eframe::Result<()> {
     // Follow the invoked command, including the Linux package's spotifast
     // symlink. Old updaters execute a file named fastpotify and require its
     // original --version output; both commands otherwise start the same app.
-    let name = match arguments
+    let name = match launch
+        .arguments
         .first()
         .and_then(|arg| std::path::Path::new(arg).file_stem())
         .and_then(|arg| arg.to_str())
@@ -376,8 +367,12 @@ pub(crate) fn run() -> eframe::Result<()> {
         Some(name) if name.eq_ignore_ascii_case("fastpotify") => "fastpotify",
         _ => "spotifast",
     };
-    let cli = Cli::from_arg_matches(&Cli::command().name(name).get_matches())
-        .unwrap_or_else(|error| error.exit());
+    let cli = Cli::from_arg_matches(
+        &Cli::command()
+            .name(name)
+            .get_matches_from(&launch.arguments),
+    )
+    .unwrap_or_else(|error| error.exit());
     // Demo mode invents plays, settings, and a signed-in account. Without a
     // folder of its own it would write them into the real profile, where
     // they would pass for the user's history and stop the next real launch
@@ -436,9 +431,9 @@ pub(crate) fn run() -> eframe::Result<()> {
         None
     };
     #[cfg(feature = "demo")]
-    let migrate = guarded && cli.demo_data.is_none() && cli.update_receipt.is_none();
+    let migrate = guarded && cli.demo_data.is_none() && launch.receipt.is_none();
     #[cfg(not(feature = "demo"))]
-    let migrate = guarded && cli.update_receipt.is_none();
+    let migrate = guarded && launch.receipt.is_none();
     if migrate {
         paths::AppDirs::discover()
             .migrate_legacy()
@@ -456,7 +451,7 @@ pub(crate) fn run() -> eframe::Result<()> {
     } else {
         "warn,spotifast=info"
     };
-    let dirs = paths::AppDirs::for_launch(cli.update_receipt.is_some());
+    let dirs = paths::AppDirs::for_launch(launch.receipt.is_some());
     #[cfg(feature = "demo")]
     let dirs = cli
         .demo_data
@@ -526,8 +521,8 @@ pub(crate) fn run() -> eframe::Result<()> {
     if load_themes {
         app.load_custom_themes(&waker);
     }
-    app.update_receipt = cli.update_receipt;
-    if let Some(error) = cli.update_error {
+    app.update_receipt = launch.receipt;
+    if let Some(error) = launch.error {
         app.report_update_failure(error);
     }
     if let Some(guard) = &instance {
@@ -541,7 +536,7 @@ pub(crate) fn run() -> eframe::Result<()> {
         spotifast::demo::populate(&mut app);
         spotifast::demo::apply_flags(&mut app, cli.demo_page.as_deref(), cli.demo_show.as_deref());
         if let Some(feed) = &cli.demo_update_feed {
-            match spotifast::updates::Source::local(feed) {
+            match fastframe_update::Source::local(feed) {
                 Ok(source) => app.update_source = source,
                 Err(error) => {
                     eprintln!("{error:#}");
@@ -1315,7 +1310,7 @@ impl eframe::App for Shell {
         app.frame_ui(ui);
         if let Some(receipt) = app.update_receipt.take() {
             std::thread::spawn(move || {
-                if let Err(error) = spotifast::updates::install::acknowledge(&receipt) {
+                if let Err(error) = receipt.acknowledge() {
                     log::error!("Could not confirm the update: {error:#}");
                 }
             });
