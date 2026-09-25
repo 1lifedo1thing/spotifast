@@ -351,10 +351,14 @@ fn reorder_row(row: &mut Row, text: &str, pixels_per_point: f32) {
     let glyphs = std::mem::take(&mut row.glyphs);
     row.glyphs = order.into_iter().map(|index| glyphs[index]).collect();
     repack_glyph_vertices(row);
-    // The advances add up to the width epaint measured, give or take its
-    // rounding to the interface grid. Only a row whose measured width left
-    // out a trailing space, now moved inside it, grows.
-    if cursor.round_ui() > row.size.x {
+    // The advances add up to the width epaint measured, which it rounded to
+    // the interface grid (1/32 point) after summing in pixels. Summed here in
+    // points, a width that falls on a rounding midpoint can land on the other
+    // side of it and round a step up (198.046875 against epaint's 198.046844,
+    // Arabic at 13 pt and 133%): the same width, not a wider row. Only a row
+    // whose measured width left out a trailing space, now moved inside it,
+    // grows, and a space is many grid steps wide.
+    if cursor > row.size.x + egui::emath::GUI_ROUNDING {
         row.size.x = cursor.round_ui();
     }
 }
