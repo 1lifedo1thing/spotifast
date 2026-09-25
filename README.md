@@ -343,7 +343,10 @@ fonts. On Linux, install `noto-fonts` and `noto-fonts-cjk` (Arch) or
 `fonts-noto` and `fonts-noto-cjk` (Debian or Ubuntu) if titles appear as
 empty boxes. Since 0.10.0, Spotifast also looks in every font
 directory named in fontconfig's configuration, so fonts installed through
-NixOS's `fonts.packages` are found too.
+NixOS's `fonts.packages` are found too. Since 0.10.2, Arabic drawn with
+a small system face is enlarged to read as large as the Latin text around
+it, and Javanese, styled mathematical and circled letters, and ♡ in names
+find an installed face as well.
 
 Since 0.8.0, long right-to-left titles in song rows and the player
 bar end with an ellipsis inside their text area, including joined Arabic letters.

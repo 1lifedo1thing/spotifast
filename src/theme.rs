@@ -123,24 +123,20 @@ pub fn titlebar_inset(ctx: &egui::Context) -> f32 {
     }
 }
 
-const INTER_MEDIUM: &str = "inter-medium";
-const INTER_SEMIBOLD: &str = "inter-semibold";
-const INTER_BOLD: &str = "inter-bold";
-
 pub fn regular(size: f32) -> egui::FontId {
-    egui::FontId::new(size, egui::FontFamily::Proportional)
+    fastframe_fonts::Weight::Regular.font_id(size)
 }
 
 pub fn medium(size: f32) -> egui::FontId {
-    egui::FontId::new(size, egui::FontFamily::Name(INTER_MEDIUM.into()))
+    fastframe_fonts::Weight::Medium.font_id(size)
 }
 
 pub fn semibold(size: f32) -> egui::FontId {
-    egui::FontId::new(size, egui::FontFamily::Name(INTER_SEMIBOLD.into()))
+    fastframe_fonts::Weight::SemiBold.font_id(size)
 }
 
 pub fn bold(size: f32) -> egui::FontId {
-    egui::FontId::new(size, egui::FontFamily::Name(INTER_BOLD.into()))
+    fastframe_fonts::Weight::Bold.font_id(size)
 }
 
 /// How the desktop renders text, read once per process.
@@ -281,130 +277,17 @@ fn apply_to_style(style: &mut egui::Style, palette: &Palette) {
     style.url_in_tooltip = false;
 }
 
+/// Inter at its four weights with the monochrome emoji face right behind it
+/// (so every emoji wears the same style, ahead of egui's own pair), then the
+/// installed faces for the scripts Inter lacks, drawn the way the desktop
+/// renders text.
 fn install_fonts(ctx: &egui::Context) {
-    use egui::epaint::text::VariationCoords;
-    use egui::{FontData, FontDefinitions, FontFamily};
-    use std::sync::Arc;
-
-    let mut fonts = FontDefinitions::default();
-    let inter = include_bytes!("../assets/fonts/InterVariable.ttf");
-    let weighted = |weight: f32| {
-        let mut data = FontData::from_static(inter);
-        data.tweak.coords = VariationCoords::new([(b"wght", weight)]);
-        Arc::new(data)
-    };
-    fonts.font_data.insert("inter".to_owned(), weighted(400.0));
-    fonts
-        .font_data
-        .insert(INTER_MEDIUM.to_owned(), weighted(500.0));
-    fonts
-        .font_data
-        .insert(INTER_SEMIBOLD.to_owned(), weighted(600.0));
-    fonts
-        .font_data
-        .insert(INTER_BOLD.to_owned(), weighted(700.0));
-
-    let noto_emoji = include_bytes!("../assets/fonts/NotoEmoji.ttf");
-    fonts.font_data.insert(
-        "noto_emoji".to_owned(),
-        Arc::new(FontData::from_static(noto_emoji)),
-    );
-
-    fonts
-        .families
-        .entry(FontFamily::Proportional)
-        .or_default()
-        .insert(0, "inter".to_owned());
-    // Right behind the text face, ahead of the emoji subset and the icon
-    // font egui bundles, so every emoji comes from the one full face and
-    // wears the same style; egui's pair still serves what Noto lacks.
-    fonts
-        .families
-        .entry(FontFamily::Proportional)
-        .or_default()
-        .insert(1, "noto_emoji".to_owned());
-    fonts
-        .families
-        .entry(FontFamily::Monospace)
-        .or_default()
-        .insert(1, "noto_emoji".to_owned());
-    let fallbacks: Vec<String> = fonts.families[&FontFamily::Proportional]
-        .iter()
-        .skip(1)
-        .cloned()
-        .collect();
-    for name in [INTER_MEDIUM, INTER_SEMIBOLD, INTER_BOLD] {
-        let mut family = vec![name.to_owned()];
-        family.extend(fallbacks.iter().cloned());
-        fonts.families.insert(FontFamily::Name(name.into()), family);
-    }
-
-    // Add installed fallbacks for scripts Inter does not cover. Keep them after
-    // Inter and the emoji font to preserve Latin shapes and color emoji.
-    for font in crate::system_fonts::fallbacks() {
-        // Reuse cached font bytes to avoid copying large collections whenever
-        // epaint rebuilds the glyph atlas.
-        let mut data = FontData::from_static(&font.bytes);
-        data.index = font.index;
-        let offset = fallback_baseline_y_offset(&font.bytes, font.index);
-        if offset.abs() > 0.001 {
-            data.tweak.y_offset_factor = offset;
-        }
-        fonts.font_data.insert(font.name.clone(), Arc::new(data));
-        for family in fonts.families.values_mut() {
-            family.push(font.name.clone());
-        }
-    }
-
+    let emoji = egui::FontData::from_static(include_bytes!("../assets/fonts/NotoEmoji.ttf"));
+    let mut fonts = fastframe_fonts::FontSetup::default()
+        .companion("noto_emoji", std::sync::Arc::new(emoji))
+        .definitions();
     text_rendering().apply_to(&mut fonts);
     ctx.set_fonts(fonts);
-}
-
-// Adjusts a fallback face's baseline to align with Inter.
-//
-// epaint positions fallback glyphs by centering the difference between the
-// primary font's row height and the fallback font's row height:
-//
-//     glyph.pos.y = fallback.ascent + 0.5 * (primary.row_height - fallback.row_height)
-//
-// When the fallback face has vertical metrics different from Inter (for example,
-// Hiragino Sans on macOS, which declares a line height of 1.5 em via a 0.5 em lineGap),
-// this centering shifts the fallback baseline upward or downward relative to Latin text.
-//
-// Offsetting the glyph downward by the difference in baseline-to-center distances:
-//
-//     (inter.ascent - 0.5 * inter.row_height) - (fallback.ascent - 0.5 * fallback.row_height)
-//
-// neutralises epaint's centering and aligns the baselines across all mixed scripts
-// and font sizes.
-fn fallback_baseline_y_offset(bytes: &[u8], index: u32) -> f32 {
-    use skrifa::MetadataProvider as _;
-
-    let Ok(font) = skrifa::FontRef::from_index(bytes, index) else {
-        return 0.0;
-    };
-    let metrics = font.metrics(
-        skrifa::instance::Size::unscaled(),
-        skrifa::instance::LocationRef::default(),
-    );
-    let upm = metrics.units_per_em as f32;
-    if upm <= 0.0 {
-        return 0.0;
-    }
-    let fallback_height = metrics.ascent - metrics.descent + metrics.leading;
-    if fallback_height <= 0.0 {
-        return 0.0;
-    }
-
-    // Inter's metrics from assets/fonts/InterVariable.ttf:
-    // units_per_em = 2048, typo_asc = 1984, typo_desc = -494, typo_line_gap = 0
-    // ascent_ratio = 1984 / 2048 = 0.96875
-    // row_height_ratio = (1984 - (-494)) / 2048 = 2478 / 2048 = 1.2099609375
-    // baseline_center = 0.96875 - 0.5 * 1.2099609375 = 0.36376953125
-    const INTER_BASELINE_CENTER: f32 = (1984.0 / 2048.0) - 0.5 * ((1984.0 + 494.0) / 2048.0);
-
-    let fallback_baseline_center = (metrics.ascent - 0.5 * fallback_height) / upm;
-    INTER_BASELINE_CENTER - fallback_baseline_center
 }
 
 macro_rules! icons {
@@ -1121,53 +1004,24 @@ mod tests {
         output.textures_delta.clear();
     }
 
+    /// The monochrome emoji face comes right after Inter at every weight
+    /// and in the monospace family, ahead of egui's own emoji pair.
     #[test]
-    fn inter_figures_are_tabular() {
+    fn the_emoji_face_follows_inter_everywhere() {
         let ctx = egui::Context::default();
         install(&ctx);
-        let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
-            let width = |text: &str| {
-                ui.painter()
-                    .layout_no_wrap(text.to_owned(), regular(13.0), Color32::WHITE)
-                    .rect
-                    .width()
-            };
-            // The narrow "1" is the tell: with proportional figures "1:11" is
-            // far narrower than "8:88", so time and date labels jitter as the
-            // value changes. Frozen tabular figures keep every digit equal.
-            assert!(
-                (width("1:11") - width("8:88")).abs() < 0.01,
-                "bundled Inter should draw tabular figures"
-            );
-        });
-        output.textures_delta.clear();
-    }
-
-    #[test]
-    fn fallback_baseline_offset_is_zero_for_inter() {
-        let inter = include_bytes!("../assets/fonts/InterVariable.ttf");
-        let offset = fallback_baseline_y_offset(inter, 0);
-        assert!(
-            offset.abs() < 1e-4,
-            "Inter should have zero offset relative to itself, got {offset}"
-        );
-    }
-
-    #[test]
-    fn fallback_baseline_offset_is_bounded_for_installed_fonts() {
-        for font in crate::system_fonts::fallbacks() {
-            let offset = fallback_baseline_y_offset(&font.bytes, font.index);
-            assert!(
-                offset.is_finite(),
-                "{} offset was not finite: {offset}",
-                font.name
-            );
-            assert!(
-                (-1.0..=1.0).contains(&offset),
-                "{} offset was out of expected range: {offset}",
-                font.name
-            );
+        ctx.run_ui(egui::RawInput::default(), |_| {})
+            .textures_delta
+            .clear();
+        let fonts = ctx.fonts(|fonts| fonts.definitions().clone());
+        for weight in fastframe_fonts::Weight::ALL {
+            let family = &fonts.families[&weight.family()];
+            assert_eq!(family[..2], [weight.name(), "noto_emoji"], "{weight:?}");
         }
+        assert_eq!(
+            fonts.families[&egui::FontFamily::Monospace][1],
+            "noto_emoji"
+        );
     }
 
     #[test]
@@ -1184,96 +1038,5 @@ mod tests {
             assert!(galley.rows[0].glyphs.len() >= 10);
         });
         output.textures_delta.clear();
-    }
-
-    /// Compare the painted glyph positions, including the raster offset, with
-    /// the same glyph drawn by its untweaked face. Inspecting `glyph.pos` alone
-    /// misses FontTweak, which is applied to the glyph's texture offset.
-    #[test]
-    fn fallback_glyphs_are_painted_on_the_latin_baseline() {
-        use egui::{FontFamily, FontId};
-        use skrifa::MetadataProvider as _;
-        use std::sync::Arc;
-
-        for pixels_per_point in [1.0, 1.5, 2.0] {
-            let ctx = egui::Context::default();
-            ctx.set_pixels_per_point(pixels_per_point);
-            install(&ctx);
-            ctx.run_ui(egui::RawInput::default(), |_| {})
-                .textures_delta
-                .clear();
-            let mut fonts = ctx.fonts(|fonts| fonts.definitions().clone());
-            let inter_data = Arc::clone(&fonts.font_data["inter"]);
-            let inter = skrifa::FontRef::from_index(&inter_data.font, 0).expect("bundled Inter");
-            let inter_map = inter.charmap();
-            let mut cases = Vec::new();
-            for font in crate::system_fonts::fallbacks() {
-                let face = skrifa::FontRef::from_index(&font.bytes, font.index)
-                    .expect("readable system fallback");
-                let Some(character) = crate::system_fonts::FALLBACK_SCRIPTS
-                    .iter()
-                    .map(|(_, probe, _)| *probe)
-                    .find(|probe| {
-                        inter_map.map(*probe).is_none() && face.charmap().map(*probe).is_some()
-                    })
-                else {
-                    continue;
-                };
-                let reference = format!("raw-{}", font.name);
-                let mut raw = (*fonts.font_data[&font.name]).clone();
-                raw.tweak.y_offset_factor = 0.0;
-                raw.tweak.y_offset = 0.0;
-                fonts.font_data.insert(reference.clone(), Arc::new(raw));
-                fonts.families.insert(
-                    FontFamily::Name(reference.clone().into()),
-                    vec![reference.clone()],
-                );
-                // Use the application's actual installed faces, selecting this
-                // fallback explicitly so an earlier face cannot mask a failure.
-                for primary in ["inter", INTER_MEDIUM, INTER_SEMIBOLD, INTER_BOLD] {
-                    let mixed = format!("{primary}-{}", font.name);
-                    fonts.families.insert(
-                        FontFamily::Name(mixed.clone().into()),
-                        vec![primary.into(), font.name.clone()],
-                    );
-                    cases.push((character, reference.clone(), mixed));
-                }
-            }
-            ctx.set_fonts(fonts);
-            ctx.run_ui(egui::RawInput::default(), |_| {})
-                .textures_delta
-                .clear();
-            let mut output = ctx.run_ui(egui::RawInput::default(), |ui| {
-                for (character, reference, mixed) in &cases {
-                    for size in [14.0, 28.0] {
-                        let layout = |text, family: &String| {
-                            ui.painter().layout_no_wrap(
-                                text,
-                                FontId::new(size, FontFamily::Name(family.clone().into())),
-                                Color32::WHITE,
-                            )
-                        };
-                        let raw = layout(character.to_string(), reference);
-                        let galley = layout(format!("A{character}A"), mixed);
-                        let row = &galley.rows[0];
-                        let glyph = row.glyphs.iter().find(|g| g.chr == *character).unwrap();
-                        let raw_row = &raw.rows[0];
-                        let raw_glyph = &raw_row.glyphs[0];
-                        let top = row.visuals.mesh.vertices[glyph.first_vertex as usize].pos.y;
-                        let raw_top =
-                            raw_row.visuals.mesh.vertices[raw_glyph.first_vertex as usize].pos.y;
-                        let baseline = top - raw_top + raw_glyph.pos.y;
-                        let latin_baseline = row.glyphs[0].pos.y;
-                        // Glyphs and their offsets snap independently to pixels.
-                        let error_pixels = (baseline - latin_baseline).abs() * pixels_per_point;
-                        assert!(
-                            error_pixels <= 1.01,
-                            "{mixed}, {character}, {size} pt at {pixels_per_point}x: baseline {baseline}, Latin {latin_baseline} ({error_pixels} px apart)"
-                        );
-                    }
-                }
-            });
-            output.textures_delta.clear();
-        }
     }
 }
