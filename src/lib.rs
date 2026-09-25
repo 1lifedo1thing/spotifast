@@ -48,11 +48,6 @@ pub mod skin;
 pub mod system_fonts;
 pub mod theme;
 pub mod thumbbar;
-#[cfg(target_os = "linux")]
-pub mod tray;
-#[cfg(not(target_os = "linux"))]
-#[path = "tray_native.rs"]
-pub mod tray;
 pub mod ui;
 pub mod updates;
 pub mod util;

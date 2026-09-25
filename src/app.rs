@@ -26,7 +26,6 @@ use crate::player::{EngineConfig, LoadSpec, LocalState, Playback, PlayerCommand,
 use crate::settings::{CachedRootlist, SessionState, Settings, ThemeChoice};
 use crate::single_instance::ControlCommand;
 use crate::theme::{self, Palette};
-use crate::tray::{TrayCommand, TrayService};
 use crate::util;
 
 const REMOTE_POLL_ACTIVE: Duration = Duration::from_secs(4);
@@ -240,7 +239,9 @@ pub struct App {
     /// from. Finding the file touches the disk and the controls are synced
     /// every frame, so the answer is kept until the artwork changes.
     media_art: Option<(String, PathBuf)>,
-    tray: Option<TrayService>,
+    tray: Option<fastframe_tray::Tray>,
+    /// Whether the tray menu last offered Pause rather than Play.
+    tray_playing: bool,
     pub window_hidden: bool,
     /// The window should close but the process should stay in the tray.
     pub hide_intent: bool,
@@ -594,6 +595,38 @@ const GLIDE_STOP: f32 = 40.0;
 /// in seconds: the span the release speed is measured over.
 const GLIDE_REST: f64 = 0.1;
 
+const TRAY_SHOW: &str = "show";
+const TRAY_PLAY_PAUSE: &str = "play-pause";
+const TRAY_NEXT: &str = "next";
+const TRAY_PREVIOUS: &str = "previous";
+const TRAY_QUIT: &str = "quit";
+
+/// The tray menu's Play or Pause entry, for what is playing.
+fn play_pause_label(playing: bool) -> &'static str {
+    if playing { "Pause" } else { "Play" }
+}
+
+/// The tray item: Spotifast's icon, and a menu that shows or hides the
+/// window, controls playback and quits.
+fn tray_config() -> fastframe_tray::Config {
+    use fastframe_tray::MenuItem;
+    fastframe_tray::Config {
+        id: "spotifast",
+        title: "Spotifast".into(),
+        icon: util::app_icon_rgba,
+        template_icon: Some(util::tray_template_rgba),
+        menu: vec![
+            MenuItem::action(TRAY_SHOW, "Show or hide Spotifast"),
+            MenuItem::Separator,
+            MenuItem::action(TRAY_PLAY_PAUSE, play_pause_label(false)),
+            MenuItem::action(TRAY_NEXT, "Next"),
+            MenuItem::action(TRAY_PREVIOUS, "Previous"),
+            MenuItem::Separator,
+            MenuItem::action(TRAY_QUIT, "Quit"),
+        ],
+    }
+}
+
 impl App {
     pub fn new(waker: &Waker, dirs: AppDirs, mut settings: Settings, options: AppOptions) -> Self {
         // The legacy password file has no endpoint of its own. Keep the old
@@ -657,7 +690,7 @@ impl App {
         let wake = waker.clone();
         let tray = options
             .tray
-            .then(|| TrayService::spawn(move || wake.wake()))
+            .then(|| fastframe_tray::Tray::spawn(tray_config(), move || wake.wake()))
             .flatten();
 
         let first_page = session
@@ -686,6 +719,7 @@ impl App {
             system_appearance,
             media_art: None,
             tray,
+            tray_playing: false,
             window_hidden: false,
             hide_intent: false,
             wants_show: false,
@@ -999,9 +1033,6 @@ impl App {
         self.window_hidden = true;
         self.hide_intent = false;
         self.wants_show = false;
-        if let Some(tray) = &mut self.tray {
-            tray.hidden();
-        }
     }
 
     /// Whether closing the window keeps the app in the tray rather than
@@ -3153,22 +3184,27 @@ impl App {
     }
 
     fn handle_tray(&mut self) {
-        let Some(commands) = self.tray.as_ref().map(TrayService::drain_commands) else {
+        use fastframe_tray::Event;
+        let Some(events) = self.tray.as_ref().map(fastframe_tray::Tray::events) else {
             return;
         };
-        for command in commands {
-            match command {
-                TrayCommand::Show => self.actions.push(Action::ShowWindow),
-                TrayCommand::ShowHide => self.actions.push(if self.window_hidden {
-                    Action::ShowWindow
-                } else {
-                    Action::HideWindow
-                }),
-                TrayCommand::PlayPause => self.actions.push(Action::TogglePlay),
-                TrayCommand::Next => self.actions.push(Action::Next),
-                TrayCommand::Previous => self.actions.push(Action::Previous),
-                TrayCommand::Quit => self.actions.push(Action::Quit),
-            }
+        for event in events {
+            let action = match event {
+                Event::Show => Action::ShowWindow,
+                Event::Toggle | Event::Menu(TRAY_SHOW) => {
+                    if self.window_hidden {
+                        Action::ShowWindow
+                    } else {
+                        Action::HideWindow
+                    }
+                }
+                Event::Menu(TRAY_PLAY_PAUSE) => Action::TogglePlay,
+                Event::Menu(TRAY_NEXT) => Action::Next,
+                Event::Menu(TRAY_PREVIOUS) => Action::Previous,
+                Event::Menu(TRAY_QUIT) => Action::Quit,
+                Event::Menu(_) => continue,
+            };
+            self.actions.push(action);
         }
     }
 
@@ -3376,8 +3412,11 @@ impl App {
             controls.update(state);
         }
         let playing = self.now_playing().is_some_and(|now| now.playing);
-        if let Some(tray) = &mut self.tray {
-            tray.set_playing(playing);
+        if let Some(tray) = &mut self.tray
+            && self.tray_playing != playing
+        {
+            self.tray_playing = playing;
+            tray.set_label(TRAY_PLAY_PAUSE, play_pause_label(playing));
         }
         #[cfg(target_os = "macos")]
         crate::mac_menu::set_playing(playing);

@@ -724,7 +724,7 @@ pub(crate) fn run() -> eframe::Result<()> {
                     break;
                 }
             }
-            spotifast::tray::idle(std::time::Duration::from_millis(150));
+            fastframe_tray::idle(std::time::Duration::from_millis(150));
         }
         let quit = {
             let guard = slot.lock().unwrap_or_else(|p| p.into_inner());
