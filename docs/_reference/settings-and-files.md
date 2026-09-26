@@ -307,12 +307,17 @@ and `--demo-show` adds surfaces on top of it: a comma separated list of
 `focus`, `winamp`, `playlist`, `eq`, `eq-shade`, `compact`, `update`, `personal-app`,
 `collection-loading`, `shuffle-selected`, `shuffle-started`, `library-list`,
 `library-list-narrow`, `library-list-wide`, `library-grid`, `library-grid-narrow`,
-`library-grid-wide`, and `rtl`. The Library variants show the list or cover grid with
+`library-grid-wide`, `rtl`, `player-bar-spectrum`, `player-bar-waveform`,
+`lyrics-fullscreen-view`, and `lyrics-fullscreen-instrumental`. The Library variants show the list or cover grid with
 a normal, narrow, or wide sidebar and collapsed artwork for matching captures.
 `shuffle-selected` and `shuffle-started` capture the selected-mode and
 playback-started outcomes of a collection Shuffle click. `update` shows a sample
 update badge for checking its layout. `personal-app` shows the personal Spotify
 app introduction.
+`player-bar-spectrum` and `player-bar-waveform` play a fixed, music-like
+sound on this computer with that player bar visualizer on.
+`lyrics-fullscreen-view` and `lyrics-fullscreen-instrumental` draw full-screen
+lyrics, with words or without, at the window's own size.
 `rtl` gives the first songs of `playlist:pl1` invented Hebrew and Arabic
 titles, some mixed with English, numbers, and brackets.
 `collection-loading` keeps known collection metadata and placeholder artwork
