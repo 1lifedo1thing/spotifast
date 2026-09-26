@@ -5715,6 +5715,56 @@ mod tests {
         }
     }
 
+    /// The cover moves aside only once there are words: while lyrics load,
+    /// and when fetching them failed, it stays in the middle, the failure
+    /// with its retry beneath.
+    #[cfg(feature = "demo")]
+    #[test]
+    fn full_screen_lyrics_keep_the_cover_centred_until_there_are_words() {
+        let centred = |shapes: &[egui::epaint::ClippedShape], wanted: &str| {
+            shapes.iter().any(|shape| match &shape.shape {
+                // A centred label anchors at its middle, so measure what is
+                // drawn rather than where it starts.
+                egui::Shape::Text(text) if text.galley.job.text == wanted => {
+                    (shape.shape.visual_bounding_rect().center().x - 800.0).abs() < 3.0
+                }
+                _ => false,
+            })
+        };
+        for (state, below) in [
+            (Loadable::Loading, None),
+            (
+                Loadable::Failed("Connection interrupted".into()),
+                Some("Try again"),
+            ),
+        ] {
+            let (ctx, mut app) = accessible_app("lyrics-centred-while-loading");
+            apply_flags(&mut app, None, Some("lyrics-fullscreen-view"));
+            app.lyrics = state;
+            let mut shapes = Vec::new();
+            for frame in 0..10 {
+                let mut output = ctx.run_ui(
+                    egui::RawInput {
+                        time: Some(f64::from(frame) / 30.0),
+                        screen_rect: Some(egui::Rect::from_min_size(
+                            egui::Pos2::ZERO,
+                            egui::vec2(1600.0, 900.0),
+                        )),
+                        ..Default::default()
+                    },
+                    |ui| app.frame_ui(ui),
+                );
+                output.textures_delta.clear();
+                shapes = output.shapes;
+            }
+            assert!(centred(&shapes, "Rosewood"), "the title stays centred");
+            if let Some(below) = below {
+                assert!(centred(&shapes, below), "{below} under the cover");
+            }
+            app.backend.shutdown();
+        }
+    }
+
     #[test]
     fn fullscreen_lyrics_highlight_preserves_line_layout() {
         let root =
