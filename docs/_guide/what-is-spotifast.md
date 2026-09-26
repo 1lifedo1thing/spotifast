@@ -93,7 +93,8 @@ Spotify playback. It takes inspiration from
 [spotify-tui](https://github.com/Rigellute/spotify-tui),
 [spotify-player](https://github.com/aome510/spotify-player),
 [ncspot](https://github.com/hrkfdn/ncspot), and
-[Omarchy Spotify](https://github.com/stappmus/Omarchy-Spotify).
+[Omarchy Spotify](https://github.com/stappmus/Omarchy-Spotify). Spotifast is
+a sibling of [ZapFast](https://zapfast.rocks), a native client for WhatsApp.
 
 Spotifast is an independent project, not affiliated with or endorsed by
 Spotify AB. Spotify is a trademark of Spotify AB.
