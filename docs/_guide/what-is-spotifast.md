@@ -95,6 +95,8 @@ Spotify playback. It takes inspiration from
 [ncspot](https://github.com/hrkfdn/ncspot), and
 [Omarchy Spotify](https://github.com/stappmus/Omarchy-Spotify). Spotifast is
 a sibling of [ZapFast](https://zapfast.rocks), a native client for WhatsApp.
+Both are built on [fastframe](https://github.com/crmne/fastframe), the shared
+foundation for native Rust apps built with egui.
 
 Spotifast is an independent project, not affiliated with or endorsed by
 Spotify AB. Spotify is a trademark of Spotify AB.

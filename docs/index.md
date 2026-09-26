@@ -82,7 +82,8 @@ react to music playing on your computer, in a resizable window or full screen.
 ## WhatsApp, just as fast
 
 **Want WhatsApp just as fast and native?** [ZapFast](https://zapfast.rocks) is
-Spotifast's sibling: the same native interface, for WhatsApp.
+Spotifast's sibling: the same native interface, for WhatsApp. Both are built on [fastframe](https://github.com/crmne/fastframe), the shared
+foundation for native Rust apps built with egui.
 
 <style>
   /* The hero image slot is sized for a square logo; the screenshot needs the
