@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-26 22:05+0200\n"
+"POT-Creation-Date: 2026-09-26 22:10+0200\n"
 "PO-Revision-Date: 2026-09-23 20:00+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: European Portuguese\n"
@@ -220,7 +220,7 @@ msgstr "{name}, pasta, aberta"
 msgid "Click to change the visualizer"
 msgstr "Clique para mudar o visualizador"
 
-#: src/ui/player_bar.rs:393 src/ui/lyrics.rs:122 src/ui/lyrics.rs:589
+#: src/ui/player_bar.rs:393 src/ui/lyrics.rs:122 src/ui/lyrics.rs:591
 msgid "Nothing playing"
 msgstr "Nada em reprodução"
 
@@ -290,7 +290,7 @@ msgstr "Ligar a um dispositivo"
 msgid "Queue"
 msgstr "Fila"
 
-#: src/ui/player_bar.rs:904 src/ui/lyrics.rs:60 src/ui/lyrics.rs:512
+#: src/ui/player_bar.rs:904 src/ui/lyrics.rs:60 src/ui/lyrics.rs:514
 msgid "Lyrics"
 msgstr "Letra"
 
@@ -357,43 +357,48 @@ msgstr "Carregar mais"
 msgid "Full screen lyrics"
 msgstr "Letra em ecrã inteiro"
 
-#: src/ui/lyrics.rs:95 src/ui/lyrics.rs:535
+#: src/ui/lyrics.rs:95 src/ui/lyrics.rs:537
 msgctxt "lyrics"
 msgid "Follow"
 msgstr "Seguir"
 
-#: src/ui/lyrics.rs:123 src/ui/lyrics.rs:590
+#: src/ui/lyrics.rs:123 src/ui/lyrics.rs:592
 msgid "Play a song to see its lyrics."
 msgstr "Reproduz uma música para veres a letra."
 
 #. Translators: Keep {error} unchanged. It is the original failure detail.
-#: src/ui/lyrics.rs:136 src/ui/lyrics.rs:369 src/ui/lyrics.rs:603
+#: src/ui/lyrics.rs:136 src/ui/lyrics.rs:369 src/ui/lyrics.rs:605
 #, rust-format
 msgid "Couldn't fetch the lyrics: {error}"
 msgstr "Não foi possível obter a letra: {error}"
 
-#: src/ui/lyrics.rs:142 src/ui/lyrics.rs:394 src/ui/lyrics.rs:609
+#: src/ui/lyrics.rs:142 src/ui/lyrics.rs:396 src/ui/lyrics.rs:611
 #: src/ui/settings.rs:370 src/ui/login.rs:106
 msgid "Try again"
 msgstr "Tentar novamente"
 
-#: src/ui/lyrics.rs:153 src/ui/lyrics.rs:362 src/ui/lyrics.rs:620
+#: src/ui/lyrics.rs:153 src/ui/lyrics.rs:362 src/ui/lyrics.rs:622
 msgid "No lyrics"
 msgstr "Sem letra"
 
-#: src/ui/lyrics.rs:154 src/ui/lyrics.rs:363 src/ui/lyrics.rs:621
+#: src/ui/lyrics.rs:154 src/ui/lyrics.rs:363 src/ui/lyrics.rs:623
 msgid "No lyrics found for this track."
 msgstr "Não foi encontrada letra para esta música."
 
-#: src/ui/lyrics.rs:163 src/ui/lyrics.rs:358 src/ui/lyrics.rs:630
+#: src/ui/lyrics.rs:163 src/ui/lyrics.rs:358 src/ui/lyrics.rs:632
 msgid "Instrumental"
 msgstr "Instrumental"
 
-#: src/ui/lyrics.rs:164 src/ui/lyrics.rs:359 src/ui/lyrics.rs:631
+#: src/ui/lyrics.rs:164 src/ui/lyrics.rs:359 src/ui/lyrics.rs:633
 msgid "No timed lyrics for this track."
 msgstr "Esta música não tem letra sincronizada."
 
-#: src/ui/lyrics.rs:523
+#: src/ui/lyrics.rs:376 src/ui/widgets.rs:2400 src/app.rs:10141
+#: src/ui/collection.rs:727
+msgid "Loading…"
+msgstr "A carregar…"
+
+#: src/ui/lyrics.rs:525
 msgid "Leave full screen (Esc)"
 msgstr "Sair do ecrã inteiro (Esc)"
 
@@ -560,10 +565,6 @@ msgstr "DATA DE ADIÇÃO"
 #: src/ui/widgets.rs:2144 src/ui/widgets.rs:2174
 msgid "Sort by duration"
 msgstr "Ordenar por duração"
-
-#: src/ui/widgets.rs:2400 src/app.rs:10141 src/ui/collection.rs:727
-msgid "Loading…"
-msgstr "A carregar…"
 
 #: src/ui/widgets.rs:2646
 msgid "Cut"

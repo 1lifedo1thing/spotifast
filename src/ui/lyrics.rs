@@ -351,8 +351,8 @@ fn with_cover(app: &mut App, ui: &mut egui::Ui, rect: Rect, top: f32) {
             .clamp(200.0, 560.0);
         let column = Rect::from_center_size(below.center(), vec2(side, side + 90.0));
         big_cover(app, ui, column, Align::Center);
-        // Why there are no words, quietly, under the song; nothing yet
-        // while they load.
+        // Why there are no words, quietly, under the song, or that they
+        // are still being fetched.
         let (heading, detail) = match &app.lyrics {
             Loadable::Loaded(Some(_)) => (
                 gettext(app.locale, "Instrumental"),
@@ -372,7 +372,9 @@ fn with_cover(app: &mut App, ui: &mut egui::Ui, rect: Rect, top: f32) {
                 .into(),
                 Default::default(),
             ),
-            Loadable::NotLoaded | Loadable::Loading => return,
+            Loadable::NotLoaded | Loadable::Loading => {
+                (gettext(app.locale, "Loading…"), Default::default())
+            }
         };
         let heading = ui.painter().text(
             pos2(column.center().x, column.bottom() + 8.0),
