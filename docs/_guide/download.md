@@ -64,6 +64,11 @@ open `spotifast.exe`.
 Either way, SmartScreen may warn about an unknown publisher on first run;
 choose **More info**, then **Run anyway**.
 
+Spotifast needs OpenGL 2.0 or newer, which every current Windows graphics
+driver provides. In a virtual machine or remote session that only has the
+Microsoft Basic Display Adapter, it may not start; install the machine's
+graphics driver, or enable GPU acceleration for the virtual machine.
+
 To choose which app opens Spotify links, use **Settings → Apps → Default apps**
 in Windows.
 

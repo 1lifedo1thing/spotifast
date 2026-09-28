@@ -369,6 +369,12 @@ After installing it, `xdg-mime default spotifast.desktop x-scheme-handler/spotif
 chooses Spotifast for `spotify:` links. The published 0.8.0 packages still use
 `fastpotify.desktop`; use that name with `xdg-mime` until updating.
 
+Spotifast draws its window with OpenGL 2.0 or newer, which the graphics
+driver of any current PC or Mac provides. A virtual machine or remote session
+without a graphics driver, such as Windows on the Microsoft Basic Display
+Adapter, may not offer it, and Spotifast then exits at startup. There is no
+separate software-rendering mode. MilkDrop needs OpenGL 3.3.
+
 ## Sign in
 
 Press **Sign in with Spotify**. Your browser opens Spotify's consent page
@@ -377,6 +383,8 @@ app keeps its grants in the system credential store: Secret Service on Linux,
 Keychain on macOS, and Credential Manager on Windows. You usually sign in once
 per machine. If the store is unavailable or locked, a new sign-in works for
 this session and Spotifast explains that it could not save it.
+[Privacy](https://spotifast.rocks/privacy/) lists everything the app stores
+and sends.
 
 Playing music **on this computer** needs a second, one-time browser approval.
 Spotify handles streaming separately from library access. Start it from the
