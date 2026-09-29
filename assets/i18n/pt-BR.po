@@ -373,7 +373,7 @@ msgid "Couldn't fetch the lyrics: {error}"
 msgstr "Não foi possível buscar a letra: {error}"
 
 #: src/ui/lyrics.rs:142 src/ui/lyrics.rs:396 src/ui/lyrics.rs:611
-#: src/ui/settings.rs:402 src/ui/login.rs:106
+#: src/ui/settings.rs:429 src/ui/login.rs:106
 msgid "Try again"
 msgstr "Tentar novamente"
 
@@ -1076,32 +1076,32 @@ msgstr "Não foi possível enviar a capa: {error}. Tente novamente."
 msgid "{track} Radio"
 msgstr "Rádio de {track}"
 
-#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:409
+#: src/ui/settings.rs:202 src/ui/keys.rs:290 src/ui/topbar.rs:409
 #: src/ui/topbar.rs:439
 msgid "Settings"
 msgstr "Configurações"
 
-#: src/ui/settings.rs:189
+#: src/ui/settings.rs:216
 msgid "Search settings"
 msgstr "Buscar nas configurações"
 
-#: src/ui/settings.rs:205
+#: src/ui/settings.rs:232
 msgid "Open folder"
 msgstr "Abrir pasta"
 
-#: src/ui/settings.rs:217
+#: src/ui/settings.rs:244
 msgid "Account"
 msgstr "Conta"
 
-#: src/ui/settings.rs:218 src/ui/topbar.rs:427
+#: src/ui/settings.rs:245 src/ui/topbar.rs:427
 msgid "Sign out"
 msgstr "Sair da conta"
 
-#: src/ui/settings.rs:221
+#: src/ui/settings.rs:248
 msgid "Personal Spotify app"
 msgstr "App pessoal do Spotify"
 
-#: src/ui/settings.rs:224
+#: src/ui/settings.rs:251
 msgid ""
 "Use a personal Development Mode app for a separate API quota. The shared app "
 "stays active."
@@ -1109,216 +1109,216 @@ msgstr ""
 "Use um app pessoal em Development Mode para ter uma cota de API separada. O "
 "app compartilhado continua ativo."
 
-#: src/ui/settings.rs:228
+#: src/ui/settings.rs:255
 msgid "Create an app"
 msgstr "Criar um app"
 
-#: src/ui/settings.rs:231
+#: src/ui/settings.rs:258
 msgid "Create one for free in Spotify's developer dashboard."
 msgstr "Crie um gratuitamente no painel de desenvolvedor do Spotify."
 
-#: src/ui/settings.rs:236
+#: src/ui/settings.rs:263
 msgid "Personal app ready"
 msgstr "App pessoal pronto"
 
-#: src/ui/settings.rs:239
+#: src/ui/settings.rs:266
 msgid "Supported requests use your app. Other requests use the shared app."
 msgstr ""
 "As solicitações compatíveis usam seu app. As demais usam o app compartilhado."
 
-#: src/ui/settings.rs:244
+#: src/ui/settings.rs:271
 msgid "Authorize your personal app"
 msgstr "Autorize seu app pessoal"
 
-#: src/ui/settings.rs:247
+#: src/ui/settings.rs:274
 msgid "Spotify opens in your browser to verify the account."
 msgstr "O Spotify abre no navegador para verificar a conta."
 
-#: src/ui/settings.rs:252
+#: src/ui/settings.rs:279
 msgid "Remove personal app"
 msgstr "Remover app pessoal"
 
-#: src/ui/settings.rs:253
+#: src/ui/settings.rs:280
 msgid "Shared access remains signed in."
 msgstr "O acesso compartilhado continua conectado."
 
-#: src/ui/settings.rs:283
+#: src/ui/settings.rs:310
 msgid "Spotify Free, local playback needs Premium"
 msgstr "Spotify Free, a reprodução local requer Premium"
 
 #. Translators: {username} is the Spotify account's user name.
-#: src/ui/settings.rs:297
+#: src/ui/settings.rs:324
 #, rust-format
 msgid "Connected as {username}"
 msgstr "Conectado como {username}"
 
-#: src/ui/settings.rs:325
+#: src/ui/settings.rs:352
 msgid "Client ID"
 msgstr "Client ID"
 
-#: src/ui/settings.rs:348
+#: src/ui/settings.rs:375
 msgid "Setup guide"
 msgstr "Guia de configuração"
 
-#: src/ui/settings.rs:358 src/ui/settings.rs:374 src/ui/dialogs.rs:96
+#: src/ui/settings.rs:385 src/ui/settings.rs:401 src/ui/dialogs.rs:96
 msgid "Remove"
 msgstr "Remover"
 
-#: src/ui/settings.rs:366
+#: src/ui/settings.rs:393
 msgid "Authorize"
 msgstr "Autorizar"
 
-#: src/ui/settings.rs:385
+#: src/ui/settings.rs:412
 msgctxt "playback status"
 msgid "Ready"
 msgstr "Pronto"
 
-#: src/ui/settings.rs:386
+#: src/ui/settings.rs:413
 msgid "This computer is a Spotify Connect device."
 msgstr "Este computador é um dispositivo Spotify Connect."
 
-#: src/ui/settings.rs:390
+#: src/ui/settings.rs:417
 msgctxt "playback status"
 msgid "Setting up"
 msgstr "Configurando"
 
-#: src/ui/settings.rs:391
+#: src/ui/settings.rs:418
 msgid "Finish authorizing in your browser."
 msgstr "Conclua a autorização no navegador."
 
-#: src/ui/settings.rs:395
+#: src/ui/settings.rs:422
 msgctxt "playback status"
 msgid "Connecting"
 msgstr "Conectando"
 
-#: src/ui/settings.rs:396 src/ui/login.rs:97
+#: src/ui/settings.rs:423 src/ui/login.rs:97
 msgid "Connecting to Spotify…"
 msgstr "Conectando ao Spotify…"
 
-#: src/ui/settings.rs:400
+#: src/ui/settings.rs:427
 msgctxt "playback status"
 msgid "Unavailable"
 msgstr "Indisponível"
 
-#: src/ui/settings.rs:405
+#: src/ui/settings.rs:432
 msgctxt "playback status"
 msgid "Not set up"
 msgstr "Não configurado"
 
-#: src/ui/settings.rs:408
+#: src/ui/settings.rs:435
 msgid "Requires Spotify Premium and a one-time browser sign-in."
 msgstr "Requer o Spotify Premium e um login único pelo navegador."
 
-#: src/ui/settings.rs:410
+#: src/ui/settings.rs:437
 msgid "Enable playback here"
 msgstr "Ativar a reprodução aqui"
 
-#: src/ui/settings.rs:413
+#: src/ui/settings.rs:440
 msgid "Playback on this computer"
 msgstr "Reprodução neste computador"
 
-#: src/ui/settings.rs:414
+#: src/ui/settings.rs:441
 msgid "Normalize volume"
 msgstr "Normalizar volume"
 
-#: src/ui/settings.rs:415
+#: src/ui/settings.rs:442
 msgid "Autoplay"
 msgstr "Reprodução automática"
 
-#: src/ui/settings.rs:416
+#: src/ui/settings.rs:443
 msgid "Gapless playback"
 msgstr "Reprodução sem intervalos"
 
-#: src/ui/settings.rs:417
+#: src/ui/settings.rs:444
 msgid "Keep music playing when the window closes"
 msgstr "Continuar tocando ao fechar a janela"
 
-#: src/ui/settings.rs:418
+#: src/ui/settings.rs:445
 msgid "Automatic update checks"
 msgstr "Verificar atualizações automaticamente"
 
-#: src/ui/settings.rs:419
+#: src/ui/settings.rs:446
 msgid "Audio cache"
 msgstr "Cache de áudio"
 
-#: src/ui/settings.rs:420
+#: src/ui/settings.rs:447
 msgid "Apply and restart playback"
 msgstr "Aplicar e reiniciar a reprodução"
 
-#: src/ui/settings.rs:421
+#: src/ui/settings.rs:448
 msgid "Restart local playback to apply these settings."
 msgstr "Reinicie a reprodução local para aplicar estas configurações."
 
-#: src/ui/settings.rs:422
+#: src/ui/settings.rs:449
 msgid "Download updates automatically"
 msgstr "Baixar atualizações automaticamente"
 
 #. Translators: {status} is a playback state such as Ready or Not set up.
-#: src/ui/settings.rs:426
+#: src/ui/settings.rs:453
 #, rust-format
 msgid "Status: {status}"
 msgstr "Status: {status}"
 
-#: src/ui/settings.rs:430
+#: src/ui/settings.rs:457
 msgid "Device name"
 msgstr "Nome do dispositivo"
 
-#: src/ui/settings.rs:431
+#: src/ui/settings.rs:458
 msgid "How this computer appears in Spotify Connect."
 msgstr "Como este computador aparece no Spotify Connect."
 
-#: src/ui/settings.rs:434
+#: src/ui/settings.rs:461
 msgid "Audio quality"
 msgstr "Qualidade do áudio"
 
-#: src/ui/settings.rs:435
+#: src/ui/settings.rs:462
 msgid "Higher bitrates use more data and cache space."
 msgstr "Taxas de bits mais altas usam mais dados e espaço de cache."
 
-#: src/ui/settings.rs:439
+#: src/ui/settings.rs:466
 msgid "Keep loud and quiet tracks at a similar level."
 msgstr "Mantém faixas altas e baixas em um nível parecido."
 
-#: src/ui/settings.rs:443
+#: src/ui/settings.rs:470
 msgid "Keep playing similar songs when your music ends."
 msgstr "Continua tocando músicas parecidas quando a sua música acabar."
 
-#: src/ui/settings.rs:447
+#: src/ui/settings.rs:474
 msgid "Play tracks without silence between them."
 msgstr "Reproduz as faixas sem silêncio entre elas."
 
-#: src/ui/settings.rs:454
+#: src/ui/settings.rs:481
 msgid ""
 "Spotifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
 msgstr ""
 "O Spotifast fica na bandeja do sistema. Saia pelo menu da bandeja ou com "
 "Ctrl+Q."
 
-#: src/ui/settings.rs:458
+#: src/ui/settings.rs:485
 msgid ""
 "Spotifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
 msgstr ""
 "O Spotifast fica na bandeja do sistema. Saia pelo menu da bandeja ou com "
 "Cmd+Q."
 
-#: src/ui/settings.rs:465
+#: src/ui/settings.rs:492
 msgid "Checks GitHub once a day. No personal data is sent."
 msgstr "Verifica o GitHub uma vez por dia. Nenhum dado pessoal é enviado."
 
-#: src/ui/settings.rs:468
+#: src/ui/settings.rs:495
 msgid "Audio output"
 msgstr "Saída de áudio"
 
-#: src/ui/settings.rs:471
+#: src/ui/settings.rs:498
 msgid "PulseAudio also covers PipeWire. Rodio talks to ALSA directly."
 msgstr ""
 "O PulseAudio também atende o PipeWire. O Rodio fala diretamente com o ALSA."
 
-#: src/ui/settings.rs:476
+#: src/ui/settings.rs:503
 msgid "Output buffer"
 msgstr "Buffer de saída"
 
-#: src/ui/settings.rs:479
+#: src/ui/settings.rs:506
 msgid ""
 "More buffering can prevent clicks on busy computers. Less buffering makes "
 "controls respond sooner."
@@ -1326,122 +1326,122 @@ msgstr ""
 "Um buffer maior pode evitar estalos em computadores sobrecarregados. Um "
 "buffer menor faz os controles responderem mais rápido."
 
-#: src/ui/settings.rs:485
+#: src/ui/settings.rs:512
 msgid "Save downloaded audio for later playback."
 msgstr "Salva o áudio baixado para reproduzir depois."
 
-#: src/ui/settings.rs:488
+#: src/ui/settings.rs:515
 msgid "Playback settings applied"
 msgstr "Configurações de reprodução aplicadas"
 
-#: src/ui/settings.rs:493
+#: src/ui/settings.rs:520
 msgid "Downloads in the background. You choose when to restart."
 msgstr "Baixa em segundo plano. Você escolhe quando reiniciar."
 
-#: src/ui/settings.rs:510
+#: src/ui/settings.rs:537
 msgid "Reconnect"
 msgstr "Reconectar"
 
-#: src/ui/settings.rs:542
+#: src/ui/settings.rs:569
 msgid "Normal · 96 kbps"
 msgstr "Normal · 96 kbps"
 
-#: src/ui/settings.rs:543
+#: src/ui/settings.rs:570
 msgid "High · 160 kbps"
 msgstr "Alta · 160 kbps"
 
-#: src/ui/settings.rs:544
+#: src/ui/settings.rs:571
 msgid "Very high · 320 kbps"
 msgstr "Muito alta · 320 kbps"
 
-#: src/ui/settings.rs:743
+#: src/ui/settings.rs:770
 msgid "Playback settings applied."
 msgstr "Configurações de reprodução aplicadas."
 
-#: src/ui/settings.rs:750
+#: src/ui/settings.rs:777
 msgid "Appearance"
 msgstr "Aparência"
 
-#: src/ui/settings.rs:751
+#: src/ui/settings.rs:778
 msgid "Theme"
 msgstr "Tema"
 
-#: src/ui/settings.rs:752
+#: src/ui/settings.rs:779
 msgid "How to make a theme"
 msgstr "Como criar um tema"
 
-#: src/ui/settings.rs:753
+#: src/ui/settings.rs:780
 msgid "Open themes folder"
 msgstr "Abrir pasta de temas"
 
-#: src/ui/settings.rs:754
+#: src/ui/settings.rs:781
 msgid "Colour from album art"
 msgstr "Cor da capa do álbum"
 
-#: src/ui/settings.rs:755
+#: src/ui/settings.rs:782
 msgid "Compact library sidebar"
 msgstr "Barra lateral compacta da biblioteca"
 
-#: src/ui/settings.rs:756
+#: src/ui/settings.rs:783
 msgid "Compact track list"
 msgstr "Lista de faixas compacta"
 
-#: src/ui/settings.rs:757
+#: src/ui/settings.rs:784
 msgid "Middle-click autoscroll"
 msgstr "Rolagem automática com o botão do meio"
 
-#: src/ui/settings.rs:758
+#: src/ui/settings.rs:785
 msgid "Custom title bar"
 msgstr "Barra de título personalizada"
 
-#: src/ui/settings.rs:759
+#: src/ui/settings.rs:786
 msgid "Player bar visualizer"
 msgstr "Visualizador na barra do player"
 
-#: src/ui/settings.rs:770
+#: src/ui/settings.rs:797
 msgid "Follow system uses your Omarchy colours."
 msgstr "Seguir o sistema usa as cores do Omarchy."
 
-#: src/ui/settings.rs:774
+#: src/ui/settings.rs:801
 msgid "Follow system uses your desktop's light or dark appearance."
 msgstr ""
 "Seguir o sistema usa a aparência clara ou escura do seu ambiente de trabalho."
 
-#: src/ui/settings.rs:779 src/ui/settings.rs:1910
+#: src/ui/settings.rs:806 src/ui/settings.rs:1952
 msgid "Language"
 msgstr "Idioma"
 
-#: src/ui/settings.rs:782
+#: src/ui/settings.rs:809
 msgid ""
 "System follows your computer's language. Untranslated text stays in English."
 msgstr ""
 "Sistema segue o idioma do computador. O texto sem tradução fica em inglês."
 
-#: src/ui/settings.rs:789
+#: src/ui/settings.rs:816
 msgid "Use the current cover's colour on pages and the player bar."
 msgstr "Usa a cor da capa atual nas páginas e na barra do player."
 
-#: src/ui/settings.rs:794
+#: src/ui/settings.rs:821
 msgid "Show names without covers in the sidebar."
 msgstr "Mostra os nomes sem capas na barra lateral."
 
-#: src/ui/settings.rs:798
+#: src/ui/settings.rs:825
 msgid "Show each track on one line without a cover."
 msgstr "Mostra cada faixa em uma linha, sem capa."
 
-#: src/ui/settings.rs:801
+#: src/ui/settings.rs:828
 msgid "Interface zoom"
 msgstr "Zoom da interface"
 
-#: src/ui/settings.rs:805
+#: src/ui/settings.rs:832
 msgid "Ctrl+Plus and Ctrl+Minus work anywhere; Ctrl+0 resets."
 msgstr "Ctrl+Plus e Ctrl+Minus funcionam em qualquer lugar; Ctrl+0 restaura."
 
-#: src/ui/settings.rs:809
+#: src/ui/settings.rs:836
 msgid "Cmd+Plus and Cmd+Minus work anywhere; Cmd+0 resets."
 msgstr "Cmd+Plus e Cmd+Minus funcionam em qualquer lugar; Cmd+0 restaura."
 
-#: src/ui/settings.rs:818
+#: src/ui/settings.rs:845
 msgid ""
 "Middle-click a list, then move the pointer to scroll it. Off by default, "
 "because a middle click usually pastes on Linux."
@@ -1449,7 +1449,7 @@ msgstr ""
 "Clique com o botão do meio em uma lista e mova o ponteiro para rolá-la. "
 "Desativado por padrão, porque no Linux o clique do meio costuma colar."
 
-#: src/ui/settings.rs:826
+#: src/ui/settings.rs:853
 msgid ""
 "Draw Spotifast's own title bar and window buttons instead of the standard "
 "Windows ones."
@@ -1457,44 +1457,44 @@ msgstr ""
 "Desenha a barra de título e os botões de janela do próprio Spotifast em vez "
 "dos padrões do Windows."
 
-#: src/ui/settings.rs:834
+#: src/ui/settings.rs:861
 msgid ""
 "Show the song moving behind the player bar's controls while it plays here."
 msgstr ""
 "Mostra a música em movimento atrás dos controles da barra do player enquanto "
 "toca aqui."
 
-#: src/ui/settings.rs:969
+#: src/ui/settings.rs:996
 msgid "Off"
 msgstr "Desativado"
 
-#: src/ui/settings.rs:970
+#: src/ui/settings.rs:997
 msgid "Spectrum"
 msgstr "Espectro"
 
-#: src/ui/settings.rs:971
+#: src/ui/settings.rs:998
 msgid "Waveform"
 msgstr "Forma de onda"
 
-#: src/ui/settings.rs:1128
+#: src/ui/settings.rs:1155
 msgid "Proxy"
 msgstr "Proxy"
 
-#: src/ui/settings.rs:1130
+#: src/ui/settings.rs:1157
 msgid "Mode, host, port, username and password"
 msgstr "Modo, host, porta, nome de usuário e senha"
 
-#: src/ui/settings.rs:1133
+#: src/ui/settings.rs:1160
 msgid "Off, System, HTTP or SOCKS5 proxy for network requests."
 msgstr ""
 "Proxy desativado, do sistema, HTTP ou SOCKS5 para as solicitações de rede."
 
-#: src/ui/settings.rs:1143
+#: src/ui/settings.rs:1170
 msgctxt "proxy"
 msgid "Mode"
 msgstr "Modo"
 
-#: src/ui/settings.rs:1146
+#: src/ui/settings.rs:1173
 msgid ""
 "Off ignores environment variables. System uses them, and the OS proxy on "
 "macOS and Windows."
@@ -1502,35 +1502,35 @@ msgstr ""
 "Desativado ignora as variáveis de ambiente. Sistema usa essas variáveis e, "
 "no macOS e no Windows, o proxy do sistema operacional."
 
-#: src/ui/settings.rs:1198 src/ui/login.rs:249
+#: src/ui/settings.rs:1225 src/ui/login.rs:249
 msgid "Apply settings"
 msgstr "Aplicar configurações"
 
-#: src/ui/settings.rs:1210
+#: src/ui/settings.rs:1237
 msgid "Not using a proxy."
 msgstr "Sem proxy."
 
-#: src/ui/settings.rs:1211
+#: src/ui/settings.rs:1238
 msgid "Using the system proxy."
 msgstr "Usando o proxy do sistema."
 
-#: src/ui/settings.rs:1222
+#: src/ui/settings.rs:1249
 msgid "Winamp skins"
 msgstr "Skins do Winamp"
 
-#: src/ui/settings.rs:1223 src/ui/winamp/mod.rs:706 src/ui/winamp/mod.rs:852
+#: src/ui/settings.rs:1250 src/ui/winamp/mod.rs:706 src/ui/winamp/mod.rs:852
 msgid "Always on top"
 msgstr "Sempre visível"
 
-#: src/ui/settings.rs:1224
+#: src/ui/settings.rs:1251
 msgid "Show Winamp in taskbar"
 msgstr "Mostrar o Winamp na barra de tarefas"
 
-#: src/ui/settings.rs:1227
+#: src/ui/settings.rs:1254
 msgid "Mini player"
 msgstr "Miniplayer"
 
-#: src/ui/settings.rs:1231
+#: src/ui/settings.rs:1258
 msgid ""
 "Use classic Winamp .wsz skins. Press Ctrl+M or click the skin logo to "
 "return. Drop a skin on either window to add it."
@@ -1539,7 +1539,7 @@ msgstr ""
 "da skin para voltar. Solte uma skin em qualquer uma das janelas para "
 "adicioná-la."
 
-#: src/ui/settings.rs:1235
+#: src/ui/settings.rs:1262
 msgid ""
 "Use classic Winamp .wsz skins. Press Cmd+Shift+M or click the skin logo to "
 "return. Drop a skin on either window to add it."
@@ -1548,34 +1548,34 @@ msgstr ""
 "logotipo da skin para voltar. Solte uma skin em qualquer uma das janelas "
 "para adicioná-la."
 
-#: src/ui/settings.rs:1241
+#: src/ui/settings.rs:1268
 msgid "Skin"
 msgstr "Skin"
 
 #. Translators: {folder} is the path of the skins folder.
-#: src/ui/settings.rs:1245
+#: src/ui/settings.rs:1272
 #, rust-format
 msgid "Installed skins are in {folder}. Find more at the Winamp Skin Museum."
 msgstr ""
 "As skins instaladas ficam em {folder}. Encontre mais no Winamp Skin Museum."
 
-#: src/ui/settings.rs:1250 src/ui/winamp/mod.rs:693
+#: src/ui/settings.rs:1277 src/ui/winamp/mod.rs:693
 msgid "Size"
 msgstr "Tamanho"
 
-#: src/ui/settings.rs:1251
+#: src/ui/settings.rs:1278
 msgid "Whole-number scaling keeps skin pixels sharp."
 msgstr "A escala em números inteiros mantém os pixels da skin nítidos."
 
-#: src/ui/settings.rs:1256
+#: src/ui/settings.rs:1283
 msgid "Keep the Winamp window above everything else."
 msgstr "Mantém a janela do Winamp acima de todas as outras."
 
-#: src/ui/settings.rs:1262 src/ui/winamp/mod.rs:716
+#: src/ui/settings.rs:1289 src/ui/winamp/mod.rs:716
 msgid "Show in taskbar"
 msgstr "Mostrar na barra de tarefas"
 
-#: src/ui/settings.rs:1265
+#: src/ui/settings.rs:1292
 msgid ""
 "Keep a taskbar button for the mini player. The tray icon stays available "
 "when hidden."
@@ -1583,33 +1583,33 @@ msgstr ""
 "Mantém um botão na barra de tarefas para o miniplayer. O ícone da bandeja "
 "continua disponível quando ele está oculto."
 
-#: src/ui/settings.rs:1270
+#: src/ui/settings.rs:1297
 msgid "Installed skins"
 msgstr "Skins instaladas"
 
-#: src/ui/settings.rs:1283
+#: src/ui/settings.rs:1310
 msgid "Switch to it"
 msgstr "Usar esta"
 
-#: src/ui/settings.rs:1296
+#: src/ui/settings.rs:1323
 msgid "Skin Museum"
 msgstr "Skin Museum"
 
-#: src/ui/settings.rs:1322
+#: src/ui/settings.rs:1349
 msgid "Random"
 msgstr "Aleatório"
 
-#: src/ui/settings.rs:1361
+#: src/ui/settings.rs:1388
 #, rust-format
 msgid ""
 "Now showing {skin}. Another one is picked each time the mini player opens."
 msgstr "Em uso: {skin}. Outra é escolhida cada vez que o miniplayer abre."
 
-#: src/ui/settings.rs:1415
+#: src/ui/settings.rs:1442
 msgid "MilkDrop window"
 msgstr "Janela do MilkDrop"
 
-#: src/ui/settings.rs:1423
+#: src/ui/settings.rs:1450
 msgid ""
 "A projectM visualiser for local playback. Open it here, from the top bar, "
 "with Ctrl+Shift+K, or from the mini player's V menu. Press ? or F1 for its "
@@ -1619,7 +1619,7 @@ msgstr ""
 "superior, com Ctrl+Shift+K ou pelo menu V do miniplayer. Pressione ? ou F1 "
 "para ver os atalhos."
 
-#: src/ui/settings.rs:1427
+#: src/ui/settings.rs:1454
 msgid ""
 "A projectM visualiser for local playback. Open it here, from the top bar, "
 "with Cmd+Shift+K, or from the mini player's V menu. Press ? or F1 for its "
@@ -1629,12 +1629,12 @@ msgstr ""
 "superior, com Cmd+Shift+K ou pelo menu V do miniplayer. Pressione ? ou F1 "
 "para ver os atalhos."
 
-#: src/ui/settings.rs:1433 src/ui/settings.rs:1648
+#: src/ui/settings.rs:1460 src/ui/settings.rs:1690
 msgid "Presets"
 msgstr "Presets"
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1438
+#: src/ui/settings.rs:1465
 #, rust-format
 msgid ""
 "None yet in {folder}. Add .milk files here. Spotifast downloads presets when "
@@ -1644,7 +1644,7 @@ msgstr ""
 "baixa presets quando o MilkDrop é aberto pela primeira vez com a pasta vazia."
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1444
+#: src/ui/settings.rs:1471
 #, rust-format
 msgid ""
 "One preset in {folder}. Add .milk files here. Spotifast downloads presets "
@@ -1654,7 +1654,7 @@ msgstr ""
 "presets quando o MilkDrop é aberto pela primeira vez com a pasta vazia."
 
 #. Translators: {count} is the number of presets, {folder} the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1450
+#: src/ui/settings.rs:1477
 #, rust-format
 msgid ""
 "{count} preset in {folder}. Add .milk files here. Spotifast downloads "
@@ -1669,25 +1669,25 @@ msgstr[1] ""
 "{count} presets em {folder}. Adicione arquivos .milk aqui. O Spotifast baixa "
 "presets quando o MilkDrop é aberto pela primeira vez com a pasta vazia."
 
-#: src/ui/settings.rs:1459
+#: src/ui/settings.rs:1486
 msgid "Time per preset"
 msgstr "Tempo por preset"
 
-#: src/ui/settings.rs:1462
+#: src/ui/settings.rs:1489
 msgid "How long each preset plays before the next fades in."
 msgstr "Quanto tempo cada preset fica antes da transição para o próximo."
 
-#: src/ui/settings.rs:1466
+#: src/ui/settings.rs:1493
 msgid "Frame rate"
 msgstr "Taxa de quadros"
 
-#: src/ui/settings.rs:1470
+#: src/ui/settings.rs:1497
 msgid "Lower rates use fewer resources. Uncapped draws as fast as possible."
 msgstr ""
 "Taxas menores usam menos recursos. Sem limite desenha o mais rápido possível."
 
 #. Translators: {hz} is the screen's refresh rate in hertz.
-#: src/ui/settings.rs:1475
+#: src/ui/settings.rs:1502
 #, rust-format
 msgid ""
 "Your screen refreshes at {hz} Hz. Higher rates do not add visible frames. "
@@ -1696,49 +1696,49 @@ msgstr ""
 "Sua tela atualiza a {hz} Hz. Taxas maiores não acrescentam quadros visíveis. "
 "Sem limite desenha o mais rápido possível."
 
-#: src/ui/settings.rs:1482
+#: src/ui/settings.rs:1509
 msgid "Resolution"
 msgstr "Resolução"
 
-#: src/ui/settings.rs:1485
+#: src/ui/settings.rs:1512
 msgid "Half and Quarter use fewer resources and scale the image back up."
 msgstr "Metade e Um quarto usam menos recursos e ampliam a imagem de volta."
 
 #. Translators: search keywords for the MilkDrop preset download buttons.
-#: src/ui/settings.rs:1492
+#: src/ui/settings.rs:1519
 msgid "Get presets"
 msgstr "Obter presets"
 
-#: src/ui/settings.rs:1530
+#: src/ui/settings.rs:1557
 msgid "Fetching..."
 msgstr "Obtendo..."
 
 #. Translators: {pack} is the name of a MilkDrop preset pack.
-#: src/ui/settings.rs:1533
+#: src/ui/settings.rs:1560
 #, rust-format
 msgid "Get {pack}"
 msgstr "Obter {pack}"
 
-#: src/ui/settings.rs:1620
+#: src/ui/settings.rs:1662
 msgctxt "resolution"
 msgid "Full"
 msgstr "Completa"
 
-#: src/ui/settings.rs:1621
+#: src/ui/settings.rs:1663
 msgctxt "resolution"
 msgid "Half"
 msgstr "Metade"
 
-#: src/ui/settings.rs:1622
+#: src/ui/settings.rs:1664
 msgctxt "resolution"
 msgid "Quarter"
 msgstr "Um quarto"
 
-#: src/ui/settings.rs:1636
+#: src/ui/settings.rs:1678
 msgid "Equalizer"
 msgstr "Equalizador"
 
-#: src/ui/settings.rs:1642
+#: src/ui/settings.rs:1684
 msgid ""
 "A ten-band equalizer for playback on this computer. It does not affect other "
 "devices."
@@ -1747,99 +1747,99 @@ msgstr ""
 "outros dispositivos."
 
 #. Translators: a search keyword for the equalizer's preamplifier slider.
-#: src/ui/settings.rs:1650
+#: src/ui/settings.rs:1692
 msgid "Preamp"
 msgstr "Pré-amplificador"
 
 #. Translators: a search keyword for the equalizer's frequency band sliders.
-#: src/ui/settings.rs:1652
+#: src/ui/settings.rs:1694
 msgid "Bands"
 msgstr "Bandas"
 
 #. Translators: short label under the equalizer's preamplifier slider.
-#: src/ui/settings.rs:1702
+#: src/ui/settings.rs:1744
 msgctxt "equalizer"
 msgid "Pre"
 msgstr "Pré"
 
-#: src/ui/settings.rs:1719
+#: src/ui/settings.rs:1761
 msgid "Storage"
 msgstr "Armazenamento"
 
-#: src/ui/settings.rs:1722
+#: src/ui/settings.rs:1764
 msgid "Artwork cache"
 msgstr "Cache de capas"
 
 #. Translators: {folder} is the path of a cache folder.
-#: src/ui/settings.rs:1724 src/ui/settings.rs:1730
+#: src/ui/settings.rs:1766 src/ui/settings.rs:1772
 #, rust-format
 msgid "Stored in {folder}"
 msgstr "Armazenado em {folder}"
 
-#: src/ui/settings.rs:1736
+#: src/ui/settings.rs:1778
 msgid "Play history"
 msgstr "Histórico de reprodução"
 
 #. Translators: {file} is the path of the play history file.
-#: src/ui/settings.rs:1740
+#: src/ui/settings.rs:1782
 #, rust-format
 msgid "Tracks played here are stored in {file}. This file is never uploaded."
 msgstr "As faixas tocadas aqui ficam em {file}. Este arquivo nunca é enviado."
 
-#: src/ui/settings.rs:1745
+#: src/ui/settings.rs:1787
 msgid "Sign-in"
 msgstr "Login"
 
-#: src/ui/settings.rs:1748
+#: src/ui/settings.rs:1790
 msgid "Sign-ins are saved in the system credential store when available."
 msgstr ""
 "Os logins são salvos no armazenamento de credenciais do sistema, quando "
 "disponível."
 
-#: src/ui/settings.rs:1760
+#: src/ui/settings.rs:1802
 msgid "Clear artwork"
 msgstr "Limpar capas"
 
-#: src/ui/settings.rs:1774
+#: src/ui/settings.rs:1816
 msgid "Clear history"
 msgstr "Limpar histórico"
 
-#: src/ui/settings.rs:1786 src/ui/show.rs:34
+#: src/ui/settings.rs:1828 src/ui/show.rs:34
 msgid "About"
 msgstr "Sobre"
 
-#: src/ui/settings.rs:1789
+#: src/ui/settings.rs:1831
 msgid "Built with Rust, egui, and librespot. Not affiliated with Spotify."
 msgstr "Feito com Rust, egui e librespot. Sem afiliação com o Spotify."
 
-#: src/ui/settings.rs:1791
+#: src/ui/settings.rs:1833
 msgid "Check for updates"
 msgstr "Verificar atualizações"
 
-#: src/ui/settings.rs:1792
+#: src/ui/settings.rs:1834
 msgid "Checking…"
 msgstr "Verificando…"
 
-#: src/ui/settings.rs:1793 src/ui/dialogs.rs:153 src/ui/keys.rs:300
+#: src/ui/settings.rs:1835 src/ui/dialogs.rs:153 src/ui/keys.rs:300
 #: src/ui/topbar.rs:417
 msgid "Keyboard shortcuts"
 msgstr "Atalhos de teclado"
 
-#: src/ui/settings.rs:1794
+#: src/ui/settings.rs:1836
 msgid "Source code"
 msgstr "Código-fonte"
 
 #. Translators: {query} is the text typed into the settings search field.
-#: src/ui/settings.rs:1866
+#: src/ui/settings.rs:1908
 #, rust-format
 msgid "No settings for “{query}”"
 msgstr "Nenhuma configuração para “{query}”"
 
-#: src/ui/settings.rs:1867
+#: src/ui/settings.rs:1909
 msgid "Try fewer words, or check the spelling."
 msgstr "Tente menos palavras ou verifique a ortografia."
 
-#: src/ui/settings.rs:1883
+#: src/ui/settings.rs:1925
 msgctxt "language"
 msgid "System"
 msgstr "Sistema"
