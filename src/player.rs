@@ -465,6 +465,26 @@ impl Engine {
         &self.device_id
     }
 
+    /// What this engine is heard at, kept past the engine itself: the next
+    /// engine starts there.
+    pub(crate) fn heard(&self) -> Heard {
+        Heard {
+            state: Arc::clone(&self.state),
+        }
+    }
+
+    /// Applies a level set here to the mixer and the state at once, so the
+    /// engine is heard at it from now on. Connect is told on release, not
+    /// while the slider is still moving.
+    fn note_volume(&self, volume: u16, preview: bool) -> Result<()> {
+        self.mixer.set_volume(volume);
+        self.state.lock().unwrap_or_else(|p| p.into_inner()).volume = volume;
+        if !preview {
+            self.spirc.set_volume(volume)?;
+        }
+        Ok(())
+    }
+
     /// Whether Spotify classifies this album as an EP in its internal metadata.
     pub(crate) async fn album_is_ep(&self, album_uri: &str) -> Result<bool> {
         let uri = SpotifyUri::from_uri(album_uri).context("invalid album URI")?;
@@ -586,11 +606,8 @@ impl Engine {
             PlayerCommand::ClearQueue => spirc.clear_queue()?,
             PlayerCommand::AddToQueue(uri) => spirc.add_to_queue(uri)?,
             PlayerCommand::Seek(position_ms) => spirc.set_position_ms(position_ms)?,
-            PlayerCommand::Volume(volume) => {
-                self.mixer.set_volume(volume);
-                spirc.set_volume(volume)?;
-            }
-            PlayerCommand::VolumePreview(volume) => self.mixer.set_volume(volume),
+            PlayerCommand::Volume(volume) => self.note_volume(volume, false)?,
+            PlayerCommand::VolumePreview(volume) => self.note_volume(volume, true)?,
             PlayerCommand::Shuffle(enabled) => spirc.shuffle(enabled)?,
             PlayerCommand::Repeat(mode) => match mode {
                 RepeatMode::Off => {
@@ -710,6 +727,32 @@ fn sink_builder(
         }),
         Box::new(NoOpVolume),
     )
+}
+
+/// What an engine is heard at, for the engine that replaces it.
+#[derive(Clone)]
+pub(crate) struct Heard {
+    state: Arc<Mutex<LocalState>>,
+}
+
+impl Heard {
+    /// The level set last, which the state holds exactly: a level set here
+    /// goes into the state with the mixer, and Connect reports every other
+    /// change of the level.
+    pub(crate) fn level(&self) -> u16 {
+        self.state.lock().unwrap_or_else(|p| p.into_inner()).volume
+    }
+
+    /// An engine heard at `volume`, for tests that have no engine.
+    #[cfg(test)]
+    pub(crate) fn at(volume: u16) -> Self {
+        Self {
+            state: Arc::new(Mutex::new(LocalState {
+                volume,
+                ..LocalState::default()
+            })),
+        }
+    }
 }
 
 async fn run_events(
@@ -1508,5 +1551,12 @@ mod tests {
         state.playback = Playback::Playing;
         state.track = None;
         assert!(state.interrupted().is_none());
+    }
+
+    /// The next engine starts at the level set last, exactly.
+    #[test]
+    fn an_engine_is_heard_at_the_level_set_last() {
+        let set_here = 3276;
+        assert_eq!(Heard::at(set_here).level(), set_here);
     }
 }
