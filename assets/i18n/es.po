@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-29 14:58+0200\n"
+"POT-Creation-Date: 2026-09-29 15:00+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Spanish\n"
@@ -158,17 +158,17 @@ msgstr "Sin coincidencias."
 msgid "Sort by recently played"
 msgstr "Ordenar por reproducido recientemente"
 
-#: src/ui/sidebar.rs:1828 src/ui/player_bar.rs:681 src/ui/widgets.rs:956
+#: src/ui/sidebar.rs:1832 src/ui/player_bar.rs:681 src/ui/widgets.rs:956
 #: src/ui/widgets.rs:2349 src/ui/artist.rs:329 src/ui/collection.rs:214
 #: src/ui/home.rs:147 src/ui/search.rs:390 src/ui/show.rs:311
 msgid "Play"
 msgstr "Reproducir"
 
-#: src/ui/sidebar.rs:1846
+#: src/ui/sidebar.rs:1850
 msgid "Unpin"
 msgstr "Dejar de fijar"
 
-#: src/ui/sidebar.rs:1848
+#: src/ui/sidebar.rs:1852
 msgid "Pin to top"
 msgstr "Fijar arriba"
 

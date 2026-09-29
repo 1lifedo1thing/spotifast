@@ -1821,6 +1821,10 @@ fn entry_menu(app: &mut App, response: &egui::Response, entry: &Entry, custom_or
         egui::Popup::context_menu(response)
             .frame(super::widgets::menu_frame(&app.palette))
             .show(|ui| {
+                // The same width as every other menu; without it the menu
+                // stretches as wide as the window.
+                ui.set_min_width(200.0);
+                ui.set_max_width(300.0);
                 if super::widgets::menu_item(
                     ui,
                     &app.palette,
