@@ -149,7 +149,7 @@ jobs:
   nix:
     name: Nix package
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: wimpysworld/nothing-but-nix@v9
