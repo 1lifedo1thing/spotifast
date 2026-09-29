@@ -126,8 +126,7 @@ fn receiver_row(app: &mut App, ui: &mut egui::Ui, receiver: &crate::zeroconf::Re
         .image(palette.text, 22.0)
         .paint_at(ui, icon_rect);
     let painter = ui.painter().with_clip_rect(rect);
-    crate::emoji::paint_line(
-        ui,
+    crate::bidi::paint_line(
         &painter,
         rect.left() + 48.0,
         rect.right() - 12.0,
@@ -312,8 +311,7 @@ pub fn popup(app: &mut App, ctx: &egui::Context) {
                                 .image(color, 22.0)
                                 .paint_at(ui, icon_rect);
                             let painter = ui.painter().with_clip_rect(rect);
-                            crate::emoji::paint_line(
-                                ui,
+                            crate::bidi::paint_line(
                                 &painter,
                                 rect.left() + 48.0,
                                 rect.right() - 12.0,

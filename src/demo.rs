@@ -1122,6 +1122,12 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                         playlist.name = name.to_string();
                     }
                 }
+                // Text fields: the top bar's search and, with `create`, the
+                // new playlist's name.
+                app.search.query = "road trip 🚗".into();
+                if let Some(Dialog::CreatePlaylist { name, .. }) = &mut app.dialog {
+                    *name = "Autumn drives 🍂🚗".into();
+                }
                 if let Loadable::Loaded(Some(lyrics)) = &mut app.lyrics {
                     let marks = ["🌃", "🪟", "📻", "🛣️", "⛽", "🗺️", "🌌", "🥰"];
                     for (line, mark) in lyrics.lines.iter_mut().zip(marks.iter().cycle()) {

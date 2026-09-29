@@ -361,10 +361,10 @@ a small system face is enlarged to read as large as the Latin text around
 it, and Javanese, styled mathematical and circled letters, and ♡ in names
 find an installed face as well.
 
-On `main`, emoji in song, artist, album and playlist names and in lyrics
-are drawn in colour, in the system's own style: Apple Color Emoji on
-macOS, Segoe UI Emoji on Windows, and the desktop's colour emoji font on
-Linux (`noto-fonts-emoji` on Arch, `fonts-noto-color-emoji` on Debian or
+On `main`, emoji are drawn in colour everywhere the interface shows
+text (names, lyrics, menus, tooltips and text fields), in the system's own
+style: Apple Color Emoji on macOS, Segoe UI Emoji on Windows, and the
+desktop's colour emoji font on Linux (`noto-fonts-emoji` on Arch, `fonts-noto-color-emoji` on Debian or
 Ubuntu). Without one, emoji are drawn in a single colour as before. The
 Winamp mini player and MilkDrop's titles keep the single-colour emoji.
 

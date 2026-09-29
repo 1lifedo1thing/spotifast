@@ -119,8 +119,7 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                         pos2(cover.right() + 12.0, rect.top()),
                         pos2(rect.right() - play_room, rect.bottom()),
                     );
-                    crate::emoji::paint_line(
-                        ui,
+                    crate::bidi::paint_line(
                         &ui.painter().with_clip_rect(text_rect),
                         text_rect.left(),
                         text_rect.right(),

@@ -321,8 +321,7 @@ fn top_result(
             pos2(rect.right() - 20.0, rect.bottom()),
         );
         let painter = ui.painter().with_clip_rect(text_clip);
-        crate::emoji::paint_line(
-            ui,
+        crate::bidi::paint_line(
             &painter,
             text_clip.left(),
             text_clip.right(),
@@ -360,8 +359,7 @@ fn top_result(
                 );
             }
             TopResultSubtitle::Text(subtitle) => {
-                crate::emoji::paint_line(
-                    ui,
+                crate::bidi::paint_line(
                     &painter,
                     text_clip.left(),
                     text_clip.right(),

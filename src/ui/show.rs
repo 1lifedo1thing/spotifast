@@ -246,8 +246,7 @@ pub fn episode_row(
     } else {
         palette.text
     };
-    crate::emoji::paint_line(
-        ui,
+    crate::bidi::paint_line(
         &painter,
         text_left,
         text_rect.right(),

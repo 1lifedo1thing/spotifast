@@ -215,7 +215,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                 } else {
                     Sense::hover()
                 };
-                let response = if crate::bidi::is_rtl(text) || crate::emoji::shows(text) {
+                let response = if crate::bidi::is_rtl(text) {
                     let galley = crate::bidi::layout(
                         ui.painter(),
                         text,
@@ -225,7 +225,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui) {
                         usize::MAX,
                         None,
                     );
-                    crate::emoji::label(ui, galley, sense)
+                    ui.add(egui::Label::new(galley).sense(sense))
                 } else {
                     ui.add(
                         egui::Label::new(egui::RichText::new(text).font(font).color(color))
@@ -443,12 +443,21 @@ fn big_cover(app: &App, ui: &mut egui::Ui, column: Rect, align: Align) {
             .layout(Layout::top_down(align)),
     );
     text.spacing_mut().item_spacing.y = 4.0;
-    theme::text(&mut text, &now.title, theme::semibold(22.0), Color32::WHITE);
-    theme::text(
-        &mut text,
-        &now.subtitle,
-        theme::regular(14.0),
-        Color32::from_gray(225),
+    text.add(
+        egui::Label::new(
+            egui::RichText::new(&now.title)
+                .font(theme::semibold(22.0))
+                .color(Color32::WHITE),
+        )
+        .truncate(),
+    );
+    text.add(
+        egui::Label::new(
+            egui::RichText::new(&now.subtitle)
+                .font(theme::regular(14.0))
+                .color(Color32::from_gray(225)),
+        )
+        .truncate(),
     );
 }
 
@@ -718,7 +727,7 @@ fn fullscreen_contents(app: &mut App, ui: &mut egui::Ui) {
                 let response = ui
                     .scope(|ui| {
                         ui.multiply_opacity(edge * edge * (3.0 - 2.0 * edge));
-                        crate::emoji::label(ui, galley, sense)
+                        ui.add(egui::Label::new(galley).sense(sense))
                     })
                     .inner;
                 let rect = response.rect;

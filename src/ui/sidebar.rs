@@ -1342,8 +1342,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             pos2(text_left, rect.top()),
                             pos2(text_right, rect.bottom()),
                         ));
-                        crate::emoji::paint_line(
-                            ui,
+                        crate::bidi::paint_line(
                             &painter,
                             text_left,
                             text_right,
@@ -1353,8 +1352,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             name_color,
                         );
                         if !compact {
-                            crate::emoji::paint_line(
-                                ui,
+                            crate::bidi::paint_line(
                                 &painter,
                                 text_left,
                                 text_right,
@@ -1376,8 +1374,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             pos2(text_left, rect.top()),
                             pos2(text_right, rect.bottom()),
                         ));
-                        crate::emoji::paint_line(
-                            ui,
+                        crate::bidi::paint_line(
                             &painter,
                             text_left,
                             text_right,
@@ -1418,8 +1415,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             pos2(text_left, rect.top()),
                             pos2(text_right, rect.bottom()),
                         ));
-                        crate::emoji::paint_line(
-                            ui,
+                        crate::bidi::paint_line(
                             &painter,
                             text_left,
                             text_right,
@@ -1428,8 +1424,7 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             theme::medium(14.0),
                             name_color,
                         );
-                        crate::emoji::paint_line(
-                            ui,
+                        crate::bidi::paint_line(
                             &painter,
                             text_left,
                             text_right,
@@ -1546,8 +1541,8 @@ fn paint_grid_text(
         1,
         Some(crate::bidi::ELLIPSIS),
     );
-    let origin = crate::bidi::galley_pos(rect, &galley);
-    crate::emoji::galley(ui, ui.painter(), origin, galley, color);
+    ui.painter()
+        .galley(crate::bidi::galley_pos(rect, &galley), galley, color);
 }
 
 fn grid_reorder_slot(

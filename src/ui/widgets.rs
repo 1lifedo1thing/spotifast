@@ -1620,8 +1620,7 @@ fn track_row_contents(
                 pos2(x + cols.added_by - 12.0, rect.bottom()),
             );
             let clipped = painter.with_clip_rect(cell.intersect(ui.clip_rect()));
-            crate::emoji::paint_line(
-                ui,
+            crate::bidi::paint_line(
                 &clipped,
                 cell.left(),
                 cell.right(),
@@ -2309,7 +2308,7 @@ pub fn card(
             Align::Center => pos2(title_rect.center().x, title_rect.top()),
             _ => title_rect.min,
         };
-        crate::emoji::galley(ui, ui.painter(), title_pos, title_galley, palette.text);
+        ui.painter().galley(title_pos, title_galley, palette.text);
         let subtitle_galley = ellipsized(
             ui,
             subtitle,
@@ -2327,13 +2326,8 @@ pub fn card(
             Align::Center => pos2(subtitle_rect.center().x, subtitle_rect.top()),
             _ => subtitle_rect.min,
         };
-        crate::emoji::galley(
-            ui,
-            ui.painter(),
-            subtitle_pos,
-            subtitle_galley,
-            palette.secondary,
-        );
+        ui.painter()
+            .galley(subtitle_pos, subtitle_galley, palette.secondary);
 
         if playable && hovered {
             let button_rect = Rect::from_center_size(

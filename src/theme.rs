@@ -263,6 +263,8 @@ pub fn install(ctx: &egui::Context) {
     install_fonts(ctx);
     egui_extras::install_image_loaders(ctx);
     fastframe_icons::install::<Icon>(ctx);
+    // Colour emoji over every text egui draws (see `crate::emoji`).
+    ctx.add_plugin(fastframe_emoji::EmojiPlugin::default());
 }
 
 /// Applies the palette to egui's own widgets so dialogs, menus, and text
@@ -819,9 +821,8 @@ pub fn text(
     color: Color32,
 ) -> Response {
     let text = text.into();
-    if crate::bidi::is_rtl(&text) || crate::emoji::shows(&text) {
-        // Laid out here so a cut lands at the reading end, on the left, and
-        // emoji can be painted in colour.
+    if crate::bidi::is_rtl(&text) {
+        // Laid out here so a cut lands at the reading end, on the left.
         let galley = crate::bidi::layout(
             ui.painter(),
             &text,
@@ -831,7 +832,7 @@ pub fn text(
             1,
             Some(crate::bidi::ELLIPSIS),
         );
-        return crate::emoji::label(ui, galley, Sense::hover());
+        return ui.add(egui::Label::new(galley).selectable(false));
     }
     ui.add(
         egui::Label::new(egui::RichText::new(text).font(font).color(color))
@@ -848,7 +849,7 @@ pub fn link(
     color: Color32,
 ) -> Response {
     let text = text.into();
-    let response = if crate::bidi::is_rtl(&text) || crate::emoji::shows(&text) {
+    let response = if crate::bidi::is_rtl(&text) {
         let galley = crate::bidi::layout(
             ui.painter(),
             &text,
@@ -858,7 +859,11 @@ pub fn link(
             1,
             Some(crate::bidi::ELLIPSIS),
         );
-        crate::emoji::label(ui, galley, Sense::click())
+        ui.add(
+            egui::Label::new(galley)
+                .selectable(false)
+                .sense(Sense::click()),
+        )
     } else {
         ui.add(
             egui::Label::new(egui::RichText::new(text.clone()).font(font).color(color))

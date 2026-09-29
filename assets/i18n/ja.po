@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-29 18:59+0200\n"
+"POT-Creation-Date: 2026-09-30 00:29+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Japanese\n"
@@ -43,8 +43,8 @@ msgstr "お気に入りの曲"
 msgid "Library order"
 msgstr "ライブラリ順"
 
-#: src/ui/sidebar.rs:342 src/ui/home.rs:277 src/ui/home.rs:287
-#: src/ui/home.rs:314
+#: src/ui/sidebar.rs:342 src/ui/home.rs:276 src/ui/home.rs:286
+#: src/ui/home.rs:313
 msgid "Recently played"
 msgstr "最近再生した順"
 
@@ -111,22 +111,22 @@ msgstr "ライブラリを検索"
 msgid "Library"
 msgstr "ライブラリ"
 
-#: src/ui/sidebar.rs:937 src/app.rs:5904 src/model.rs:636 src/ui/search.rs:634
+#: src/ui/sidebar.rs:937 src/app.rs:5904 src/model.rs:636 src/ui/search.rs:632
 msgid "Playlists"
 msgstr "プレイリスト"
 
 #: src/ui/sidebar.rs:938 src/model.rs:635 src/model.rs:749 src/ui/library.rs:17
-#: src/ui/search.rs:567
+#: src/ui/search.rs:565
 msgid "Albums"
 msgstr "アルバム"
 
 #: src/ui/sidebar.rs:939 src/model.rs:634 src/ui/library.rs:22
-#: src/ui/search.rs:505
+#: src/ui/search.rs:503
 msgid "Artists"
 msgstr "アーティスト"
 
 #: src/ui/sidebar.rs:940 src/model.rs:637 src/ui/library.rs:27
-#: src/ui/search.rs:685
+#: src/ui/search.rs:683
 msgid "Podcasts"
 msgstr "ポッドキャスト"
 
@@ -135,8 +135,8 @@ msgid "Search in Your Library"
 msgstr "ライブラリ内を検索"
 
 #: src/ui/sidebar.rs:1089 src/app.rs:2439 src/ui/artist.rs:197
-#: src/ui/artist.rs:299 src/ui/home.rs:546 src/ui/library.rs:95
-#: src/ui/search.rs:145 src/ui/search.rs:472 src/ui/winamp/playlist.rs:729
+#: src/ui/artist.rs:299 src/ui/home.rs:545 src/ui/library.rs:95
+#: src/ui/search.rs:145 src/ui/search.rs:470 src/ui/winamp/playlist.rs:729
 msgid "Artist"
 msgstr "アーティスト"
 
@@ -154,21 +154,21 @@ msgstr "まだ何もありません。"
 msgid "No matches."
 msgstr "一致する項目はありません。"
 
-#: src/ui/sidebar.rs:1816
+#: src/ui/sidebar.rs:1811
 msgid "Sort by recently played"
 msgstr "最近再生した順に並べ替え"
 
-#: src/ui/sidebar.rs:1837 src/ui/player_bar.rs:681 src/ui/widgets.rs:956
-#: src/ui/widgets.rs:2355 src/ui/artist.rs:329 src/ui/collection.rs:214
-#: src/ui/home.rs:148 src/ui/search.rs:392 src/ui/show.rs:312
+#: src/ui/sidebar.rs:1832 src/ui/player_bar.rs:681 src/ui/widgets.rs:956
+#: src/ui/widgets.rs:2349 src/ui/artist.rs:329 src/ui/collection.rs:214
+#: src/ui/home.rs:147 src/ui/search.rs:390 src/ui/show.rs:311
 msgid "Play"
 msgstr "再生"
 
-#: src/ui/sidebar.rs:1855
+#: src/ui/sidebar.rs:1850
 msgid "Unpin"
 msgstr "固定を解除"
 
-#: src/ui/sidebar.rs:1857
+#: src/ui/sidebar.rs:1852
 msgid "Pin to top"
 msgstr "上部に固定"
 
@@ -216,7 +216,7 @@ msgstr "{name}、フォルダ、展開"
 msgid "Click to change the visualizer"
 msgstr "クリックでビジュアライザーを切り替え"
 
-#: src/ui/player_bar.rs:400 src/ui/lyrics.rs:122 src/ui/lyrics.rs:582
+#: src/ui/player_bar.rs:400 src/ui/lyrics.rs:122 src/ui/lyrics.rs:591
 msgid "Nothing playing"
 msgstr "再生していません"
 
@@ -225,12 +225,12 @@ msgid "Pick a song, album, or playlist"
 msgstr "曲、アルバム、プレイリストを選んでください"
 
 #: src/ui/player_bar.rs:537 src/ui/widgets.rs:560 src/ui/widgets.rs:786
-#: src/ui/widgets.rs:1685
+#: src/ui/widgets.rs:1684
 msgid "Remove from Liked Songs"
 msgstr "お気に入りの曲から削除"
 
 #: src/ui/player_bar.rs:543 src/ui/widgets.rs:563 src/ui/widgets.rs:789
-#: src/ui/widgets.rs:1687
+#: src/ui/widgets.rs:1686
 msgid "Save to Liked Songs"
 msgstr "お気に入りの曲に保存"
 
@@ -278,7 +278,7 @@ msgstr "ミュートを解除"
 msgid "Mute"
 msgstr "ミュート"
 
-#: src/ui/player_bar.rs:867 src/ui/devices.rs:194
+#: src/ui/player_bar.rs:867 src/ui/devices.rs:193
 msgid "Connect to a device"
 msgstr "デバイスに接続"
 
@@ -286,7 +286,7 @@ msgstr "デバイスに接続"
 msgid "Queue"
 msgstr "再生待ちリスト"
 
-#: src/ui/player_bar.rs:912 src/ui/lyrics.rs:60 src/ui/lyrics.rs:505
+#: src/ui/player_bar.rs:912 src/ui/lyrics.rs:60 src/ui/lyrics.rs:514
 msgid "Lyrics"
 msgstr "歌詞"
 
@@ -332,7 +332,7 @@ msgstr "次に再生"
 msgid "Next up"
 msgstr "このあと再生"
 
-#: src/ui/queue.rs:465 src/ui/queue.rs:498 src/ui/widgets.rs:2421
+#: src/ui/queue.rs:465 src/ui/queue.rs:498 src/ui/widgets.rs:2415
 #: src/ui/collection.rs:1065
 msgid "Retry"
 msgstr "再試行"
@@ -353,48 +353,48 @@ msgstr "さらに読み込む"
 msgid "Full screen lyrics"
 msgstr "歌詞を全画面表示"
 
-#: src/ui/lyrics.rs:95 src/ui/lyrics.rs:528
+#: src/ui/lyrics.rs:95 src/ui/lyrics.rs:537
 msgctxt "lyrics"
 msgid "Follow"
 msgstr "追従"
 
-#: src/ui/lyrics.rs:123 src/ui/lyrics.rs:583
+#: src/ui/lyrics.rs:123 src/ui/lyrics.rs:592
 msgid "Play a song to see its lyrics."
 msgstr "曲を再生すると歌詞が表示されます。"
 
 #. Translators: Keep {error} unchanged. It is the original failure detail.
-#: src/ui/lyrics.rs:136 src/ui/lyrics.rs:369 src/ui/lyrics.rs:596
+#: src/ui/lyrics.rs:136 src/ui/lyrics.rs:369 src/ui/lyrics.rs:605
 #, rust-format
 msgid "Couldn't fetch the lyrics: {error}"
 msgstr "歌詞を取得できませんでした：{error}"
 
-#: src/ui/lyrics.rs:142 src/ui/lyrics.rs:396 src/ui/lyrics.rs:602
+#: src/ui/lyrics.rs:142 src/ui/lyrics.rs:396 src/ui/lyrics.rs:611
 #: src/ui/settings.rs:429 src/ui/login.rs:106
 msgid "Try again"
 msgstr "もう一度試す"
 
-#: src/ui/lyrics.rs:153 src/ui/lyrics.rs:362 src/ui/lyrics.rs:613
+#: src/ui/lyrics.rs:153 src/ui/lyrics.rs:362 src/ui/lyrics.rs:622
 msgid "No lyrics"
 msgstr "歌詞はありません"
 
-#: src/ui/lyrics.rs:154 src/ui/lyrics.rs:363 src/ui/lyrics.rs:614
+#: src/ui/lyrics.rs:154 src/ui/lyrics.rs:363 src/ui/lyrics.rs:623
 msgid "No lyrics found for this track."
 msgstr "この曲の歌詞は見つかりませんでした。"
 
-#: src/ui/lyrics.rs:163 src/ui/lyrics.rs:358 src/ui/lyrics.rs:623
+#: src/ui/lyrics.rs:163 src/ui/lyrics.rs:358 src/ui/lyrics.rs:632
 msgid "Instrumental"
 msgstr "インストゥルメンタル"
 
-#: src/ui/lyrics.rs:164 src/ui/lyrics.rs:359 src/ui/lyrics.rs:624
+#: src/ui/lyrics.rs:164 src/ui/lyrics.rs:359 src/ui/lyrics.rs:633
 msgid "No timed lyrics for this track."
 msgstr "この曲には同期された歌詞がありません。"
 
-#: src/ui/lyrics.rs:376 src/ui/widgets.rs:2406 src/app.rs:10163
+#: src/ui/lyrics.rs:376 src/ui/widgets.rs:2400 src/app.rs:10163
 #: src/ui/collection.rs:728
 msgid "Loading…"
 msgstr "読み込み中…"
 
-#: src/ui/lyrics.rs:516
+#: src/ui/lyrics.rs:525
 msgid "Leave full screen (Esc)"
 msgstr "全画面表示を終了 (Esc)"
 
@@ -511,99 +511,99 @@ msgstr "アーティストのラジオへ移動"
 msgid "Play {title}, {subtitle}"
 msgstr "{title}を再生、{subtitle}"
 
-#: src/ui/widgets.rs:1732 src/ui/artist.rs:359 src/ui/collection.rs:306
-#: src/ui/show.rs:187 src/ui/show.rs:390
+#: src/ui/widgets.rs:1731 src/ui/artist.rs:359 src/ui/collection.rs:306
+#: src/ui/show.rs:187 src/ui/show.rs:389
 msgid "More"
 msgstr "その他"
 
 #. Translators: The label beside the pointer while songs are dragged. {name} is the first song's name and {count} how many more songs are dragged with it.
-#: src/ui/widgets.rs:1868
+#: src/ui/widgets.rs:1867
 #, rust-format
 msgid "{name} + {count} more"
 msgid_plural "{name} + {count} more"
 msgstr[0] "{name} ほか{count}件"
 
 #. Translators: {column} is a column heading of a song list, such as Title.
-#: src/ui/widgets.rs:1985
+#: src/ui/widgets.rs:1984
 #, rust-format
 msgid "Sort by {column}"
 msgstr "{column}で並べ替え"
 
-#: src/ui/widgets.rs:2035
+#: src/ui/widgets.rs:2034
 msgid "Sort by playlist order"
 msgstr "プレイリストの順に並べ替え"
 
-#: src/ui/widgets.rs:2070
+#: src/ui/widgets.rs:2069
 msgid "Original order, reversed"
 msgstr "元の順序、逆順"
 
-#: src/ui/widgets.rs:2083
+#: src/ui/widgets.rs:2082
 msgctxt "column heading"
 msgid "TITLE"
 msgstr "タイトル"
 
-#: src/ui/widgets.rs:2106
+#: src/ui/widgets.rs:2105
 msgctxt "column heading"
 msgid "ALBUM"
 msgstr "アルバム"
 
-#: src/ui/widgets.rs:2115
+#: src/ui/widgets.rs:2114
 msgctxt "column heading"
 msgid "ADDED BY"
 msgstr "追加したユーザー"
 
-#: src/ui/widgets.rs:2124
+#: src/ui/widgets.rs:2123
 msgctxt "column heading"
 msgid "DATE ADDED"
 msgstr "追加日"
 
-#: src/ui/widgets.rs:2145 src/ui/widgets.rs:2175
+#: src/ui/widgets.rs:2144 src/ui/widgets.rs:2174
 msgid "Sort by duration"
 msgstr "再生時間で並べ替え"
 
-#: src/ui/widgets.rs:2652
+#: src/ui/widgets.rs:2646
 msgid "Cut"
 msgstr "切り取り"
 
-#: src/ui/widgets.rs:2657
+#: src/ui/widgets.rs:2651
 msgid "Copy"
 msgstr "コピー"
 
-#: src/ui/widgets.rs:2662
+#: src/ui/widgets.rs:2656
 msgid "Paste"
 msgstr "貼り付け"
 
-#: src/ui/widgets.rs:2679
+#: src/ui/widgets.rs:2673
 msgid "Select all"
 msgstr "すべて選択"
 
-#: src/ui/widgets.rs:2782
+#: src/ui/widgets.rs:2776
 msgid "Clear"
 msgstr "クリア"
 
 #. Translators: {name} is replaced by the author's name, shown as a link.
-#: src/ui/widgets.rs:2827
+#: src/ui/widgets.rs:2821
 #, rust-format
 msgid "Built with love by {name}"
 msgstr "{name}が心を込めて制作"
 
-#: src/ui/widgets.rs:2972
+#: src/ui/widgets.rs:2966
 msgid "Host"
 msgstr "ホスト"
 
-#: src/ui/widgets.rs:2989
+#: src/ui/widgets.rs:2983
 msgid "Port"
 msgstr "ポート"
 
-#: src/ui/widgets.rs:3007
+#: src/ui/widgets.rs:3001
 msgid "Username"
 msgstr "ユーザー名"
 
-#: src/ui/widgets.rs:3018
+#: src/ui/widgets.rs:3012
 msgid "Password"
 msgstr "パスワード"
 
-#: src/ui/widgets.rs:3036
+#: src/ui/widgets.rs:3030
 msgid ""
 "Proxy login applies to Web requests. Local playback uses this proxy only "
 "without a login."
@@ -611,7 +611,7 @@ msgstr ""
 "プロキシのログイン情報はWebリクエストに適用されます。ローカル再生では、ログイ"
 "ン情報がない場合のみこのプロキシを使用します。"
 
-#: src/ui/widgets.rs:3040
+#: src/ui/widgets.rs:3034
 msgid ""
 "Spotify hostnames are resolved by the proxy. Local playback connects "
 "directly."
@@ -1867,7 +1867,7 @@ msgctxt "filter"
 msgid "All"
 msgstr "すべて"
 
-#: src/model.rs:633 src/ui/search.rs:427
+#: src/model.rs:633 src/ui/search.rs:425
 msgid "Songs"
 msgstr "曲"
 
@@ -1986,7 +1986,7 @@ msgid_plural "{count} followers"
 msgstr[0] "フォロワー{count}人"
 
 #: src/ui/artist.rs:320 src/ui/collection.rs:200 src/ui/show.rs:146
-#: src/ui/show.rs:299
+#: src/ui/show.rs:298
 msgid "Starting…"
 msgstr "起動中…"
 
@@ -2011,7 +2011,7 @@ msgstr "プレイリストとして保存"
 msgid "Refreshing…"
 msgstr "更新中…"
 
-#: src/ui/collection.rs:343 src/ui/devices.rs:207
+#: src/ui/collection.rs:343 src/ui/devices.rs:206
 msgid "Refresh"
 msgstr "更新"
 
@@ -2031,7 +2031,7 @@ msgstr "まだ何もありません"
 msgid "Added songs appear here."
 msgstr "追加した曲がここに表示されます。"
 
-#: src/ui/collection.rs:1287 src/ui/home.rs:654
+#: src/ui/collection.rs:1287 src/ui/home.rs:653
 msgid "Your top songs"
 msgstr "あなたのトップソング"
 
@@ -2079,7 +2079,7 @@ msgid_plural "and {count} others"
 msgstr[0] "ほか{count}人"
 
 #. Translators: {name} is the name this computer uses in Spotify Connect.
-#: src/ui/devices.rs:72 src/ui/devices.rs:290
+#: src/ui/devices.rs:72 src/ui/devices.rs:289
 #, rust-format
 msgid "{name} (this computer)"
 msgstr "{name}（このコンピューター）"
@@ -2092,28 +2092,28 @@ msgstr "設定中…"
 msgid "Set up playback here"
 msgstr "ここで再生を設定"
 
-#: src/ui/devices.rs:143
+#: src/ui/devices.rs:142
 msgid "Connecting…"
 msgstr "接続中…"
 
-#: src/ui/devices.rs:145
+#: src/ui/devices.rs:144
 msgid "On your network, click to connect"
 msgstr "同じネットワーク上にあります。クリックして接続"
 
-#: src/ui/devices.rs:279
+#: src/ui/devices.rs:278
 msgid "No devices found. Open Spotify on another device, then refresh."
 msgstr ""
 "デバイスが見つかりません。別のデバイスでSpotifyを開いてから更新してください。"
 
-#: src/ui/devices.rs:326
+#: src/ui/devices.rs:324
 msgid "Listening on this device"
 msgstr "このデバイスで再生中"
 
-#: src/ui/devices.rs:328
+#: src/ui/devices.rs:326
 msgid "Restricted"
 msgstr "制限あり"
 
-#: src/ui/devices.rs:330
+#: src/ui/devices.rs:328
 msgid "Play here"
 msgstr "ここで再生"
 
@@ -2313,45 +2313,45 @@ msgstr "説明（任意）"
 msgid "Save"
 msgstr "保存"
 
-#: src/ui/home.rs:212
+#: src/ui/home.rs:211
 msgid "Made for you"
 msgstr "あなた向け"
 
-#: src/ui/home.rs:217
+#: src/ui/home.rs:216
 msgid "Couldn't load this shelf"
 msgstr "このセクションを読み込めませんでした"
 
 #. Translators: {owner} is the name of the playlist's owner.
-#: src/ui/home.rs:228 src/ui/search.rs:592
+#: src/ui/home.rs:227 src/ui/search.rs:590
 #, rust-format
 msgid "By {owner}"
 msgstr "作成者：{owner}"
 
-#: src/ui/home.rs:451
+#: src/ui/home.rs:450
 msgid "Your podcasts"
 msgstr "あなたのポッドキャスト"
 
 #. Translators: {time} is the time left in an episode, such as 12 min; {show} is the podcast's name.
-#: src/ui/home.rs:457
+#: src/ui/home.rs:456
 #, rust-format
 msgid "{time} left • {show}"
 msgstr "残り{time} • {show}"
 
 #. Translators: {show} is the podcast's name.
-#: src/ui/home.rs:466
+#: src/ui/home.rs:465
 #, rust-format
 msgid "New • {show}"
 msgstr "新着 • {show}"
 
-#: src/ui/home.rs:513 src/ui/home.rs:523 src/ui/home.rs:538
+#: src/ui/home.rs:512 src/ui/home.rs:522 src/ui/home.rs:537
 msgid "Your top artists"
 msgstr "あなたのトップアーティスト"
 
-#: src/ui/home.rs:655
+#: src/ui/home.rs:654
 msgid "Show more top songs"
 msgstr "トップソングをもっと見る"
 
-#: src/ui/home.rs:669
+#: src/ui/home.rs:668
 msgid "Recommended for you"
 msgstr "おすすめ"
 
@@ -2661,7 +2661,7 @@ msgid "Album • {artists}"
 msgstr "アルバム • {artists}"
 
 #. Translators: Precedes the song's artist names, which follow as links.
-#: src/ui/search.rs:350
+#: src/ui/search.rs:349
 msgid "Song • "
 msgstr "曲 • "
 
@@ -2685,12 +2685,12 @@ msgid "Follow podcast"
 msgstr "ポッドキャストをフォロー"
 
 #. Translators: {duration} is the time left in an episode, such as "12 min".
-#: src/ui/show.rs:340
+#: src/ui/show.rs:339
 #, rust-format
 msgid "{duration} left"
 msgstr "残り{duration}"
 
-#: src/ui/show.rs:362
+#: src/ui/show.rs:361
 msgid "Played"
 msgstr "再生済み"
 
