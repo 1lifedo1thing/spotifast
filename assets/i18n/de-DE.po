@@ -158,7 +158,7 @@ msgstr "Keine Treffer."
 msgid "Sort by recently played"
 msgstr "Nach zuletzt gespielt sortieren"
 
-#: src/ui/sidebar.rs:1828 src/ui/player_bar.rs:674 src/ui/widgets.rs:956
+#: src/ui/sidebar.rs:1828 src/ui/player_bar.rs:681 src/ui/widgets.rs:956
 #: src/ui/widgets.rs:2349 src/ui/artist.rs:329 src/ui/collection.rs:214
 #: src/ui/home.rs:147 src/ui/search.rs:390 src/ui/show.rs:311
 msgid "Play"
@@ -216,81 +216,81 @@ msgstr "{name}, Ordner, eingeklappt"
 msgid "{name}, folder, expanded"
 msgstr "{name}, Ordner, ausgeklappt"
 
-#: src/ui/player_bar.rs:76
+#: src/ui/player_bar.rs:80
 msgid "Click to change the visualizer"
 msgstr "Klicken, um den Visualizer zu wechseln"
 
-#: src/ui/player_bar.rs:393 src/ui/lyrics.rs:122 src/ui/lyrics.rs:591
+#: src/ui/player_bar.rs:400 src/ui/lyrics.rs:122 src/ui/lyrics.rs:591
 msgid "Nothing playing"
 msgstr "Keine Wiedergabe"
 
-#: src/ui/player_bar.rs:399 src/app.rs:7213
+#: src/ui/player_bar.rs:406 src/app.rs:7213
 msgid "Pick a song, album, or playlist"
 msgstr "Wähle einen Song, ein Album oder eine Playlist"
 
-#: src/ui/player_bar.rs:530 src/ui/widgets.rs:560 src/ui/widgets.rs:786
+#: src/ui/player_bar.rs:537 src/ui/widgets.rs:560 src/ui/widgets.rs:786
 #: src/ui/widgets.rs:1684
 msgid "Remove from Liked Songs"
 msgstr "Aus Lieblingssongs entfernen"
 
-#: src/ui/player_bar.rs:536 src/ui/widgets.rs:563 src/ui/widgets.rs:789
+#: src/ui/player_bar.rs:543 src/ui/widgets.rs:563 src/ui/widgets.rs:789
 #: src/ui/widgets.rs:1686
 msgid "Save to Liked Songs"
 msgstr "In Lieblingssongs speichern"
 
-#: src/ui/player_bar.rs:618 src/ui/player_bar.rs:625 src/ui/collection.rs:260
+#: src/ui/player_bar.rs:625 src/ui/player_bar.rs:632 src/ui/collection.rs:260
 msgid "Shuffle"
 msgstr "Zufallswiedergabe"
 
-#: src/ui/player_bar.rs:639
+#: src/ui/player_bar.rs:646
 msgid "Previous"
 msgstr "Zurück"
 
-#: src/ui/player_bar.rs:672 src/ui/collection.rs:212
+#: src/ui/player_bar.rs:679 src/ui/collection.rs:212
 msgid "Pause"
 msgstr "Pause"
 
-#: src/ui/player_bar.rs:690
+#: src/ui/player_bar.rs:697
 msgid "Next"
 msgstr "Weiter"
 
-#: src/ui/player_bar.rs:698
+#: src/ui/player_bar.rs:705
 msgid "Repeat"
 msgstr "Wiederholen"
 
-#: src/ui/player_bar.rs:702
+#: src/ui/player_bar.rs:709
 msgid "Repeat one"
 msgstr "Einen Titel wiederholen"
 
-#: src/ui/player_bar.rs:707
+#: src/ui/player_bar.rs:714
 msgid "Repeat off"
 msgstr "Wiederholen aus"
 
-#: src/ui/player_bar.rs:768
+#: src/ui/player_bar.rs:775
 msgid "Playback position (%)"
 msgstr "Wiedergabeposition (%)"
 
-#: src/ui/player_bar.rs:806
+#: src/ui/player_bar.rs:813
 msgid "Volume (%)"
 msgstr "Lautstärke (%)"
 
-#: src/ui/player_bar.rs:839
+#: src/ui/player_bar.rs:846
 msgid "Unmute"
 msgstr "Stummschaltung aufheben"
 
-#: src/ui/player_bar.rs:841
+#: src/ui/player_bar.rs:848
 msgid "Mute"
 msgstr "Stummschalten"
 
-#: src/ui/player_bar.rs:860 src/ui/devices.rs:193
+#: src/ui/player_bar.rs:867 src/ui/devices.rs:193
 msgid "Connect to a device"
 msgstr "Mit einem Gerät verbinden"
 
-#: src/ui/player_bar.rs:879 src/ui/queue.rs:23 src/ui/queue.rs:72
+#: src/ui/player_bar.rs:886 src/ui/queue.rs:23 src/ui/queue.rs:72
 msgid "Queue"
 msgstr "Warteschlange"
 
-#: src/ui/player_bar.rs:905 src/ui/lyrics.rs:60 src/ui/lyrics.rs:514
+#: src/ui/player_bar.rs:912 src/ui/lyrics.rs:60 src/ui/lyrics.rs:514
 msgid "Lyrics"
 msgstr "Songtext"
 
