@@ -120,7 +120,7 @@
                 pname = "spotifast";
                 version = (pkgs.lib.importTOML ./Cargo.toml).package.version;
                 src = self;
-                hash = "sha256-59ZSwpcEnJgx1igqKcZSPJVRVsSZ/FPSK8L+Eh6cW4s=";
+                hash = "sha256-bZ0O0cfBRM+3X6EijZkxdiX6/qFg0zKP9rItAT2Nse8=";
               };
               # projectm-sys only searches lib, while CMake may otherwise install to lib64.
               postPatch = ''

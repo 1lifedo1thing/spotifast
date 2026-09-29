@@ -1075,6 +1075,60 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.show_lyrics_panel = true;
                 app.lyrics_fullscreen = Some(false);
             }
+            // Emoji in titles, artists, playlist names and lyrics: joined
+            // sequences, skin tones, flags and keycaps. Give it after
+            // `lyrics` to put emoji in the words too.
+            "emoji" => {
+                let titles = [
+                    ("Road Trip 🚗💨", "The Wanderers 🌵"),
+                    ("Family 👨‍👩‍👧 Sunday", "Kasia 👋🏽"),
+                    ("🇮🇹 Estate", "Nove 9️⃣"),
+                    ("Heartbeat ❤️‍🔥", "Pulse"),
+                    ("Rainbow 🏳️‍🌈 Parade", "Colours ✨"),
+                    ("Night Drive 🌙", "Neon 🎧"),
+                ];
+                let rename = |track: &mut Track, (title, artist): (&str, &str)| {
+                    track.name = title.to_string();
+                    if let Some(first) = track.artists.first_mut() {
+                        first.name = artist.to_string();
+                    }
+                };
+                if let Some(page) = app.playlist_pages.get_mut("pl1") {
+                    for (entry, names) in page.items.items.iter_mut().zip(titles) {
+                        if let Some(PlayableItem::Track(track)) = &mut entry.item {
+                            rename(track, names);
+                        }
+                    }
+                    page.items.revision += 1;
+                }
+                if let Loadable::Loaded(queue) = &mut app.queue {
+                    for (item, names) in queue.queue.iter_mut().zip(titles) {
+                        if let PlayableItem::Track(track) = item {
+                            rename(track, names);
+                        }
+                    }
+                }
+                if let Some(remote) = &mut app.remote
+                    && let Some(PlayableItem::Track(track)) = &mut remote.state.item
+                {
+                    rename(track, titles[0]);
+                }
+                if let Some(track) = app.track_cache.get_mut("trk0") {
+                    rename(track, titles[0]);
+                }
+                if let Loadable::Loaded(playlists) = &mut app.library.playlists {
+                    let names = ["☕ Morning", "Gym 💪🏿", "🎄 Christmas"];
+                    for (playlist, name) in playlists.iter_mut().skip(3).zip(names) {
+                        playlist.name = name.to_string();
+                    }
+                }
+                if let Loadable::Loaded(Some(lyrics)) = &mut app.lyrics {
+                    let marks = ["🌃", "🪟", "📻", "🛣️", "⛽", "🗺️", "🌌", "🥰"];
+                    for (line, mark) in lyrics.lines.iter_mut().zip(marks.iter().cycle()) {
+                        line.text = format!("{} {mark}", line.text);
+                    }
+                }
+            }
             // Titles in scripts the interface font does not cover.
             "scripts" => {
                 let titles = [
@@ -4252,6 +4306,28 @@ mod tests {
             assert!(
                 painted.iter().any(|(text, _)| text.contains(artist)),
                 "{artist} is not drawn"
+            );
+        }
+        app.backend.shutdown();
+    }
+
+    /// Emoji titles keep their own text: the colour pictures are painted
+    /// over hidden glyphs, so layout, copying and screen readers see the
+    /// title exactly as Spotify sent it.
+    #[cfg(feature = "demo")]
+    #[test]
+    fn emoji_titles_are_drawn_whole() {
+        fn playlist(app: &mut App, ui: &mut egui::Ui) {
+            crate::ui::collection::playlist(app, ui, "pl1");
+        }
+        let (ctx, mut app) = accessible_app("emoji-titles");
+        apply_flags(&mut app, Some("playlist:pl1"), Some("emoji"));
+        view_frame(&ctx, &mut app, vec![], playlist);
+        let painted = view_frame(&ctx, &mut app, vec![], playlist);
+        for title in ["Road Trip 🚗💨", "Family 👨‍👩‍👧 Sunday", "🇮🇹 Estate"] {
+            assert!(
+                painted.iter().any(|(text, _)| text == title),
+                "{title} is not drawn"
             );
         }
         app.backend.shutdown();

@@ -1823,6 +1823,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastframe-emoji"
+version = "0.2.0"
+source = "git+https://github.com/crmne/fastframe?tag=v0.2.0#574b7387edf283a6f45ddd470102f6252e60de93"
+dependencies = [
+ "egui",
+ "fastframe-fonts",
+ "harfrust",
+ "log",
+ "memmap2",
+ "png 0.18.1",
+ "skrifa",
+ "unicode-segmentation",
+ "windows 0.62.2",
+ "windows-core 0.62.2",
+ "windows-numerics 0.3.1",
+]
+
+[[package]]
 name = "fastframe-fonts"
 version = "0.2.0"
 source = "git+https://github.com/crmne/fastframe?tag=v0.2.0#574b7387edf283a6f45ddd470102f6252e60de93"
@@ -5815,6 +5833,7 @@ dependencies = [
  "eframe",
  "egui",
  "egui_extras",
+ "fastframe-emoji",
  "fastframe-fonts",
  "fastframe-i18n",
  "fastframe-icons",

@@ -47,6 +47,9 @@ fastframe-text = { git = "https://github.com/crmne/fastframe", tag = "v0.2.0" }
 fastframe-fonts = { git = "https://github.com/crmne/fastframe", tag = "v0.2.0" }
 fastframe-icons = { git = "https://github.com/crmne/fastframe", tag = "v0.2.0" }
 fastframe-theme = { git = "https://github.com/crmne/fastframe", tag = "v0.2.0" }
+# Colour emoji in the platform's own style (Apple Color Emoji, Segoe UI
+# Emoji, the desktop's colour emoji font), painted over names and lyrics.
+fastframe-emoji = { git = "https://github.com/crmne/fastframe", tag = "v0.2.0" }
 # Catalogs compiled from PO files at build time (see build.rs) and the
 # system's preferred languages. No libintl or runtime catalog parsing.
 fastframe-i18n = { git = "https://github.com/crmne/fastframe", tag = "v0.2.0" }

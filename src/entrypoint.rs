@@ -488,6 +488,12 @@ pub(crate) fn run() -> eframe::Result<()> {
         settings.device_name = name;
     }
     spotifast::window::set_custom_titlebar(settings.custom_titlebar);
+    // Colour emoji: the fonts are found off this thread. A demo capture
+    // draws every picture in the frame that shows it.
+    #[cfg(feature = "demo")]
+    spotifast::emoji::install(demo);
+    #[cfg(not(feature = "demo"))]
+    spotifast::emoji::install(false);
     // macOS delivers links as Apple Events; install before the event loop.
     #[cfg(target_os = "macos")]
     if let Some(guard) = &instance {

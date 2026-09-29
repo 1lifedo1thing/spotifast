@@ -819,8 +819,9 @@ pub fn text(
     color: Color32,
 ) -> Response {
     let text = text.into();
-    if crate::bidi::is_rtl(&text) {
-        // Laid out here so a cut lands at the reading end, on the left.
+    if crate::bidi::is_rtl(&text) || crate::emoji::shows(&text) {
+        // Laid out here so a cut lands at the reading end, on the left, and
+        // emoji can be painted in colour.
         let galley = crate::bidi::layout(
             ui.painter(),
             &text,
@@ -830,7 +831,7 @@ pub fn text(
             1,
             Some(crate::bidi::ELLIPSIS),
         );
-        return ui.add(egui::Label::new(galley).selectable(false));
+        return crate::emoji::label(ui, galley, Sense::hover());
     }
     ui.add(
         egui::Label::new(egui::RichText::new(text).font(font).color(color))
@@ -847,7 +848,7 @@ pub fn link(
     color: Color32,
 ) -> Response {
     let text = text.into();
-    let response = if crate::bidi::is_rtl(&text) {
+    let response = if crate::bidi::is_rtl(&text) || crate::emoji::shows(&text) {
         let galley = crate::bidi::layout(
             ui.painter(),
             &text,
@@ -857,11 +858,7 @@ pub fn link(
             1,
             Some(crate::bidi::ELLIPSIS),
         );
-        ui.add(
-            egui::Label::new(galley)
-                .selectable(false)
-                .sense(Sense::click()),
-        )
+        crate::emoji::label(ui, galley, Sense::click())
     } else {
         ui.add(
             egui::Label::new(egui::RichText::new(text.clone()).font(font).color(color))
