@@ -939,6 +939,15 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                     duplicate_uris: vec!["spotify:track:trk1".into()],
                 })
             }
+            // A Spotify mix whose songs carry only the epoch Spotify stamps on
+            // dates it never recorded.
+            "undated-mix" => {
+                if let Some(page) = app.playlist_pages.get_mut("pl0") {
+                    for item in &mut page.items.items {
+                        item.added_at = Some("1970-01-01T00:00:00Z".into());
+                    }
+                }
+            }
             "light" => {
                 app.settings.theme = crate::settings::ThemeChoice::Light;
                 app.actions.push(Action::SettingsChanged);
@@ -4208,6 +4217,54 @@ mod tests {
             );
         }
         app.backend.shutdown();
+    }
+
+    /// Spotify's own mixes carry only the epoch it stamps on dates it never
+    /// recorded: their table has no Date added column, and the album names
+    /// sit under their heading rather than a column's width to its right.
+    #[cfg(feature = "demo")]
+    #[test]
+    fn an_undated_mix_has_no_date_added_column() {
+        fn playlist(app: &mut App, ui: &mut egui::Ui) {
+            crate::ui::collection::playlist(app, ui, "pl0");
+        }
+        let left_of = |painted: &[(String, egui::Rect)], label: &str| {
+            painted
+                .iter()
+                .find(|(text, _)| text == label)
+                .map(|(_, rect)| rect.left())
+        };
+        let render = |name: &str, show: Option<&str>| {
+            let (ctx, mut app) = accessible_app(name);
+            apply_flags(&mut app, Some("playlist:pl0"), show);
+            view_frame(&ctx, &mut app, vec![], playlist);
+            let painted = view_frame(&ctx, &mut app, vec![], playlist);
+            let first_album = match &app.playlist_pages["pl0"].items.items[0].item {
+                Some(PlayableItem::Track(track)) => track.album.clone().expect("an album").name,
+                _ => panic!("the demo playlist starts with a song"),
+            };
+            app.backend.shutdown();
+            (painted, first_album)
+        };
+
+        // #given the dated demo playlist
+        let (painted, _) = render("dated-mix", None);
+        assert!(
+            left_of(&painted, "DATE ADDED").is_some(),
+            "a dated playlist has the column"
+        );
+
+        // #when every song carries the epoch
+        let (painted, first_album) = render("undated-mix", Some("undated-mix"));
+
+        // #then there is no column, and the album names line up with their heading
+        assert_eq!(left_of(&painted, "DATE ADDED"), None);
+        let heading = left_of(&painted, "ALBUM").expect("the album heading");
+        let album = left_of(&painted, &first_album).expect("the first song's album");
+        assert!(
+            (heading - album).abs() < 1.0,
+            "album heading at {heading}, album names at {album}"
+        );
     }
 
     /// The player bar's visualizer draws only when chosen and while the

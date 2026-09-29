@@ -29,12 +29,12 @@ msgid "Play {name}"
 msgstr "{name} abspielen"
 
 #: src/ui/sidebar.rs:289 src/app.rs:2404 src/app.rs:16249
-#: src/ui/collection.rs:1688 src/ui/collection.rs:1865
+#: src/ui/collection.rs:1695 src/ui/collection.rs:1872
 msgid "Playlist"
 msgstr "Playlist"
 
 #: src/ui/sidebar.rs:299 src/app.rs:2378 src/app.rs:16254
-#: src/ui/collection.rs:1858 src/ui/home.rs:49 src/ui/keys.rs:258
+#: src/ui/collection.rs:1865 src/ui/home.rs:49 src/ui/keys.rs:258
 #: src/ui/winamp/playlist.rs:653
 msgid "Liked Songs"
 msgstr "Lieblingssongs"
@@ -183,7 +183,7 @@ msgstr[1] "Playlist • {count} Titel"
 #. Translators: Keep {count} exactly as written. It becomes a number of songs.
 #. Translators: Keep {count} exactly as written. It becomes the number of selected songs.
 #. Translators: {count} is a number of songs.
-#: src/i18n.rs:183 src/ui/widgets.rs:530 src/ui/collection.rs:1952
+#: src/i18n.rs:183 src/ui/widgets.rs:530 src/ui/collection.rs:1959
 #, rust-format
 msgid "{count} song"
 msgid_plural "{count} songs"
@@ -337,7 +337,7 @@ msgid "Next up"
 msgstr "Danach"
 
 #: src/ui/queue.rs:465 src/ui/queue.rs:498 src/ui/widgets.rs:2549
-#: src/ui/collection.rs:1064
+#: src/ui/collection.rs:1065
 msgid "Retry"
 msgstr "Erneut versuchen"
 
@@ -480,12 +480,12 @@ msgctxt "artist"
 msgid "Follow"
 msgstr "Folgen"
 
-#: src/ui/widgets.rs:990 src/ui/collection.rs:1736 src/ui/collection.rs:1758
+#: src/ui/widgets.rs:990 src/ui/collection.rs:1743 src/ui/collection.rs:1765
 #: src/ui/show.rs:169
 msgid "Remove from Your Library"
 msgstr "Aus deiner Bibliothek entfernen"
 
-#: src/ui/widgets.rs:991 src/ui/collection.rs:1735
+#: src/ui/widgets.rs:991 src/ui/collection.rs:1742
 msgid "Add to Your Library"
 msgstr "Zu deiner Bibliothek hinzufügen"
 
@@ -2056,37 +2056,37 @@ msgstr "Filtern"
 msgid "Unavailable"
 msgstr "Nicht verfügbar"
 
-#: src/ui/collection.rs:875
+#: src/ui/collection.rs:876
 msgid "Nothing here yet"
 msgstr "Hier ist noch nichts"
 
-#: src/ui/collection.rs:876
+#: src/ui/collection.rs:877
 msgid "Added songs appear here."
 msgstr "Hier erscheinen hinzugefügte Songs."
 
-#: src/ui/collection.rs:1286 src/ui/home.rs:665
+#: src/ui/collection.rs:1287 src/ui/home.rs:665
 msgid "Your top songs"
 msgstr "Deine Top-Songs"
 
-#: src/ui/collection.rs:1295
+#: src/ui/collection.rs:1296
 msgid "Your most-played tracks from the last four weeks."
 msgstr "Deine meistgespielten Titel der letzten vier Wochen."
 
-#: src/ui/collection.rs:1684
+#: src/ui/collection.rs:1691
 msgid "Collaborative Playlist"
 msgstr "Gemeinsame Playlist"
 
-#: src/ui/collection.rs:1686
+#: src/ui/collection.rs:1693
 msgid "Public Playlist"
 msgstr "Öffentliche Playlist"
 
-#: src/ui/collection.rs:1757
+#: src/ui/collection.rs:1764
 msgid "Save to Your Library"
 msgstr "In deiner Bibliothek speichern"
 
 #. Translators: {count} is a number of songs and {duration} their total
 #. length, such as "2 hr 13 min".
-#: src/ui/collection.rs:1965
+#: src/ui/collection.rs:1972
 #, rust-format
 msgid "{count} song, {duration}"
 msgid_plural "{count} songs, {duration}"
@@ -2094,19 +2094,19 @@ msgstr[0] "{count} Song, {duration}"
 msgstr[1] "{count} Songs, {duration}"
 
 #. Translators: {name} is the name of someone who added songs to the playlist.
-#: src/ui/collection.rs:1979
+#: src/ui/collection.rs:1986
 #, rust-format
 msgid "with {name}"
 msgstr "mit {name}"
 
 #. Translators: {first} and {second} are names of people who added songs.
-#: src/ui/collection.rs:1983
+#: src/ui/collection.rs:1990
 #, rust-format
 msgid "with {first} and {second}"
 msgstr "mit {first} und {second}"
 
 #. Translators: {count} is how many other people added songs to the playlist.
-#: src/ui/collection.rs:1990
+#: src/ui/collection.rs:1997
 #, rust-format
 msgid "and {count} other"
 msgid_plural "and {count} others"

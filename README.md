@@ -128,6 +128,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   arrow keys choose another. Since 0.9.0, playlist folders and
   invitation permissions also load when the library finishes before local
   playback connects.
+  Spotify's own mixes carry no added dates, so they show no Date added column.
 - **Opens Spotify links.** Spotifast registers for `spotify:` links, so a
   song, album, artist, playlist, or podcast shared from another app opens
   in it, whether it is running or not. `open.spotify.com` addresses go

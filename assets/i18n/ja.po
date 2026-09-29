@@ -29,12 +29,12 @@ msgid "Play {name}"
 msgstr "{name}を再生"
 
 #: src/ui/sidebar.rs:289 src/app.rs:2404 src/app.rs:16249
-#: src/ui/collection.rs:1688 src/ui/collection.rs:1865
+#: src/ui/collection.rs:1695 src/ui/collection.rs:1872
 msgid "Playlist"
 msgstr "プレイリスト"
 
 #: src/ui/sidebar.rs:299 src/app.rs:2378 src/app.rs:16254
-#: src/ui/collection.rs:1858 src/ui/home.rs:49 src/ui/keys.rs:258
+#: src/ui/collection.rs:1865 src/ui/home.rs:49 src/ui/keys.rs:258
 #: src/ui/winamp/playlist.rs:653
 msgid "Liked Songs"
 msgstr "お気に入りの曲"
@@ -182,7 +182,7 @@ msgstr[0] "プレイリスト • {count}曲"
 #. Translators: Keep {count} exactly as written. It becomes a number of songs.
 #. Translators: Keep {count} exactly as written. It becomes the number of selected songs.
 #. Translators: {count} is a number of songs.
-#: src/i18n.rs:183 src/ui/widgets.rs:530 src/ui/collection.rs:1952
+#: src/i18n.rs:183 src/ui/widgets.rs:530 src/ui/collection.rs:1959
 #, rust-format
 msgid "{count} song"
 msgid_plural "{count} songs"
@@ -333,7 +333,7 @@ msgid "Next up"
 msgstr "このあと再生"
 
 #: src/ui/queue.rs:465 src/ui/queue.rs:498 src/ui/widgets.rs:2549
-#: src/ui/collection.rs:1064
+#: src/ui/collection.rs:1065
 msgid "Retry"
 msgstr "再試行"
 
@@ -476,12 +476,12 @@ msgctxt "artist"
 msgid "Follow"
 msgstr "フォロー"
 
-#: src/ui/widgets.rs:990 src/ui/collection.rs:1736 src/ui/collection.rs:1758
+#: src/ui/widgets.rs:990 src/ui/collection.rs:1743 src/ui/collection.rs:1765
 #: src/ui/show.rs:169
 msgid "Remove from Your Library"
 msgstr "マイライブラリから削除"
 
-#: src/ui/widgets.rs:991 src/ui/collection.rs:1735
+#: src/ui/widgets.rs:991 src/ui/collection.rs:1742
 msgid "Add to Your Library"
 msgstr "マイライブラリに追加"
 
@@ -2031,56 +2031,56 @@ msgstr "絞り込み"
 msgid "Unavailable"
 msgstr "利用不可"
 
-#: src/ui/collection.rs:875
+#: src/ui/collection.rs:876
 msgid "Nothing here yet"
 msgstr "まだ何もありません"
 
-#: src/ui/collection.rs:876
+#: src/ui/collection.rs:877
 msgid "Added songs appear here."
 msgstr "追加した曲がここに表示されます。"
 
-#: src/ui/collection.rs:1286 src/ui/home.rs:665
+#: src/ui/collection.rs:1287 src/ui/home.rs:665
 msgid "Your top songs"
 msgstr "あなたのトップソング"
 
-#: src/ui/collection.rs:1295
+#: src/ui/collection.rs:1296
 msgid "Your most-played tracks from the last four weeks."
 msgstr "過去4週間でよく再生した曲です。"
 
-#: src/ui/collection.rs:1684
+#: src/ui/collection.rs:1691
 msgid "Collaborative Playlist"
 msgstr "コラボプレイリスト"
 
-#: src/ui/collection.rs:1686
+#: src/ui/collection.rs:1693
 msgid "Public Playlist"
 msgstr "公開プレイリスト"
 
-#: src/ui/collection.rs:1757
+#: src/ui/collection.rs:1764
 msgid "Save to Your Library"
 msgstr "マイライブラリに保存"
 
 #. Translators: {count} is a number of songs and {duration} their total
 #. length, such as "2 hr 13 min".
-#: src/ui/collection.rs:1965
+#: src/ui/collection.rs:1972
 #, rust-format
 msgid "{count} song, {duration}"
 msgid_plural "{count} songs, {duration}"
 msgstr[0] "{count}曲、{duration}"
 
 #. Translators: {name} is the name of someone who added songs to the playlist.
-#: src/ui/collection.rs:1979
+#: src/ui/collection.rs:1986
 #, rust-format
 msgid "with {name}"
 msgstr "{name}と共同"
 
 #. Translators: {first} and {second} are names of people who added songs.
-#: src/ui/collection.rs:1983
+#: src/ui/collection.rs:1990
 #, rust-format
 msgid "with {first} and {second}"
 msgstr "{first}、{second}と共同"
 
 #. Translators: {count} is how many other people added songs to the playlist.
-#: src/ui/collection.rs:1990
+#: src/ui/collection.rs:1997
 #, rust-format
 msgid "and {count} other"
 msgid_plural "and {count} others"
