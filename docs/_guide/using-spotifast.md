@@ -126,6 +126,8 @@ Right-clicking a song in an editable playlist offers **Remove from this
 playlist** even when the list is sorted or filtered, since removal does not
 depend on position. **Move up**, **Move down**, and drag-reorder stay on the
 default order, where the rows on screen match the order saved on Spotify.
+Right-clicking the playing song in the player bar offers the same removal
+while it plays from a playlist you can edit.
 
 ## Refreshing a playlist
 

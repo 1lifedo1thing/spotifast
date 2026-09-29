@@ -9571,6 +9571,28 @@ impl App {
         owned || playlist.collaborative || self.editable_by_grant.contains(&playlist.uri)
     }
 
+    /// The playing playlist as a row context, when the now-playing track
+    /// comes from a playlist the account may edit. The player bar menu
+    /// uses this so removal matches a row's URI-based entry; moves need
+    /// a row index and stay in the playlist view.
+    pub fn editable_context_playlist(&self) -> Option<RowContext> {
+        let uri = self.playing_context_uri()?;
+        if !uri.starts_with("spotify:playlist:") {
+            return None;
+        }
+        let id = util::uri_id(&uri)?.to_string();
+        let playlist = self
+            .library_entry(&id)
+            .or_else(|| self.playlist_pages.get(&id)?.playlist.get())?;
+        if !self.can_edit_playlist(playlist) {
+            return None;
+        }
+        Some(RowContext::Context {
+            uri,
+            editable_playlist: Some((id, playlist.snapshot_id.clone())),
+        })
+    }
+
     /// The library's playlists that take songs, as id and name pairs.
     pub fn editable_playlists(&self) -> Vec<(String, String)> {
         if self.user_id().is_none() {
@@ -22421,6 +22443,98 @@ mod tests {
             .map(|(id, _)| id)
             .collect();
         assert_eq!(editable, ["shared", "mine"]);
+    }
+
+    /// The player bar menu offers removal only while the playing track
+    /// comes from a playlist the account may edit.
+    #[test]
+    fn player_bar_menu_knows_its_editable_playlist() {
+        // #given an owned playlist, a friend's, and one known by its page
+        let mut app = headless_app();
+        app.user = Some(User {
+            id: "me".into(),
+            ..User::default()
+        });
+        let mine = Playlist {
+            id: "mine".into(),
+            name: "Mine".into(),
+            uri: "spotify:playlist:mine".into(),
+            owner: crate::api::models::Owner {
+                id: Some("me".into()),
+                ..Default::default()
+            },
+            snapshot_id: Some("snap1".into()),
+            ..Playlist::default()
+        };
+        let theirs = Playlist {
+            id: "theirs".into(),
+            name: "Theirs".into(),
+            uri: "spotify:playlist:theirs".into(),
+            owner: crate::api::models::Owner {
+                id: Some("friend".into()),
+                ..Default::default()
+            },
+            ..Playlist::default()
+        };
+        app.library.playlists = Loadable::Loaded(vec![mine.clone(), theirs]);
+        app.playlist_pages.insert(
+            "paged".into(),
+            PlaylistPage {
+                playlist: Loadable::Loaded(Playlist {
+                    id: "paged".into(),
+                    uri: "spotify:playlist:paged".into(),
+                    owner: crate::api::models::Owner {
+                        id: Some("me".into()),
+                        ..Default::default()
+                    },
+                    snapshot_id: Some("snap9".into()),
+                    ..Playlist::default()
+                }),
+                ..Default::default()
+            },
+        );
+        let assume = |app: &mut App, uri: &str| {
+            app.assumed_context = Some(AssumedContext {
+                uri: uri.into(),
+                shuffle: None,
+                at: Instant::now(),
+            });
+        };
+
+        // #when the owned playlist plays, its snapshot rides along
+        assume(&mut app, "spotify:playlist:mine");
+        assert_eq!(
+            app.editable_context_playlist(),
+            Some(RowContext::Context {
+                uri: "spotify:playlist:mine".into(),
+                editable_playlist: Some(("mine".into(), Some("snap1".into()))),
+            })
+        );
+
+        // #when the page alone knows the playlist, it still counts
+        assume(&mut app, "spotify:playlist:paged");
+        assert_eq!(
+            app.editable_context_playlist(),
+            Some(RowContext::Context {
+                uri: "spotify:playlist:paged".into(),
+                editable_playlist: Some(("paged".into(), Some("snap9".into()))),
+            })
+        );
+
+        // #then anything else stays quiet: a friend's list, an album,
+        // Liked Songs, radio, and an unknown playlist
+        for uri in [
+            "spotify:playlist:theirs",
+            "spotify:album:alb1",
+            "spotify:user:me:collection",
+            "spotify:station:track:xyz",
+            "spotify:playlist:unloaded",
+        ] {
+            assume(&mut app, uri);
+            assert_eq!(app.editable_context_playlist(), None, "{uri}");
+        }
+        app.assumed_context = None;
+        assert_eq!(app.editable_context_playlist(), None, "no context");
     }
 
     /// Folder order survives a restart, but only for the account that
