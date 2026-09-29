@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-29 12:33+0200\n"
+"POT-Creation-Date: 2026-09-29 12:37+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Dutch\n"
@@ -373,7 +373,7 @@ msgid "Couldn't fetch the lyrics: {error}"
 msgstr "Kan de songtekst niet ophalen: {error}"
 
 #: src/ui/lyrics.rs:142 src/ui/lyrics.rs:396 src/ui/lyrics.rs:611
-#: src/ui/settings.rs:370 src/ui/login.rs:106
+#: src/ui/settings.rs:402 src/ui/login.rs:106
 msgid "Try again"
 msgstr "Opnieuw proberen"
 
@@ -1078,32 +1078,32 @@ msgstr "Kan de cover niet uploaden: {error}. Probeer het opnieuw."
 msgid "{track} Radio"
 msgstr "Radio op basis van {track}"
 
-#: src/ui/settings.rs:143 src/ui/keys.rs:285 src/ui/topbar.rs:406
+#: src/ui/settings.rs:175 src/ui/keys.rs:285 src/ui/topbar.rs:406
 #: src/ui/topbar.rs:436
 msgid "Settings"
 msgstr "Instellingen"
 
-#: src/ui/settings.rs:157
+#: src/ui/settings.rs:189
 msgid "Search settings"
 msgstr "Instellingen doorzoeken"
 
-#: src/ui/settings.rs:173
+#: src/ui/settings.rs:205
 msgid "Open folder"
 msgstr "Map openen"
 
-#: src/ui/settings.rs:185
+#: src/ui/settings.rs:217
 msgid "Account"
 msgstr "Account"
 
-#: src/ui/settings.rs:186 src/ui/topbar.rs:424
+#: src/ui/settings.rs:218 src/ui/topbar.rs:424
 msgid "Sign out"
 msgstr "Uitloggen"
 
-#: src/ui/settings.rs:189
+#: src/ui/settings.rs:221
 msgid "Personal Spotify app"
 msgstr "Persoonlijke Spotify-app"
 
-#: src/ui/settings.rs:192
+#: src/ui/settings.rs:224
 msgid ""
 "Use a personal Development Mode app for a separate API quota. The shared app "
 "stays active."
@@ -1111,218 +1111,218 @@ msgstr ""
 "Gebruik een persoonlijke app in Development Mode voor een apart API-quotum. "
 "De gedeelde app blijft actief."
 
-#: src/ui/settings.rs:196
+#: src/ui/settings.rs:228
 msgid "Create an app"
 msgstr "App maken"
 
-#: src/ui/settings.rs:199
+#: src/ui/settings.rs:231
 msgid "Create one for free in Spotify's developer dashboard."
 msgstr "Maak er gratis een in het ontwikkelaarsdashboard van Spotify."
 
-#: src/ui/settings.rs:204
+#: src/ui/settings.rs:236
 msgid "Personal app ready"
 msgstr "Persoonlijke app klaar"
 
-#: src/ui/settings.rs:207
+#: src/ui/settings.rs:239
 msgid "Supported requests use your app. Other requests use the shared app."
 msgstr ""
 "Ondersteunde verzoeken gebruiken je app. Andere verzoeken gebruiken de "
 "gedeelde app."
 
-#: src/ui/settings.rs:212
+#: src/ui/settings.rs:244
 msgid "Authorize your personal app"
 msgstr "Je persoonlijke app autoriseren"
 
-#: src/ui/settings.rs:215
+#: src/ui/settings.rs:247
 msgid "Spotify opens in your browser to verify the account."
 msgstr "Spotify opent in je browser om het account te verifiëren."
 
-#: src/ui/settings.rs:220
+#: src/ui/settings.rs:252
 msgid "Remove personal app"
 msgstr "Persoonlijke app verwijderen"
 
-#: src/ui/settings.rs:221
+#: src/ui/settings.rs:253
 msgid "Shared access remains signed in."
 msgstr "Gedeelde toegang blijft ingelogd."
 
-#: src/ui/settings.rs:251
+#: src/ui/settings.rs:283
 msgid "Spotify Free, local playback needs Premium"
 msgstr "Spotify Free, lokaal afspelen vereist Premium"
 
 #. Translators: {username} is the Spotify account's user name.
-#: src/ui/settings.rs:265
+#: src/ui/settings.rs:297
 #, rust-format
 msgid "Connected as {username}"
 msgstr "Verbonden als {username}"
 
-#: src/ui/settings.rs:293
+#: src/ui/settings.rs:325
 msgid "Client ID"
 msgstr "Client ID"
 
-#: src/ui/settings.rs:316
+#: src/ui/settings.rs:348
 msgid "Setup guide"
 msgstr "Installatiegids"
 
-#: src/ui/settings.rs:326 src/ui/settings.rs:342 src/ui/dialogs.rs:96
+#: src/ui/settings.rs:358 src/ui/settings.rs:374 src/ui/dialogs.rs:96
 msgid "Remove"
 msgstr "Verwijderen"
 
-#: src/ui/settings.rs:334
+#: src/ui/settings.rs:366
 msgid "Authorize"
 msgstr "Autoriseren"
 
-#: src/ui/settings.rs:353
+#: src/ui/settings.rs:385
 msgctxt "playback status"
 msgid "Ready"
 msgstr "Klaar"
 
-#: src/ui/settings.rs:354
+#: src/ui/settings.rs:386
 msgid "This computer is a Spotify Connect device."
 msgstr "Deze computer is een Spotify Connect-apparaat."
 
-#: src/ui/settings.rs:358
+#: src/ui/settings.rs:390
 msgctxt "playback status"
 msgid "Setting up"
 msgstr "Wordt ingesteld"
 
-#: src/ui/settings.rs:359
+#: src/ui/settings.rs:391
 msgid "Finish authorizing in your browser."
 msgstr "Rond de autorisatie af in je browser."
 
-#: src/ui/settings.rs:363
+#: src/ui/settings.rs:395
 msgctxt "playback status"
 msgid "Connecting"
 msgstr "Verbinden"
 
-#: src/ui/settings.rs:364 src/ui/login.rs:97
+#: src/ui/settings.rs:396 src/ui/login.rs:97
 msgid "Connecting to Spotify…"
 msgstr "Verbinden met Spotify…"
 
-#: src/ui/settings.rs:368
+#: src/ui/settings.rs:400
 msgctxt "playback status"
 msgid "Unavailable"
 msgstr "Niet beschikbaar"
 
-#: src/ui/settings.rs:373
+#: src/ui/settings.rs:405
 msgctxt "playback status"
 msgid "Not set up"
 msgstr "Niet ingesteld"
 
-#: src/ui/settings.rs:376
+#: src/ui/settings.rs:408
 msgid "Requires Spotify Premium and a one-time browser sign-in."
 msgstr "Vereist Spotify Premium en eenmalig inloggen in de browser."
 
-#: src/ui/settings.rs:378
+#: src/ui/settings.rs:410
 msgid "Enable playback here"
 msgstr "Hier afspelen inschakelen"
 
-#: src/ui/settings.rs:381
+#: src/ui/settings.rs:413
 msgid "Playback on this computer"
 msgstr "Afspelen op deze computer"
 
-#: src/ui/settings.rs:382
+#: src/ui/settings.rs:414
 msgid "Normalize volume"
 msgstr "Volume normaliseren"
 
-#: src/ui/settings.rs:383
+#: src/ui/settings.rs:415
 msgid "Autoplay"
 msgstr "Automatisch afspelen"
 
-#: src/ui/settings.rs:384
+#: src/ui/settings.rs:416
 msgid "Gapless playback"
 msgstr "Naadloos afspelen"
 
-#: src/ui/settings.rs:385
+#: src/ui/settings.rs:417
 msgid "Keep music playing when the window closes"
 msgstr "Muziek blijven afspelen als het venster sluit"
 
-#: src/ui/settings.rs:386
+#: src/ui/settings.rs:418
 msgid "Automatic update checks"
 msgstr "Automatisch op updates controleren"
 
-#: src/ui/settings.rs:387
+#: src/ui/settings.rs:419
 msgid "Audio cache"
 msgstr "Audiocache"
 
-#: src/ui/settings.rs:388
+#: src/ui/settings.rs:420
 msgid "Apply and restart playback"
 msgstr "Toepassen en afspelen herstarten"
 
-#: src/ui/settings.rs:389
+#: src/ui/settings.rs:421
 msgid "Restart local playback to apply these settings."
 msgstr "Herstart lokaal afspelen om deze instellingen toe te passen."
 
-#: src/ui/settings.rs:390
+#: src/ui/settings.rs:422
 msgid "Download updates automatically"
 msgstr "Updates automatisch downloaden"
 
 #. Translators: {status} is a playback state such as Ready or Not set up.
-#: src/ui/settings.rs:394
+#: src/ui/settings.rs:426
 #, rust-format
 msgid "Status: {status}"
 msgstr "Status: {status}"
 
-#: src/ui/settings.rs:398
+#: src/ui/settings.rs:430
 msgid "Device name"
 msgstr "Apparaatnaam"
 
-#: src/ui/settings.rs:399
+#: src/ui/settings.rs:431
 msgid "How this computer appears in Spotify Connect."
 msgstr "Zo verschijnt deze computer in Spotify Connect."
 
-#: src/ui/settings.rs:402
+#: src/ui/settings.rs:434
 msgid "Audio quality"
 msgstr "Audiokwaliteit"
 
-#: src/ui/settings.rs:403
+#: src/ui/settings.rs:435
 msgid "Higher bitrates use more data and cache space."
 msgstr "Hogere bitrates gebruiken meer data en cacheruimte."
 
-#: src/ui/settings.rs:407
+#: src/ui/settings.rs:439
 msgid "Keep loud and quiet tracks at a similar level."
 msgstr "Houdt harde en zachte nummers op een vergelijkbaar niveau."
 
-#: src/ui/settings.rs:411
+#: src/ui/settings.rs:443
 msgid "Keep playing similar songs when your music ends."
 msgstr "Speelt vergelijkbare nummers af als je muziek is afgelopen."
 
-#: src/ui/settings.rs:415
+#: src/ui/settings.rs:447
 msgid "Play tracks without silence between them."
 msgstr "Speelt nummers af zonder stilte ertussen."
 
-#: src/ui/settings.rs:422
+#: src/ui/settings.rs:454
 msgid ""
 "Spotifast hides to the system tray. Quit from the tray menu or with Ctrl+Q."
 msgstr ""
 "Spotifast verdwijnt naar het systeemvak. Sluit af via het menu in het "
 "systeemvak of met Ctrl+Q."
 
-#: src/ui/settings.rs:426
+#: src/ui/settings.rs:458
 msgid ""
 "Spotifast hides to the system tray. Quit from the tray menu or with Cmd+Q."
 msgstr ""
 "Spotifast verdwijnt naar het systeemvak. Sluit af via het menu in het "
 "systeemvak of met Cmd+Q."
 
-#: src/ui/settings.rs:433
+#: src/ui/settings.rs:465
 msgid "Checks GitHub once a day. No personal data is sent."
 msgstr ""
 "Controleert GitHub één keer per dag. Er worden geen persoonlijke gegevens "
 "verstuurd."
 
-#: src/ui/settings.rs:436
+#: src/ui/settings.rs:468
 msgid "Audio output"
 msgstr "Audio-uitvoer"
 
-#: src/ui/settings.rs:439
+#: src/ui/settings.rs:471
 msgid "PulseAudio also covers PipeWire. Rodio talks to ALSA directly."
 msgstr "PulseAudio dekt ook PipeWire. Rodio praat rechtstreeks met ALSA."
 
-#: src/ui/settings.rs:444
+#: src/ui/settings.rs:476
 msgid "Output buffer"
 msgstr "Uitvoerbuffer"
 
-#: src/ui/settings.rs:447
+#: src/ui/settings.rs:479
 msgid ""
 "More buffering can prevent clicks on busy computers. Less buffering makes "
 "controls respond sooner."
@@ -1330,122 +1330,122 @@ msgstr ""
 "Meer buffer kan tikken op drukke computers voorkomen. Minder buffer laat de "
 "bediening sneller reageren."
 
-#: src/ui/settings.rs:453
+#: src/ui/settings.rs:485
 msgid "Save downloaded audio for later playback."
 msgstr "Gedownloade audio bewaren om later af te spelen."
 
-#: src/ui/settings.rs:456
+#: src/ui/settings.rs:488
 msgid "Playback settings applied"
 msgstr "Afspeelinstellingen toegepast"
 
-#: src/ui/settings.rs:461
+#: src/ui/settings.rs:493
 msgid "Downloads in the background. You choose when to restart."
 msgstr "Downloadt op de achtergrond. Jij kiest wanneer je herstart."
 
-#: src/ui/settings.rs:478
+#: src/ui/settings.rs:510
 msgid "Reconnect"
 msgstr "Opnieuw verbinden"
 
-#: src/ui/settings.rs:510
+#: src/ui/settings.rs:542
 msgid "Normal · 96 kbps"
 msgstr "Normaal · 96 kbps"
 
-#: src/ui/settings.rs:511
+#: src/ui/settings.rs:543
 msgid "High · 160 kbps"
 msgstr "Hoog · 160 kbps"
 
-#: src/ui/settings.rs:512
+#: src/ui/settings.rs:544
 msgid "Very high · 320 kbps"
 msgstr "Zeer hoog · 320 kbps"
 
-#: src/ui/settings.rs:711
+#: src/ui/settings.rs:743
 msgid "Playback settings applied."
 msgstr "Afspeelinstellingen toegepast."
 
-#: src/ui/settings.rs:718
+#: src/ui/settings.rs:750
 msgid "Appearance"
 msgstr "Weergave"
 
-#: src/ui/settings.rs:719
+#: src/ui/settings.rs:751
 msgid "Theme"
 msgstr "Thema"
 
-#: src/ui/settings.rs:720
+#: src/ui/settings.rs:752
 msgid "How to make a theme"
 msgstr "Zelf een thema maken"
 
-#: src/ui/settings.rs:721
+#: src/ui/settings.rs:753
 msgid "Open themes folder"
 msgstr "Themamap openen"
 
-#: src/ui/settings.rs:722
+#: src/ui/settings.rs:754
 msgid "Colour from album art"
 msgstr "Kleur van albumhoes"
 
-#: src/ui/settings.rs:723
+#: src/ui/settings.rs:755
 msgid "Compact library sidebar"
 msgstr "Compacte bibliotheekzijbalk"
 
-#: src/ui/settings.rs:724
+#: src/ui/settings.rs:756
 msgid "Compact track list"
 msgstr "Compacte nummerlijst"
 
-#: src/ui/settings.rs:725
+#: src/ui/settings.rs:757
 msgid "Middle-click autoscroll"
 msgstr "Automatisch scrollen met middelklik"
 
-#: src/ui/settings.rs:726
+#: src/ui/settings.rs:758
 msgid "Custom title bar"
 msgstr "Aangepaste titelbalk"
 
-#: src/ui/settings.rs:727
+#: src/ui/settings.rs:759
 msgid "Player bar visualizer"
 msgstr "Visualisatie in de spelerbalk"
 
-#: src/ui/settings.rs:738
+#: src/ui/settings.rs:770
 msgid "Follow system uses your Omarchy colours."
 msgstr "“Systeem volgen” gebruikt je Omarchy-kleuren."
 
-#: src/ui/settings.rs:742
+#: src/ui/settings.rs:774
 msgid "Follow system uses your desktop's light or dark appearance."
 msgstr ""
 "“Systeem volgen” gebruikt de lichte of donkere weergave van je bureaublad."
 
-#: src/ui/settings.rs:747 src/ui/settings.rs:1878
+#: src/ui/settings.rs:779 src/ui/settings.rs:1910
 msgid "Language"
 msgstr "Taal"
 
-#: src/ui/settings.rs:750
+#: src/ui/settings.rs:782
 msgid ""
 "System follows your computer's language. Untranslated text stays in English."
 msgstr ""
 "“Systeem” volgt de taal van je computer. Onvertaalde tekst blijft Engels."
 
-#: src/ui/settings.rs:757
+#: src/ui/settings.rs:789
 msgid "Use the current cover's colour on pages and the player bar."
 msgstr "Gebruik de kleur van de huidige cover op pagina's en in de spelerbalk."
 
-#: src/ui/settings.rs:762
+#: src/ui/settings.rs:794
 msgid "Show names without covers in the sidebar."
 msgstr "Namen zonder covers tonen in de zijbalk."
 
-#: src/ui/settings.rs:766
+#: src/ui/settings.rs:798
 msgid "Show each track on one line without a cover."
 msgstr "Elk nummer op één regel tonen, zonder cover."
 
-#: src/ui/settings.rs:769
+#: src/ui/settings.rs:801
 msgid "Interface zoom"
 msgstr "Zoom van de interface"
 
-#: src/ui/settings.rs:773
+#: src/ui/settings.rs:805
 msgid "Ctrl+Plus and Ctrl+Minus work anywhere; Ctrl+0 resets."
 msgstr "Ctrl+Plus en Ctrl+Min werken overal; Ctrl+0 herstelt."
 
-#: src/ui/settings.rs:777
+#: src/ui/settings.rs:809
 msgid "Cmd+Plus and Cmd+Minus work anywhere; Cmd+0 resets."
 msgstr "Cmd+Plus en Cmd+Min werken overal; Cmd+0 herstelt."
 
-#: src/ui/settings.rs:786
+#: src/ui/settings.rs:818
 msgid ""
 "Middle-click a list, then move the pointer to scroll it. Off by default, "
 "because a middle click usually pastes on Linux."
@@ -1453,7 +1453,7 @@ msgstr ""
 "Klik met de middelste muisknop in een lijst en beweeg dan de aanwijzer om te "
 "scrollen. Standaard uit, omdat een middelklik op Linux meestal plakt."
 
-#: src/ui/settings.rs:794
+#: src/ui/settings.rs:826
 msgid ""
 "Draw Spotifast's own title bar and window buttons instead of the standard "
 "Windows ones."
@@ -1461,43 +1461,43 @@ msgstr ""
 "Teken de eigen titelbalk en vensterknoppen van Spotifast in plaats van de "
 "standaardknoppen van Windows."
 
-#: src/ui/settings.rs:802
+#: src/ui/settings.rs:834
 msgid ""
 "Show the song moving behind the player bar's controls while it plays here."
 msgstr ""
 "Toont het nummer in beweging achter de knoppen van de spelerbalk terwijl het "
 "hier speelt."
 
-#: src/ui/settings.rs:937
+#: src/ui/settings.rs:969
 msgid "Off"
 msgstr "Uit"
 
-#: src/ui/settings.rs:938
+#: src/ui/settings.rs:970
 msgid "Spectrum"
 msgstr "Spectrum"
 
-#: src/ui/settings.rs:939
+#: src/ui/settings.rs:971
 msgid "Waveform"
 msgstr "Golfvorm"
 
-#: src/ui/settings.rs:1096
+#: src/ui/settings.rs:1128
 msgid "Proxy"
 msgstr "Proxy"
 
-#: src/ui/settings.rs:1098
+#: src/ui/settings.rs:1130
 msgid "Mode, host, port, username and password"
 msgstr "Modus, host, poort, gebruikersnaam en wachtwoord"
 
-#: src/ui/settings.rs:1101
+#: src/ui/settings.rs:1133
 msgid "Off, System, HTTP or SOCKS5 proxy for network requests."
 msgstr "Uit, systeem-, HTTP- of SOCKS5-proxy voor netwerkverzoeken."
 
-#: src/ui/settings.rs:1111
+#: src/ui/settings.rs:1143
 msgctxt "proxy"
 msgid "Mode"
 msgstr "Modus"
 
-#: src/ui/settings.rs:1114
+#: src/ui/settings.rs:1146
 msgid ""
 "Off ignores environment variables. System uses them, and the OS proxy on "
 "macOS and Windows."
@@ -1505,35 +1505,35 @@ msgstr ""
 "“Uit” negeert omgevingsvariabelen. “Systeem” gebruikt ze, en op macOS en "
 "Windows ook de proxy van het besturingssysteem."
 
-#: src/ui/settings.rs:1166 src/ui/login.rs:249
+#: src/ui/settings.rs:1198 src/ui/login.rs:249
 msgid "Apply settings"
 msgstr "Instellingen toepassen"
 
-#: src/ui/settings.rs:1178
+#: src/ui/settings.rs:1210
 msgid "Not using a proxy."
 msgstr "Er wordt geen proxy gebruikt."
 
-#: src/ui/settings.rs:1179
+#: src/ui/settings.rs:1211
 msgid "Using the system proxy."
 msgstr "De systeemproxy wordt gebruikt."
 
-#: src/ui/settings.rs:1190
+#: src/ui/settings.rs:1222
 msgid "Winamp skins"
 msgstr "Winamp-skins"
 
-#: src/ui/settings.rs:1191 src/ui/winamp/mod.rs:706 src/ui/winamp/mod.rs:852
+#: src/ui/settings.rs:1223 src/ui/winamp/mod.rs:706 src/ui/winamp/mod.rs:852
 msgid "Always on top"
 msgstr "Altijd bovenop"
 
-#: src/ui/settings.rs:1192
+#: src/ui/settings.rs:1224
 msgid "Show Winamp in taskbar"
 msgstr "Winamp in taakbalk tonen"
 
-#: src/ui/settings.rs:1195
+#: src/ui/settings.rs:1227
 msgid "Mini player"
 msgstr "Minispeler"
 
-#: src/ui/settings.rs:1199
+#: src/ui/settings.rs:1231
 msgid ""
 "Use classic Winamp .wsz skins. Press Ctrl+M or click the skin logo to "
 "return. Drop a skin on either window to add it."
@@ -1542,7 +1542,7 @@ msgstr ""
 "skinlogo om terug te gaan. Sleep een skin naar een van beide vensters om hem "
 "toe te voegen."
 
-#: src/ui/settings.rs:1203
+#: src/ui/settings.rs:1235
 msgid ""
 "Use classic Winamp .wsz skins. Press Cmd+Shift+M or click the skin logo to "
 "return. Drop a skin on either window to add it."
@@ -1551,35 +1551,35 @@ msgstr ""
 "skinlogo om terug te gaan. Sleep een skin naar een van beide vensters om hem "
 "toe te voegen."
 
-#: src/ui/settings.rs:1209
+#: src/ui/settings.rs:1241
 msgid "Skin"
 msgstr "Skin"
 
 #. Translators: {folder} is the path of the skins folder.
-#: src/ui/settings.rs:1213
+#: src/ui/settings.rs:1245
 #, rust-format
 msgid "Installed skins are in {folder}. Find more at the Winamp Skin Museum."
 msgstr ""
 "Geïnstalleerde skins staan in {folder}. Vind er meer in het Winamp Skin "
 "Museum."
 
-#: src/ui/settings.rs:1218 src/ui/winamp/mod.rs:693
+#: src/ui/settings.rs:1250 src/ui/winamp/mod.rs:693
 msgid "Size"
 msgstr "Grootte"
 
-#: src/ui/settings.rs:1219
+#: src/ui/settings.rs:1251
 msgid "Whole-number scaling keeps skin pixels sharp."
 msgstr "Schalen met hele getallen houdt de skinpixels scherp."
 
-#: src/ui/settings.rs:1224
+#: src/ui/settings.rs:1256
 msgid "Keep the Winamp window above everything else."
 msgstr "Het Winamp-venster boven alle andere houden."
 
-#: src/ui/settings.rs:1230 src/ui/winamp/mod.rs:716
+#: src/ui/settings.rs:1262 src/ui/winamp/mod.rs:716
 msgid "Show in taskbar"
 msgstr "Tonen in taakbalk"
 
-#: src/ui/settings.rs:1233
+#: src/ui/settings.rs:1265
 msgid ""
 "Keep a taskbar button for the mini player. The tray icon stays available "
 "when hidden."
@@ -1587,23 +1587,23 @@ msgstr ""
 "Houd een taakbalkknop voor de minispeler. Het pictogram in het systeemvak "
 "blijft beschikbaar als die verborgen is."
 
-#: src/ui/settings.rs:1238
+#: src/ui/settings.rs:1270
 msgid "Installed skins"
 msgstr "Geïnstalleerde skins"
 
-#: src/ui/settings.rs:1251
+#: src/ui/settings.rs:1283
 msgid "Switch to it"
 msgstr "Overschakelen"
 
-#: src/ui/settings.rs:1264
+#: src/ui/settings.rs:1296
 msgid "Skin Museum"
 msgstr "Skin Museum"
 
-#: src/ui/settings.rs:1290
+#: src/ui/settings.rs:1322
 msgid "Random"
 msgstr "Willekeurig"
 
-#: src/ui/settings.rs:1329
+#: src/ui/settings.rs:1361
 #, rust-format
 msgid ""
 "Now showing {skin}. Another one is picked each time the mini player opens."
@@ -1611,11 +1611,11 @@ msgstr ""
 "Nu te zien: {skin}. Elke keer dat de minispeler opent, wordt een andere "
 "gekozen."
 
-#: src/ui/settings.rs:1383
+#: src/ui/settings.rs:1415
 msgid "MilkDrop window"
 msgstr "MilkDrop-venster"
 
-#: src/ui/settings.rs:1391
+#: src/ui/settings.rs:1423
 msgid ""
 "A projectM visualiser for local playback. Open it here, from the top bar, "
 "with Ctrl+Shift+K, or from the mini player's V menu. Press ? or F1 for its "
@@ -1625,7 +1625,7 @@ msgstr ""
 "bovenste balk, met Ctrl+Shift+K of via het V-menu van de minispeler. Druk "
 "op ? of F1 voor de sneltoetsen."
 
-#: src/ui/settings.rs:1395
+#: src/ui/settings.rs:1427
 msgid ""
 "A projectM visualiser for local playback. Open it here, from the top bar, "
 "with Cmd+Shift+K, or from the mini player's V menu. Press ? or F1 for its "
@@ -1635,12 +1635,12 @@ msgstr ""
 "bovenste balk, met Cmd+Shift+K of via het V-menu van de minispeler. Druk "
 "op ? of F1 voor de sneltoetsen."
 
-#: src/ui/settings.rs:1401 src/ui/settings.rs:1616
+#: src/ui/settings.rs:1433 src/ui/settings.rs:1648
 msgid "Presets"
 msgstr "Presets"
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1406
+#: src/ui/settings.rs:1438
 #, rust-format
 msgid ""
 "None yet in {folder}. Add .milk files here. Spotifast downloads presets when "
@@ -1650,7 +1650,7 @@ msgstr ""
 "presets als MilkDrop voor het eerst opent met een lege map."
 
 #. Translators: {folder} is the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1412
+#: src/ui/settings.rs:1444
 #, rust-format
 msgid ""
 "One preset in {folder}. Add .milk files here. Spotifast downloads presets "
@@ -1660,7 +1660,7 @@ msgstr ""
 "presets als MilkDrop voor het eerst opent met een lege map."
 
 #. Translators: {count} is the number of presets, {folder} the path of the MilkDrop presets folder.
-#: src/ui/settings.rs:1418
+#: src/ui/settings.rs:1450
 #, rust-format
 msgid ""
 "{count} preset in {folder}. Add .milk files here. Spotifast downloads "
@@ -1675,25 +1675,25 @@ msgstr[1] ""
 "{count} presets in {folder}. Zet hier .milk-bestanden neer. Spotifast "
 "downloadt presets als MilkDrop voor het eerst opent met een lege map."
 
-#: src/ui/settings.rs:1427
+#: src/ui/settings.rs:1459
 msgid "Time per preset"
 msgstr "Tijd per preset"
 
-#: src/ui/settings.rs:1430
+#: src/ui/settings.rs:1462
 msgid "How long each preset plays before the next fades in."
 msgstr "Hoe lang elke preset speelt voordat de volgende invloeit."
 
-#: src/ui/settings.rs:1434
+#: src/ui/settings.rs:1466
 msgid "Frame rate"
 msgstr "Framerate"
 
-#: src/ui/settings.rs:1438
+#: src/ui/settings.rs:1470
 msgid "Lower rates use fewer resources. Uncapped draws as fast as possible."
 msgstr ""
 "Lagere rates gebruiken minder middelen. “Onbeperkt” tekent zo snel mogelijk."
 
 #. Translators: {hz} is the screen's refresh rate in hertz.
-#: src/ui/settings.rs:1443
+#: src/ui/settings.rs:1475
 #, rust-format
 msgid ""
 "Your screen refreshes at {hz} Hz. Higher rates do not add visible frames. "
@@ -1702,50 +1702,50 @@ msgstr ""
 "Je scherm ververst op {hz} Hz. Hogere rates voegen geen zichtbare frames "
 "toe. “Onbeperkt” tekent zo snel mogelijk."
 
-#: src/ui/settings.rs:1450
+#: src/ui/settings.rs:1482
 msgid "Resolution"
 msgstr "Resolutie"
 
-#: src/ui/settings.rs:1453
+#: src/ui/settings.rs:1485
 msgid "Half and Quarter use fewer resources and scale the image back up."
 msgstr ""
 "“Half” en “Kwart” gebruiken minder middelen en schalen het beeld weer op."
 
 #. Translators: search keywords for the MilkDrop preset download buttons.
-#: src/ui/settings.rs:1460
+#: src/ui/settings.rs:1492
 msgid "Get presets"
 msgstr "Presets ophalen"
 
-#: src/ui/settings.rs:1498
+#: src/ui/settings.rs:1530
 msgid "Fetching..."
 msgstr "Ophalen..."
 
 #. Translators: {pack} is the name of a MilkDrop preset pack.
-#: src/ui/settings.rs:1501
+#: src/ui/settings.rs:1533
 #, rust-format
 msgid "Get {pack}"
 msgstr "{pack} ophalen"
 
-#: src/ui/settings.rs:1588
+#: src/ui/settings.rs:1620
 msgctxt "resolution"
 msgid "Full"
 msgstr "Volledig"
 
-#: src/ui/settings.rs:1589
+#: src/ui/settings.rs:1621
 msgctxt "resolution"
 msgid "Half"
 msgstr "Half"
 
-#: src/ui/settings.rs:1590
+#: src/ui/settings.rs:1622
 msgctxt "resolution"
 msgid "Quarter"
 msgstr "Kwart"
 
-#: src/ui/settings.rs:1604
+#: src/ui/settings.rs:1636
 msgid "Equalizer"
 msgstr "Equalizer"
 
-#: src/ui/settings.rs:1610
+#: src/ui/settings.rs:1642
 msgid ""
 "A ten-band equalizer for playback on this computer. It does not affect other "
 "devices."
@@ -1754,101 +1754,101 @@ msgstr ""
 "apparaten worden niet beïnvloed."
 
 #. Translators: a search keyword for the equalizer's preamplifier slider.
-#: src/ui/settings.rs:1618
+#: src/ui/settings.rs:1650
 msgid "Preamp"
 msgstr "Voorversterker"
 
 #. Translators: a search keyword for the equalizer's frequency band sliders.
-#: src/ui/settings.rs:1620
+#: src/ui/settings.rs:1652
 msgid "Bands"
 msgstr "Banden"
 
 #. Translators: short label under the equalizer's preamplifier slider.
-#: src/ui/settings.rs:1670
+#: src/ui/settings.rs:1702
 msgctxt "equalizer"
 msgid "Pre"
 msgstr "Pre"
 
-#: src/ui/settings.rs:1687
+#: src/ui/settings.rs:1719
 msgid "Storage"
 msgstr "Opslag"
 
-#: src/ui/settings.rs:1690
+#: src/ui/settings.rs:1722
 msgid "Artwork cache"
 msgstr "Covercache"
 
 #. Translators: {folder} is the path of a cache folder.
-#: src/ui/settings.rs:1692 src/ui/settings.rs:1698
+#: src/ui/settings.rs:1724 src/ui/settings.rs:1730
 #, rust-format
 msgid "Stored in {folder}"
 msgstr "Opgeslagen in {folder}"
 
-#: src/ui/settings.rs:1704
+#: src/ui/settings.rs:1736
 msgid "Play history"
 msgstr "Afspeelgeschiedenis"
 
 #. Translators: {file} is the path of the play history file.
-#: src/ui/settings.rs:1708
+#: src/ui/settings.rs:1740
 #, rust-format
 msgid "Tracks played here are stored in {file}. This file is never uploaded."
 msgstr ""
 "Nummers die hier worden afgespeeld, worden opgeslagen in {file}. Dit bestand "
 "wordt nooit geüpload."
 
-#: src/ui/settings.rs:1713
+#: src/ui/settings.rs:1745
 msgid "Sign-in"
 msgstr "Inloggen"
 
-#: src/ui/settings.rs:1716
+#: src/ui/settings.rs:1748
 msgid "Sign-ins are saved in the system credential store when available."
 msgstr ""
 "Aanmeldingen worden opgeslagen in de wachtwoordopslag van het systeem als "
 "die beschikbaar is."
 
-#: src/ui/settings.rs:1728
+#: src/ui/settings.rs:1760
 msgid "Clear artwork"
 msgstr "Covers wissen"
 
-#: src/ui/settings.rs:1742
+#: src/ui/settings.rs:1774
 msgid "Clear history"
 msgstr "Geschiedenis wissen"
 
-#: src/ui/settings.rs:1754 src/ui/show.rs:34
+#: src/ui/settings.rs:1786 src/ui/show.rs:34
 msgid "About"
 msgstr "Over"
 
-#: src/ui/settings.rs:1757
+#: src/ui/settings.rs:1789
 msgid "Built with Rust, egui, and librespot. Not affiliated with Spotify."
 msgstr "Gemaakt met Rust, egui en librespot. Niet verbonden aan Spotify."
 
-#: src/ui/settings.rs:1759
+#: src/ui/settings.rs:1791
 msgid "Check for updates"
 msgstr "Controleren op updates"
 
-#: src/ui/settings.rs:1760
+#: src/ui/settings.rs:1792
 msgid "Checking…"
 msgstr "Controleren…"
 
-#: src/ui/settings.rs:1761 src/ui/dialogs.rs:153 src/ui/keys.rs:295
+#: src/ui/settings.rs:1793 src/ui/dialogs.rs:153 src/ui/keys.rs:295
 #: src/ui/topbar.rs:414
 msgid "Keyboard shortcuts"
 msgstr "Sneltoetsen"
 
-#: src/ui/settings.rs:1762
+#: src/ui/settings.rs:1794
 msgid "Source code"
 msgstr "Broncode"
 
 #. Translators: {query} is the text typed into the settings search field.
-#: src/ui/settings.rs:1834
+#: src/ui/settings.rs:1866
 #, rust-format
 msgid "No settings for “{query}”"
 msgstr "Geen instellingen voor “{query}”"
 
-#: src/ui/settings.rs:1835
+#: src/ui/settings.rs:1867
 msgid "Try fewer words, or check the spelling."
 msgstr "Probeer minder woorden of controleer de spelling."
 
-#: src/ui/settings.rs:1851
+#: src/ui/settings.rs:1883
 msgctxt "language"
 msgid "System"
 msgstr "Systeem"
