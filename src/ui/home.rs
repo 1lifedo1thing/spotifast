@@ -179,7 +179,6 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
 }
 
 fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
-    let locale = app.locale;
     let palette = app.palette;
     let mut playlists: Vec<Playlist> = Vec::new();
     let mut loading = false;
@@ -208,7 +207,6 @@ fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
     widgets::shelf(
         ui,
         &palette,
-        locale,
         "made-for-you",
         &gettext(app.locale, "Made for you"),
         |ui| {
@@ -267,7 +265,6 @@ fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
 }
 
 fn recently_played(app: &mut App, ui: &mut egui::Ui) {
-    let locale = app.locale;
     let palette = app.palette;
     let history = match app.home.recently_played.clone() {
         Loadable::Loaded(history) => history,
@@ -275,7 +272,6 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
             widgets::shelf(
                 ui,
                 &palette,
-                locale,
                 "recent",
                 &gettext(app.locale, "Recently played"),
                 |ui| widgets::loading_row(ui, &palette, app.locale),
@@ -286,7 +282,6 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
             widgets::shelf(
                 ui,
                 &palette,
-                locale,
                 "recent",
                 &gettext(app.locale, "Recently played"),
                 |ui| {
@@ -314,7 +309,6 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
     widgets::shelf(
         ui,
         &palette,
-        locale,
         "recent",
         &gettext(app.locale, "Recently played"),
         |ui| {
@@ -440,7 +434,6 @@ pub(crate) fn podcast_episodes(
 }
 
 fn podcasts(app: &mut App, ui: &mut egui::Ui) {
-    let locale = app.locale;
     let palette = app.palette;
     let episodes = podcast_episodes(
         &app.home.podcasts,
@@ -453,7 +446,6 @@ fn podcasts(app: &mut App, ui: &mut egui::Ui) {
     widgets::shelf(
         ui,
         &palette,
-        locale,
         "podcasts",
         &gettext(app.locale, "Your podcasts"),
         |ui| {
@@ -509,7 +501,6 @@ fn podcasts(app: &mut App, ui: &mut egui::Ui) {
 }
 
 fn top_artists(app: &mut App, ui: &mut egui::Ui) {
-    let locale = app.locale;
     let palette = app.palette;
     let artists = match app.home.top_artists.clone() {
         Loadable::Loaded(artists) => artists,
@@ -517,7 +508,6 @@ fn top_artists(app: &mut App, ui: &mut egui::Ui) {
             widgets::shelf(
                 ui,
                 &palette,
-                locale,
                 "top-artists",
                 &gettext(app.locale, "Your top artists"),
                 |ui| widgets::loading_row(ui, &palette, app.locale),
@@ -528,7 +518,6 @@ fn top_artists(app: &mut App, ui: &mut egui::Ui) {
             widgets::shelf(
                 ui,
                 &palette,
-                locale,
                 "top-artists",
                 &gettext(app.locale, "Your top artists"),
                 |ui| {
@@ -544,7 +533,6 @@ fn top_artists(app: &mut App, ui: &mut egui::Ui) {
     widgets::shelf(
         ui,
         &palette,
-        locale,
         "top-artists",
         &gettext(app.locale, "Your top artists"),
         |ui| {

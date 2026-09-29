@@ -491,7 +491,6 @@ fn artist_card(app: &mut App, ui: &mut egui::Ui, artist: &Artist) {
 }
 
 fn shelf_artists(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
-    let locale = app.locale;
     let palette = app.palette;
     let Some(page) = &results.artists else { return };
     if page.items.is_empty() {
@@ -500,7 +499,6 @@ fn shelf_artists(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
     widgets::shelf(
         ui,
         &palette,
-        locale,
         "search-artists",
         &gettext(app.locale, "Artists"),
         |ui| {
@@ -555,7 +553,6 @@ fn album_card(app: &mut App, ui: &mut egui::Ui, album: &crate::api::models::Albu
 }
 
 fn shelf_albums(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
-    let locale = app.locale;
     let palette = app.palette;
     let Some(page) = &results.albums else { return };
     if page.items.is_empty() {
@@ -564,7 +561,6 @@ fn shelf_albums(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
     widgets::shelf(
         ui,
         &palette,
-        locale,
         "search-albums",
         &gettext(app.locale, "Albums"),
         |ui| {
@@ -622,7 +618,6 @@ fn playlist_card(app: &mut App, ui: &mut egui::Ui, playlist: &crate::api::models
 }
 
 fn shelf_playlists(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
-    let locale = app.locale;
     let palette = app.palette;
     let Some(page) = &results.playlists else {
         return;
@@ -633,7 +628,6 @@ fn shelf_playlists(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
     widgets::shelf(
         ui,
         &palette,
-        locale,
         "search-playlists",
         &gettext(app.locale, "Playlists"),
         |ui| {
@@ -677,7 +671,6 @@ fn show_card(app: &mut App, ui: &mut egui::Ui, show: &crate::api::models::Show) 
 }
 
 fn shelf_shows(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
-    let locale = app.locale;
     let palette = app.palette;
     let Some(page) = &results.shows else { return };
     if page.items.is_empty() {
@@ -686,7 +679,6 @@ fn shelf_shows(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
     widgets::shelf(
         ui,
         &palette,
-        locale,
         "search-shows",
         &gettext(app.locale, "Podcasts"),
         |ui| {

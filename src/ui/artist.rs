@@ -196,7 +196,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, id: &str) {
             {
                 let artist_label = gettext(locale, "Artist");
                 let title = gettext(locale, "Fans also like");
-                widgets::shelf(ui, &palette, locale, "related", &title, |ui| {
+                widgets::shelf(ui, &palette, "related", &title, |ui| {
                     for artist in related {
                         let card = widgets::card(
                             ui,

@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-29 12:56+0200\n"
+"POT-Creation-Date: 2026-09-29 14:58+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Swedish\n"
@@ -28,12 +28,12 @@ msgstr "Pausa {name}"
 msgid "Play {name}"
 msgstr "Spela {name}"
 
-#: src/ui/sidebar.rs:289 src/app.rs:2404 src/app.rs:16249
+#: src/ui/sidebar.rs:289 src/app.rs:2404 src/app.rs:16248
 #: src/ui/collection.rs:1695 src/ui/collection.rs:1872
 msgid "Playlist"
 msgstr "Spellista"
 
-#: src/ui/sidebar.rs:299 src/app.rs:2378 src/app.rs:16254
+#: src/ui/sidebar.rs:299 src/app.rs:2378 src/app.rs:16253
 #: src/ui/collection.rs:1865 src/ui/home.rs:49 src/ui/keys.rs:258
 #: src/ui/winamp/playlist.rs:653
 msgid "Liked Songs"
@@ -43,8 +43,8 @@ msgstr "Gillade låtar"
 msgid "Library order"
 msgstr "Biblioteksordning"
 
-#: src/ui/sidebar.rs:342 src/ui/home.rs:280 src/ui/home.rs:291
-#: src/ui/home.rs:319
+#: src/ui/sidebar.rs:342 src/ui/home.rs:276 src/ui/home.rs:286
+#: src/ui/home.rs:313
 msgid "Recently played"
 msgstr "Nyligen spelade"
 
@@ -111,22 +111,22 @@ msgstr "Sök i biblioteket"
 msgid "Library"
 msgstr "Bibliotek"
 
-#: src/ui/sidebar.rs:937 src/app.rs:5904 src/model.rs:636 src/ui/search.rs:638
+#: src/ui/sidebar.rs:937 src/app.rs:5904 src/model.rs:636 src/ui/search.rs:632
 msgid "Playlists"
 msgstr "Spellistor"
 
 #: src/ui/sidebar.rs:938 src/model.rs:635 src/model.rs:749 src/ui/library.rs:17
-#: src/ui/search.rs:569
+#: src/ui/search.rs:565
 msgid "Albums"
 msgstr "Album"
 
 #: src/ui/sidebar.rs:939 src/model.rs:634 src/ui/library.rs:22
-#: src/ui/search.rs:505
+#: src/ui/search.rs:503
 msgid "Artists"
 msgstr "Artister"
 
 #: src/ui/sidebar.rs:940 src/model.rs:637 src/ui/library.rs:27
-#: src/ui/search.rs:691
+#: src/ui/search.rs:683
 msgid "Podcasts"
 msgstr "Poddar"
 
@@ -135,7 +135,7 @@ msgid "Search in Your Library"
 msgstr "Sök i ditt bibliotek"
 
 #: src/ui/sidebar.rs:1089 src/app.rs:2439 src/ui/artist.rs:197
-#: src/ui/artist.rs:299 src/ui/home.rs:557 src/ui/library.rs:95
+#: src/ui/artist.rs:299 src/ui/home.rs:545 src/ui/library.rs:95
 #: src/ui/search.rs:145 src/ui/search.rs:470 src/ui/winamp/playlist.rs:729
 msgid "Artist"
 msgstr "Artist"
@@ -336,7 +336,7 @@ msgstr "Härnäst"
 msgid "Next up"
 msgstr "Sedan"
 
-#: src/ui/queue.rs:465 src/ui/queue.rs:498 src/ui/widgets.rs:2549
+#: src/ui/queue.rs:465 src/ui/queue.rs:498 src/ui/widgets.rs:2415
 #: src/ui/collection.rs:1065
 msgid "Retry"
 msgstr "Försök igen"
@@ -393,7 +393,7 @@ msgstr "Instrumental"
 msgid "No timed lyrics for this track."
 msgstr "Ingen synkroniserad text för den här låten."
 
-#: src/ui/lyrics.rs:376 src/ui/widgets.rs:2534 src/app.rs:10163
+#: src/ui/lyrics.rs:376 src/ui/widgets.rs:2400 src/app.rs:10163
 #: src/ui/collection.rs:728
 msgid "Loading…"
 msgstr "Läser in…"
@@ -566,57 +566,49 @@ msgstr "DATUM TILLAGD"
 msgid "Sort by duration"
 msgstr "Sortera efter längd"
 
-#: src/ui/widgets.rs:2509
-msgid "Scroll left"
-msgstr "Rulla åt vänster"
-
-#: src/ui/widgets.rs:2510
-msgid "Scroll right"
-msgstr "Rulla åt höger"
-
-#: src/ui/widgets.rs:2780
+#: src/ui/widgets.rs:2646
 msgid "Cut"
 msgstr "Klipp ut"
 
-#: src/ui/widgets.rs:2785
+#: src/ui/widgets.rs:2651
 msgid "Copy"
 msgstr "Kopiera"
 
-#: src/ui/widgets.rs:2790
+#: src/ui/widgets.rs:2656
 msgid "Paste"
 msgstr "Klistra in"
 
-#: src/ui/widgets.rs:2807
+#: src/ui/widgets.rs:2673
 msgid "Select all"
 msgstr "Markera allt"
 
-#: src/ui/widgets.rs:2910
+#: src/ui/widgets.rs:2776
 msgid "Clear"
 msgstr "Rensa"
 
 #. Translators: {name} is replaced by the author's name, shown as a link.
-#: src/ui/widgets.rs:2955
+#: src/ui/widgets.rs:2821
 #, rust-format
 msgid "Built with love by {name}"
 msgstr "Byggd med kärlek av {name}"
 
-#: src/ui/widgets.rs:3100
+#: src/ui/widgets.rs:2966
 msgid "Host"
 msgstr "Värd"
 
-#: src/ui/widgets.rs:3117
+#: src/ui/widgets.rs:2983
 msgid "Port"
 msgstr "Port"
 
-#: src/ui/widgets.rs:3135
+#: src/ui/widgets.rs:3001
 msgid "Username"
 msgstr "Användarnamn"
 
-#: src/ui/widgets.rs:3146
+#: src/ui/widgets.rs:3012
 msgid "Password"
 msgstr "Lösenord"
 
-#: src/ui/widgets.rs:3164
+#: src/ui/widgets.rs:3030
 msgid ""
 "Proxy login applies to Web requests. Local playback uses this proxy only "
 "without a login."
@@ -624,7 +616,7 @@ msgstr ""
 "Proxyinloggningen gäller webbförfrågningar. Lokal uppspelning använder bara "
 "proxyn om ingen inloggning anges."
 
-#: src/ui/widgets.rs:3168
+#: src/ui/widgets.rs:3034
 msgid ""
 "Spotify hostnames are resolved by the proxy. Local playback connects "
 "directly."
@@ -738,7 +730,7 @@ msgid "Queue cleared"
 msgstr "Kön rensad"
 
 #. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
-#: src/app.rs:4398 src/app.rs:16239
+#: src/app.rs:4398 src/app.rs:16238
 #, rust-format
 msgid "Queue {date}"
 msgstr "Kö {date}"
@@ -1077,7 +1069,7 @@ msgstr "Kunde inte ladda upp omslaget: {error}. Försök igen."
 
 #. Translators: Keep {track} unchanged. It is the name of the song,
 #. playlist, album, or artist the radio is based on, not translated.
-#: src/app.rs:16259 src/app/radio.rs:38
+#: src/app.rs:16258 src/app/radio.rs:38
 #, rust-format
 msgid "{track} Radio"
 msgstr "{track}-radio"
@@ -2037,7 +2029,7 @@ msgstr "Här finns inget än"
 msgid "Added songs appear here."
 msgstr "Tillagda låtar visas här."
 
-#: src/ui/collection.rs:1287 src/ui/home.rs:665
+#: src/ui/collection.rs:1287 src/ui/home.rs:653
 msgid "Your top songs"
 msgstr "Dina topplåtar"
 
@@ -2326,45 +2318,45 @@ msgstr "Valfri beskrivning"
 msgid "Save"
 msgstr "Spara"
 
-#: src/ui/home.rs:213
+#: src/ui/home.rs:211
 msgid "Made for you"
 msgstr "Skapat för dig"
 
-#: src/ui/home.rs:218
+#: src/ui/home.rs:216
 msgid "Couldn't load this shelf"
 msgstr "Kunde inte läsa in den här sektionen"
 
 #. Translators: {owner} is the name of the playlist's owner.
-#: src/ui/home.rs:229 src/ui/search.rs:594
+#: src/ui/home.rs:227 src/ui/search.rs:590
 #, rust-format
 msgid "By {owner}"
 msgstr "Av {owner}"
 
-#: src/ui/home.rs:458
+#: src/ui/home.rs:450
 msgid "Your podcasts"
 msgstr "Dina poddar"
 
 #. Translators: {time} is the time left in an episode, such as 12 min; {show} is the podcast's name.
-#: src/ui/home.rs:464
+#: src/ui/home.rs:456
 #, rust-format
 msgid "{time} left • {show}"
 msgstr "{time} kvar • {show}"
 
 #. Translators: {show} is the podcast's name.
-#: src/ui/home.rs:473
+#: src/ui/home.rs:465
 #, rust-format
 msgid "New • {show}"
 msgstr "Nytt • {show}"
 
-#: src/ui/home.rs:522 src/ui/home.rs:533 src/ui/home.rs:549
+#: src/ui/home.rs:512 src/ui/home.rs:522 src/ui/home.rs:537
 msgid "Your top artists"
 msgstr "Dina toppartister"
 
-#: src/ui/home.rs:666
+#: src/ui/home.rs:654
 msgid "Show more top songs"
 msgstr "Visa fler topplåtar"
 
-#: src/ui/home.rs:680
+#: src/ui/home.rs:668
 msgid "Recommended for you"
 msgstr "Rekommenderat för dig"
 
@@ -3131,6 +3123,12 @@ msgid "On Wayland, use your desktop's Keep Above shortcut or window rule."
 msgstr ""
 "På Wayland använder du skrivbordets kortkommando eller fönsterregel för "
 "”Håll överst”."
+
+#~ msgid "Scroll left"
+#~ msgstr "Rulla åt vänster"
+
+#~ msgid "Scroll right"
+#~ msgstr "Rulla åt höger"
 
 #~ msgid "Enable lyrics motion"
 #~ msgstr "Aktivera låttextrörelse"

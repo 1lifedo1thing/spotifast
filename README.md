@@ -447,8 +447,7 @@ Since 0.8.0, text fields keep their usual Ctrl, Cmd and Alt arrow
 keys for moving the caret while you type.
 
 Hold `Shift` while turning the mouse wheel to scroll horizontal shelves,
-including Made for you and Recently played on Home, or use the arrow buttons
-at a shelf's edges.
+including Made for you and Recently played on Home.
 
 The main window exposes named playback controls, library and song rows,
 menus, sliders, and settings switches to screen readers. Use `Tab` and
