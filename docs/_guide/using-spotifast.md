@@ -24,6 +24,8 @@ click. macOS retains its existing middle-click behavior.
 Point at a horizontal shelf, such as Made for you or Recently played on
 Home, and hold `Shift` while turning the mouse wheel. The shelf moves while
 the surrounding page stays put. Release `Shift` to scroll the page normally.
+Shelves have no scroll bar; the arrow buttons at a shelf's left and right
+edges, shown while there are more cards that way, move it by one shelf width.
 
 ## Podcasts on Home
 

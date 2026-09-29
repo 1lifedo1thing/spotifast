@@ -10750,6 +10750,7 @@ mod tests {
                     crate::ui::widgets::shelf(
                         ui,
                         &app.palette,
+                        app.locale,
                         "wheel-test-shelf",
                         "Shelf",
                         |ui| {
