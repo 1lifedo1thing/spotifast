@@ -9,8 +9,8 @@ use crate::api::models::{Album, Image, PlayableItem, Playlist, pick_image};
 use crate::app::App;
 use crate::i18n::{Locale, gettext, ngettext};
 use crate::model::{
-    Action, Dialog, DragTrack, Loadable, Page, PagedList, RowContext, SortColumn, TableItem,
-    TableRowsCache, TableSort,
+    Action, Dialog, DragTrack, Loadable, Page, PagedList, RowContext, RowPick, SortColumn,
+    TableItem, TableRowsCache, TableSort,
 };
 use crate::theme::{self, Icon, Palette};
 use crate::util;
@@ -660,12 +660,13 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
                 })
             })
     });
-    // Selection uses display indices. Clear it when sorting, filtering, or row
-    // count changes.
+    // Selection uses display indices. Clear it when the view or items change,
+    // including a refresh that replaces songs without changing the row count.
     let view = format!(
-        "{sort:?}|{needle}|{}|{}",
+        "{sort:?}|{needle}|{}|{}|{}",
         entry.visible.len(),
-        table.row_offset
+        table.row_offset,
+        table.items_revision
     );
     let item_index = |row: usize| -> Option<usize> {
         if let Some(page) = finite {
@@ -783,12 +784,23 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
                 picked_songs: &picked_songs,
             },
         );
-        row_responses.push(response);
+        row_responses.push((row, response));
         if let Some(asked) = asked {
             pick = Some((row, asked));
         }
     });
-    navigate_song_rows(ui, &row_responses);
+    if app.dialog.is_none()
+        && let Some((current, next, extend)) = navigate_song_rows(ui, &row_responses)
+    {
+        if extend {
+            if app.picked_rows(&table.page).is_none() {
+                app.pick_rows(&table.page, &view, [current].into_iter().collect());
+            }
+            app.pick_row(&table.page, &view, next, RowPick::Range, rows);
+        } else {
+            app.pick_rows(&table.page, &view, [next].into_iter().collect());
+        }
+    }
     if let Some(position) = missing
         && !table.loading
         && table.error.is_none()
@@ -880,7 +892,7 @@ pub fn table(app: &mut App, ui: &mut egui::Ui, table: Table<'_>) {
     }
 }
 
-/// Select all, Cut, Copy and Paste on a song list. Cut copies the picked
+/// Select all, Cut, Copy, Paste and Delete on a song list. Cut copies the picked
 /// songs and removes them from a playlist the account can edit. A focused
 /// text field keeps these keys for its own text, and an open dialog keeps
 /// them from the list behind it.
@@ -907,7 +919,10 @@ fn list_shortcuts(
         } => Some(id.clone()),
         _ => None,
     };
-    let (select_all, cut, copy, pasted) = ui.input_mut(|input| {
+    let can_delete = editable.is_some()
+        && app.picked_rows(&table.page).is_some()
+        && !egui::Popup::is_any_open(ui.ctx());
+    let (select_all, cut, copy, pasted, delete) = ui.input_mut(|input| {
         // The platform's Cut, Copy and Paste keys arrive as these events,
         // not as key presses.
         let cut = editable.is_some()
@@ -931,6 +946,10 @@ fn list_shortcuts(
             cut,
             copy,
             pasted,
+            can_delete
+                && (input.consume_key(egui::Modifiers::NONE, egui::Key::Delete)
+                    || (cfg!(target_os = "macos")
+                        && input.consume_key(egui::Modifiers::NONE, egui::Key::Backspace))),
         )
     });
     if select_all {
@@ -942,6 +961,21 @@ fn list_shortcuts(
             })
             .collect();
         app.pick_rows(&table.page, view, all);
+    }
+    if delete && let Some(playlist_id) = &editable {
+        let uris = app
+            .picked_rows(&table.page)
+            .into_iter()
+            .flatten()
+            .filter_map(|row| item_index(*row))
+            .filter_map(|index| table.items.get(index))
+            .filter(|(item, _, _)| !item.uri().is_empty())
+            .map(|(item, _, _)| item.uri().to_string())
+            .collect();
+        app.actions.push(Action::RemoveFromPlaylist {
+            playlist_id: playlist_id.clone(),
+            uris,
+        });
     }
     if let (true, Some(playlist_id)) = (cut, &editable) {
         let uris = picked_songs
@@ -963,17 +997,23 @@ fn list_shortcuts(
 
 /// Arrow keys follow display order, independent of the positions of the
 /// artist links, Like buttons and other controls inside each song row.
-fn navigate_song_rows(ui: &egui::Ui, rows: &[egui::Response]) {
+fn navigate_song_rows(
+    ui: &egui::Ui,
+    rows: &[(usize, egui::Response)],
+) -> Option<(usize, usize, bool)> {
     if egui::Popup::is_any_open(ui.ctx()) {
-        return;
+        return None;
     }
-    let Some(current) = rows.iter().position(egui::Response::has_focus) else {
-        return;
-    };
-    let (down, up) = ui.input_mut(|input| {
+    let current = rows.iter().position(|(_, response)| response.has_focus())?;
+    let (down, up, extend) = ui.input_mut(|input| {
+        // Consume Shift first: egui's plain-key matcher also accepts Shift.
+        let down = input.count_and_consume_key(egui::Modifiers::SHIFT, egui::Key::ArrowDown);
+        let up = input.count_and_consume_key(egui::Modifiers::SHIFT, egui::Key::ArrowUp);
+        let extend = down + up > 0;
         (
-            input.count_and_consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown),
-            input.count_and_consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp),
+            down + input.count_and_consume_key(egui::Modifiers::NONE, egui::Key::ArrowDown),
+            up + input.count_and_consume_key(egui::Modifiers::NONE, egui::Key::ArrowUp),
+            extend,
         )
     });
     if down + up > 0 {
@@ -982,10 +1022,12 @@ fn navigate_song_rows(ui: &egui::Ui, rows: &[egui::Response]) {
         // Cancel egui's spatial search at the end of this pass, including on
         // the first key after gaining focus. Tab still reaches child controls.
         ui.memory_mut(|memory| memory.move_focus(egui::FocusDirection::None));
-        rows[next].request_focus();
-        rows[next].scroll_to_me(None);
+        rows[next].1.request_focus();
+        rows[next].1.scroll_to_me(None);
         ui.ctx().request_repaint();
+        return Some((rows[current].0, rows[next].0, extend));
     }
+    None
 }
 
 fn placeholder_row(
@@ -2607,6 +2649,7 @@ mod tests {
         filter: String,
         height: f32,
         editable: bool,
+        items_revision: u64,
     }
 
     impl KeyboardTable {
@@ -2621,6 +2664,7 @@ mod tests {
                 filter: String::new(),
                 height: 600.0,
                 editable: false,
+                items_revision: 0,
             }
         }
 
@@ -2667,7 +2711,7 @@ mod tests {
                                 error: None,
                                 can_load_more: false,
                                 filter: &self.filter,
-                                items_revision: 0,
+                                items_revision: self.items_revision,
                             },
                         );
                     });
@@ -2703,12 +2747,20 @@ mod tests {
         }
 
         fn key(&mut self, key: egui::Key) -> egui::accesskit::TreeUpdate {
+            self.modified_key(key, egui::Modifiers::NONE)
+        }
+
+        fn modified_key(
+            &mut self,
+            key: egui::Key,
+            modifiers: egui::Modifiers,
+        ) -> egui::accesskit::TreeUpdate {
             self.frame(vec![egui::Event::Key {
                 key,
                 physical_key: None,
                 pressed: true,
                 repeat: false,
-                modifiers: egui::Modifiers::NONE,
+                modifiers,
             }])
         }
 
@@ -2982,13 +3034,178 @@ mod tests {
             ]);
         }
         assert!(table.app.actions.is_empty(), "a body click only selects");
+        let page = Page::Playlist("test".into());
+        assert_eq!(
+            table.app.picked_rows(&page),
+            Some(&[0].into_iter().collect())
+        );
         table.key(egui::Key::ArrowDown);
         assert!(table.focused_label().starts_with("Play Cancion Animal,"));
+        assert_eq!(
+            table.app.picked_rows(&page),
+            Some(&[1].into_iter().collect())
+        );
         table.key(egui::Key::Enter);
         assert!(matches!(
             table.app.actions.as_slice(),
             [Action::PlayFromRow { index: 1, .. }]
         ));
+    }
+
+    #[test]
+    fn shift_arrows_extend_and_shrink_selection_in_display_order() {
+        let mut table = KeyboardTable::new();
+        let page = Page::Playlist("test".into());
+        table.app.table_sorts.insert(
+            page.clone(),
+            TableSort {
+                column: SortColumn::Title,
+                ascending: false,
+            },
+        );
+        table.focus_song("Ubermensch");
+        for (key, expected) in [
+            (egui::Key::ArrowDown, vec![0, 1]),
+            (egui::Key::ArrowDown, vec![0, 1, 2]),
+            (egui::Key::ArrowUp, vec![0, 1]),
+            (egui::Key::ArrowUp, vec![0]),
+            (egui::Key::ArrowUp, vec![0]),
+        ] {
+            table.modified_key(key, egui::Modifiers::SHIFT);
+            assert_eq!(
+                table.app.picked_rows(&page),
+                Some(&expected.into_iter().collect())
+            );
+        }
+        table.key(egui::Key::ArrowDown);
+        table.modified_key(egui::Key::ArrowDown, egui::Modifiers::SHIFT);
+        assert_eq!(
+            table.app.picked_rows(&page),
+            Some(&[1, 2].into_iter().collect())
+        );
+    }
+
+    #[test]
+    fn delete_removes_selected_playlist_songs_and_respects_editing_guards() {
+        let mut table = KeyboardTable::new();
+        table.editable = true;
+        table.focus_song("Bohemian Rhapsody");
+        table.key(egui::Key::ArrowDown);
+        table.key(egui::Key::Delete);
+        assert!(matches!(table.app.actions.as_slice(),
+            [Action::RemoveFromPlaylist { playlist_id, uris }]
+                if playlist_id == "test" && uris == &["spotify:track:t_1"]));
+        table.app.actions.clear();
+        table.modified_key(egui::Key::ArrowDown, egui::Modifiers::SHIFT);
+        table.key(egui::Key::Delete);
+        assert!(matches!(table.app.actions.as_slice(),
+            [Action::RemoveFromPlaylist { playlist_id, uris }]
+                if playlist_id == "test" && uris == &["spotify:track:t_1", "spotify:track:t_2"]));
+        table.app.actions.clear();
+        table.editable = false;
+        table.key(egui::Key::Delete);
+        assert!(table.app.actions.is_empty());
+        table.editable = true;
+        table.app.dialog = Some(Dialog::Shortcuts);
+        table.key(egui::Key::Delete);
+        assert!(table.app.actions.is_empty());
+        table.app.dialog = None;
+        table
+            .ctx
+            .memory_mut(|memory| memory.request_focus(egui::Id::new("keyboard-filter")));
+        table.frame(vec![]);
+        table.key(egui::Key::Delete);
+        assert!(table.app.actions.is_empty());
+    }
+
+    #[test]
+    fn backspace_removes_playlist_songs_only_on_macos_and_respects_editing_guards() {
+        let mut table = KeyboardTable::new();
+        table.editable = true;
+        table.focus_song("Bohemian Rhapsody");
+        table.key(egui::Key::ArrowDown);
+        table.modified_key(egui::Key::ArrowDown, egui::Modifiers::SHIFT);
+        table.key(egui::Key::Backspace);
+        if cfg!(target_os = "macos") {
+            assert!(matches!(table.app.actions.as_slice(),
+                [Action::RemoveFromPlaylist { playlist_id, uris }]
+                    if playlist_id == "test" && uris == &["spotify:track:t_1", "spotify:track:t_2"]));
+        } else {
+            assert!(table.app.actions.is_empty());
+        }
+        table.app.actions.clear();
+        table.editable = false;
+        table.key(egui::Key::Backspace);
+        assert!(table.app.actions.is_empty());
+        table.editable = true;
+        table.app.dialog = Some(Dialog::Shortcuts);
+        table.key(egui::Key::Backspace);
+        assert!(table.app.actions.is_empty());
+        table.app.dialog = None;
+        table
+            .ctx
+            .memory_mut(|memory| memory.request_focus(egui::Id::new("keyboard-filter")));
+        table.frame(vec![]);
+        table.key(egui::Key::Backspace);
+        assert!(table.app.actions.is_empty());
+    }
+
+    #[test]
+    fn delete_does_not_remove_replacement_rows_after_a_refresh() {
+        let mut table = KeyboardTable::new();
+        table.editable = true;
+        table.focus_song("Bohemian Rhapsody");
+        table.key(egui::Key::ArrowDown);
+        assert!(
+            table
+                .app
+                .picked_rows(&Page::Playlist("test".into()))
+                .is_some()
+        );
+        table.items.swap(1, 2);
+        table.items_revision += 1;
+        table.key(egui::Key::Delete);
+        assert!(
+            table
+                .app
+                .picked_rows(&Page::Playlist("test".into()))
+                .is_none()
+        );
+        assert!(table.app.actions.is_empty());
+    }
+
+    #[test]
+    fn delete_leaves_the_playlist_alone_while_a_row_menu_is_open() {
+        let mut table = KeyboardTable::new();
+        table.editable = true;
+        table.focus_song("Bohemian Rhapsody");
+        table.key(egui::Key::ArrowDown);
+        let tree = table.frame(vec![]);
+        let bounds = tree
+            .nodes
+            .iter()
+            .find(|(id, _)| *id == tree.focus)
+            .unwrap()
+            .1
+            .bounds()
+            .unwrap();
+        let pos = pos2(bounds.x0 as f32 + 180.0, bounds.y0 as f32 + 8.0);
+        for pressed in [true, false] {
+            table.frame(vec![
+                egui::Event::PointerMoved(pos),
+                egui::Event::PointerButton {
+                    pos,
+                    button: egui::PointerButton::Secondary,
+                    pressed,
+                    modifiers: egui::Modifiers::NONE,
+                },
+            ]);
+        }
+        assert!(egui::Popup::is_any_open(&table.ctx));
+        table.key(egui::Key::Backspace);
+        assert!(table.app.actions.is_empty());
+        table.key(egui::Key::Delete);
+        assert!(table.app.actions.is_empty());
     }
 
     #[test]
