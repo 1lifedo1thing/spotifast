@@ -1067,8 +1067,8 @@ msgstr ""
 msgid "{track} Radio"
 msgstr ""
 
-#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:406
-#: src/ui/topbar.rs:436
+#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:409
+#: src/ui/topbar.rs:439
 msgid "Settings"
 msgstr ""
 
@@ -1084,7 +1084,7 @@ msgstr ""
 msgid "Account"
 msgstr ""
 
-#: src/ui/settings.rs:218 src/ui/topbar.rs:424
+#: src/ui/settings.rs:218 src/ui/topbar.rs:427
 msgid "Sign out"
 msgstr ""
 
@@ -1761,7 +1761,7 @@ msgid "Checking…"
 msgstr ""
 
 #: src/ui/settings.rs:1793 src/ui/dialogs.rs:153 src/ui/keys.rs:300
-#: src/ui/topbar.rs:414
+#: src/ui/topbar.rs:417
 msgid "Keyboard shortcuts"
 msgstr ""
 
@@ -2662,28 +2662,28 @@ msgstr ""
 msgid "What do you want to play?"
 msgstr ""
 
-#: src/ui/topbar.rs:453
+#: src/ui/topbar.rs:456
 msgid "MilkDrop visualiser (Ctrl+Shift+K)"
 msgstr ""
 
-#: src/ui/topbar.rs:454
+#: src/ui/topbar.rs:457
 msgid "MilkDrop visualiser (Cmd+Shift+K)"
 msgstr ""
 
-#: src/ui/topbar.rs:468
+#: src/ui/topbar.rs:471
 msgid "Winamp mini player (Ctrl+M)"
 msgstr ""
 
-#: src/ui/topbar.rs:469
+#: src/ui/topbar.rs:472
 msgid "Winamp mini player (Cmd+Shift+M)"
 msgstr ""
 
-#: src/ui/topbar.rs:480
+#: src/ui/topbar.rs:483
 msgid "Waiting for Spotify…"
 msgstr ""
 
 #. Translators: {version} is a version number such as 1.2.0.
-#: src/ui/topbar.rs:517
+#: src/ui/topbar.rs:520
 #, rust-format
 msgid "Version {version} is available."
 msgstr ""

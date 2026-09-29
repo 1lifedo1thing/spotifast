@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-29 12:50+0200\n"
+"POT-Creation-Date: 2026-09-29 12:56+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Japanese\n"
@@ -1076,8 +1076,8 @@ msgstr ""
 msgid "{track} Radio"
 msgstr "{track} のラジオ"
 
-#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:406
-#: src/ui/topbar.rs:436
+#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:409
+#: src/ui/topbar.rs:439
 msgid "Settings"
 msgstr "設定"
 
@@ -1093,7 +1093,7 @@ msgstr "フォルダを開く"
 msgid "Account"
 msgstr "アカウント"
 
-#: src/ui/settings.rs:218 src/ui/topbar.rs:424
+#: src/ui/settings.rs:218 src/ui/topbar.rs:427
 msgid "Sign out"
 msgstr "ログアウト"
 
@@ -1825,7 +1825,7 @@ msgid "Checking…"
 msgstr "確認中…"
 
 #: src/ui/settings.rs:1793 src/ui/dialogs.rs:153 src/ui/keys.rs:300
-#: src/ui/topbar.rs:414
+#: src/ui/topbar.rs:417
 msgid "Keyboard shortcuts"
 msgstr "キーボードショートカット"
 
@@ -2746,28 +2746,28 @@ msgstr "{version}にアップデート"
 msgid "What do you want to play?"
 msgstr "何を再生しますか？"
 
-#: src/ui/topbar.rs:453
+#: src/ui/topbar.rs:456
 msgid "MilkDrop visualiser (Ctrl+Shift+K)"
 msgstr "MilkDropビジュアライザー (Ctrl+Shift+K)"
 
-#: src/ui/topbar.rs:454
+#: src/ui/topbar.rs:457
 msgid "MilkDrop visualiser (Cmd+Shift+K)"
 msgstr "MilkDropビジュアライザー (Cmd+Shift+K)"
 
-#: src/ui/topbar.rs:468
+#: src/ui/topbar.rs:471
 msgid "Winamp mini player (Ctrl+M)"
 msgstr "Winampミニプレイヤー (Ctrl+M)"
 
-#: src/ui/topbar.rs:469
+#: src/ui/topbar.rs:472
 msgid "Winamp mini player (Cmd+Shift+M)"
 msgstr "Winampミニプレイヤー (Cmd+Shift+M)"
 
-#: src/ui/topbar.rs:480
+#: src/ui/topbar.rs:483
 msgid "Waiting for Spotify…"
 msgstr "Spotifyを待っています…"
 
 #. Translators: {version} is a version number such as 1.2.0.
-#: src/ui/topbar.rs:517
+#: src/ui/topbar.rs:520
 #, rust-format
 msgid "Version {version} is available."
 msgstr "バージョン{version}が利用可能です。"

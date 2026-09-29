@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-29 12:50+0200\n"
+"POT-Creation-Date: 2026-09-29 12:56+0200\n"
 "PO-Revision-Date: 2026-09-09 13:30+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: German\n"
@@ -1089,8 +1089,8 @@ msgstr ""
 msgid "{track} Radio"
 msgstr "Radio zu {track}"
 
-#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:406
-#: src/ui/topbar.rs:436
+#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:409
+#: src/ui/topbar.rs:439
 msgid "Settings"
 msgstr "Einstellungen"
 
@@ -1106,7 +1106,7 @@ msgstr "Ordner öffnen"
 msgid "Account"
 msgstr "Konto"
 
-#: src/ui/settings.rs:218 src/ui/topbar.rs:424
+#: src/ui/settings.rs:218 src/ui/topbar.rs:427
 msgid "Sign out"
 msgstr "Abmelden"
 
@@ -1848,7 +1848,7 @@ msgid "Checking…"
 msgstr "Wird geprüft…"
 
 #: src/ui/settings.rs:1793 src/ui/dialogs.rs:153 src/ui/keys.rs:300
-#: src/ui/topbar.rs:414
+#: src/ui/topbar.rs:417
 msgid "Keyboard shortcuts"
 msgstr "Tastenkürzel"
 
@@ -2782,28 +2782,28 @@ msgstr "Auf {version} aktualisieren"
 msgid "What do you want to play?"
 msgstr "Was möchtest du hören?"
 
-#: src/ui/topbar.rs:453
+#: src/ui/topbar.rs:456
 msgid "MilkDrop visualiser (Ctrl+Shift+K)"
 msgstr "MilkDrop-Visualizer (Strg+Umschalt+K)"
 
-#: src/ui/topbar.rs:454
+#: src/ui/topbar.rs:457
 msgid "MilkDrop visualiser (Cmd+Shift+K)"
 msgstr "MilkDrop-Visualizer (Cmd+Umschalt+K)"
 
-#: src/ui/topbar.rs:468
+#: src/ui/topbar.rs:471
 msgid "Winamp mini player (Ctrl+M)"
 msgstr "Winamp-Mini-Player (Strg+M)"
 
-#: src/ui/topbar.rs:469
+#: src/ui/topbar.rs:472
 msgid "Winamp mini player (Cmd+Shift+M)"
 msgstr "Winamp-Mini-Player (Cmd+Umschalt+M)"
 
-#: src/ui/topbar.rs:480
+#: src/ui/topbar.rs:483
 msgid "Waiting for Spotify…"
 msgstr "Warte auf Spotify…"
 
 #. Translators: {version} is a version number such as 1.2.0.
-#: src/ui/topbar.rs:517
+#: src/ui/topbar.rs:520
 #, rust-format
 msgid "Version {version} is available."
 msgstr "Version {version} ist verfügbar."

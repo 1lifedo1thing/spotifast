@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-29 12:50+0200\n"
+"POT-Creation-Date: 2026-09-29 12:56+0200\n"
 "PO-Revision-Date: 2026-09-23 20:00+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: European Portuguese\n"
@@ -1086,8 +1086,8 @@ msgstr "Não foi possível carregar a capa: {error}. Tenta novamente."
 msgid "{track} Radio"
 msgstr "Rádio de {track}"
 
-#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:406
-#: src/ui/topbar.rs:436
+#: src/ui/settings.rs:175 src/ui/keys.rs:290 src/ui/topbar.rs:409
+#: src/ui/topbar.rs:439
 msgid "Settings"
 msgstr "Definições"
 
@@ -1103,7 +1103,7 @@ msgstr "Abrir pasta"
 msgid "Account"
 msgstr "Conta"
 
-#: src/ui/settings.rs:218 src/ui/topbar.rs:424
+#: src/ui/settings.rs:218 src/ui/topbar.rs:427
 msgid "Sign out"
 msgstr "Terminar sessão"
 
@@ -1838,7 +1838,7 @@ msgid "Checking…"
 msgstr "A verificar…"
 
 #: src/ui/settings.rs:1793 src/ui/dialogs.rs:153 src/ui/keys.rs:300
-#: src/ui/topbar.rs:414
+#: src/ui/topbar.rs:417
 msgid "Keyboard shortcuts"
 msgstr "Atalhos de teclado"
 
@@ -2769,28 +2769,28 @@ msgstr "Atualizar para {version}"
 msgid "What do you want to play?"
 msgstr "O que queres ouvir?"
 
-#: src/ui/topbar.rs:453
+#: src/ui/topbar.rs:456
 msgid "MilkDrop visualiser (Ctrl+Shift+K)"
 msgstr "Visualizador MilkDrop (Ctrl+Shift+K)"
 
-#: src/ui/topbar.rs:454
+#: src/ui/topbar.rs:457
 msgid "MilkDrop visualiser (Cmd+Shift+K)"
 msgstr "Visualizador MilkDrop (Cmd+Shift+K)"
 
-#: src/ui/topbar.rs:468
+#: src/ui/topbar.rs:471
 msgid "Winamp mini player (Ctrl+M)"
 msgstr "Minileitor do Winamp (Ctrl+M)"
 
-#: src/ui/topbar.rs:469
+#: src/ui/topbar.rs:472
 msgid "Winamp mini player (Cmd+Shift+M)"
 msgstr "Minileitor do Winamp (Cmd+Shift+M)"
 
-#: src/ui/topbar.rs:480
+#: src/ui/topbar.rs:483
 msgid "Waiting for Spotify…"
 msgstr "A aguardar o Spotify…"
 
 #. Translators: {version} is a version number such as 1.2.0.
-#: src/ui/topbar.rs:517
+#: src/ui/topbar.rs:520
 #, rust-format
 msgid "Version {version} is available."
 msgstr "A versão {version} está disponível."
