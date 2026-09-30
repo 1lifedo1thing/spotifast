@@ -19,10 +19,12 @@ foundation for native Rust apps built with egui.
 **Playback needs Spotify Premium.** Free accounts can browse and search, but
 cannot play music through Spotifast on this computer or another device.
 
-![Spotifast Home with the playlist library, recommendations, queue, and player visible](docs/screenshot.png)
+https://github.com/user-attachments/assets/a5f669ce-b3b7-4f8e-9933-976a78876c7e
 
 See [spotifast.rocks](https://spotifast.rocks/) for installation, setup,
 everyday use, and connection details.
+
+![Spotifast Home with the playlist library, recommendations, queue, and player visible](docs/screenshot.png)
 
 `spotifast` is the main command and `fastpotify` remains available
 for existing scripts. Starting with 0.9.1, the existing profile and protected
