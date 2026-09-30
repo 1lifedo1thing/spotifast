@@ -218,11 +218,10 @@ pub fn tray_template_rgba(size: usize) -> Vec<u8> {
 /// implementation of the logo; on-screen drawing goes through
 /// `theme::logo` and `theme::play_glyph_offset` instead.
 ///
-/// From 48 pixels up it is the polished disc of `packaging/icons`: a darker
-/// rim around a lit face. Below that the rim would only blur, so small
-/// icons keep the flat disc.
+/// It is the polished disc of `packaging/icons` at every size: a darker rim
+/// around a lit face.
 pub fn app_icon_rgba(size: usize) -> Vec<u8> {
-    mark_rgba(size, size >= 48)
+    mark_rgba(size, true)
 }
 
 /// Mixes two colours, `t` of the way from `a` to `b`.
@@ -391,28 +390,24 @@ mod tests {
         ]
     }
 
-    /// Large icons wear the polished disc; small ones stay flat, where a
-    /// rim would only blur; and the tray template keeps its punched-out
-    /// triangle.
+    /// The icon wears the polished disc at every size, and the tray
+    /// template keeps its punched-out triangle.
     #[test]
-    fn the_icon_is_polished_when_large_and_flat_when_small() {
+    fn the_icon_is_polished_at_every_size() {
         // #given the icon at a dock size and at a tray size
         let (large, small) = (app_icon_rgba(128), app_icon_rgba(32));
 
-        // #then the large one has a darker rim around a lighter face
+        // #then both have a darker rim around a lighter face
         let rim = pixel(&large, 128, 64, 6);
         let face = pixel(&large, 128, 64, 20);
         assert!(
             face[1] > rim[1],
             "face {face:?} should be lighter than rim {rim:?}"
         );
+        assert!(pixel(&small, 32, 16, 6)[1] > pixel(&small, 32, 16, 2)[1]);
         // #and a lit top fading to a deeper bottom
         let low = pixel(&large, 128, 64, 108);
         assert!(face[1] > low[1]);
-
-        // #and the small one is one flat green right to its edge
-        assert_eq!(pixel(&small, 32, 16, 4), pixel(&small, 32, 5, 16));
-        assert_eq!(&pixel(&small, 32, 5, 16)[..3], &[30, 215, 96]);
 
         // #and both carry the dark triangle, a little right of centre
         for (icon, size) in [(&large, 128), (&small, 32)] {
