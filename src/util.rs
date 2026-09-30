@@ -213,10 +213,8 @@ pub fn tray_template_rgba(size: usize) -> Vec<u8> {
     rgba
 }
 
-/// The mark rasterised to pixels for the window icon and the trays,
-/// where no egui painter exists. This is deliberately the one separate
-/// implementation of the logo; on-screen drawing goes through
-/// `theme::logo` and `theme::play_glyph_offset` instead.
+/// The mark rasterised to pixels: the window icon, the trays and the logo
+/// drawn in the app (`theme::logo`) all use this one picture.
 ///
 /// It is the polished disc of `packaging/icons` at every size: a darker rim
 /// around a lit face.

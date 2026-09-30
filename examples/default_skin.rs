@@ -217,13 +217,28 @@ impl Canvas {
         );
     }
 
-    /// The app's mark: a disc with a play triangle.
+    /// The app's mark in pixels: the disc with a darker rim and a lit top,
+    /// and the play triangle.
     fn logo(&mut self, cx: i64, cy: i64, radius: i64, disc: Rgb, glyph: Rgb) {
+        let shade = |c: Rgb, f: f32| c.map(|v| (f32::from(v) * f).round() as u8);
+        let lift =
+            |c: Rgb, f: f32| c.map(|v| (f32::from(v) + (255.0 - f32::from(v)) * f).round() as u8);
+        let outer = radius * radius + radius / 2;
+        let inner = (radius - 1) * (radius - 1) + (radius - 1) / 2;
         for y in -radius..=radius {
             for x in -radius..=radius {
-                if x * x + y * y <= radius * radius + radius / 2 {
-                    self.set(cx + x, cy + y, disc);
+                let d = x * x + y * y;
+                if d > outer {
+                    continue;
                 }
+                let colour = if d > inner {
+                    shade(disc, 0.7)
+                } else if y < 0 {
+                    lift(disc, 0.25)
+                } else {
+                    disc
+                };
+                self.set(cx + x, cy + y, colour);
             }
         }
         let half = radius / 2;
