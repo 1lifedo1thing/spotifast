@@ -2256,7 +2256,7 @@ impl App {
         if let Some(error) = &state.error
             && self.local.error.as_deref() != Some(error.as_str())
         {
-            self.toast_error(error.clone());
+            self.toast_error(engine_error_text(self.locale, error));
             // One unavailable track is Spotify's catalogue; several in a
             // row is the session's audio-key service gone bad, which
             // leaves librespot feeding the decoder encrypted bytes and
@@ -10316,6 +10316,19 @@ fn fill_availability(availability: &HashMap<String, bool>, items: &mut [Playlist
     changed
 }
 
+/// The playback engine reports in English from its own thread. The
+/// messages the interface recognises are shown in the user's language.
+fn engine_error_text(locale: Locale, error: &str) -> String {
+    if error == crate::sink::NO_DEVICE {
+        return gettext(
+            locale,
+            "No audio output device was found. Connect or enable one, then press play again.",
+        )
+        .into_owned();
+    }
+    error.to_owned()
+}
+
 fn friendly_page_error(locale: Locale, error: &crate::api::ApiError) -> String {
     match error.status() {
         Some(403) | Some(404) => gettext(
@@ -10477,6 +10490,23 @@ mod tests {
     use crate::api::models::{
         Episode, Image, Page as ApiPage, ResumePoint, SavedEpisode, SavedTrack, SearchResults,
     };
+
+    /// #623: the missing-output message the sink reports is the one the
+    /// catalogues translate.
+    #[test]
+    fn a_missing_audio_output_is_reported_in_the_users_language() {
+        assert_eq!(
+            engine_error_text(Locale::English, crate::sink::NO_DEVICE),
+            crate::sink::NO_DEVICE
+        );
+        let german = engine_error_text(Locale::German, crate::sink::NO_DEVICE);
+        assert_ne!(german, crate::sink::NO_DEVICE);
+        assert!(!german.is_empty());
+        assert_eq!(
+            engine_error_text(Locale::German, "Something else"),
+            "Something else"
+        );
+    }
 
     #[test]
     fn middle_clicking_a_playlist_row_autoscrolls_only_on_windows_by_default() {

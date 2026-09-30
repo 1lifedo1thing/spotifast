@@ -2,8 +2,9 @@
 //!
 //! librespot's rodio sink panics if no output device is available. Release
 //! builds abort on that panic. This sink opens the device when playback starts
-//! and reports failures through the UI. Spotifast can then remain available
-//! as a Connect remote until an output appears.
+//! and reports a device it cannot open through the UI, from the first write
+//! (see `start`). Spotifast can then remain available as a Connect remote
+//! until an output appears.
 
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError, Weak};
@@ -26,6 +27,14 @@ pub const NAME: &str = "rodio";
 
 /// Told about output failures, with a message fit for the interface.
 pub type ErrorHook = Arc<dyn Fn(String) + Send + Sync>;
+
+/// Reported when the system has no audio output at all. The interface
+/// recognises it and shows it in the user's language.
+pub const NO_DEVICE: &str =
+    "No audio output device was found. Connect or enable one, then press play again.";
+
+/// Opens the output: the device by name, else the default.
+type Opener = fn(Option<&str>, u32, &AudioControl) -> Result<Output, OpenError>;
 
 /// Maximum queued rodio chunks before `write` blocks, about 200 ms of audio.
 const QUEUE_LIMIT: usize = 12;
@@ -396,6 +405,7 @@ pub struct RodioSink {
     /// when the stream opens, so a change lands with the next restart.
     buffer_ms: u32,
     control: Arc<AudioControl>,
+    open: Opener,
 }
 
 struct Output {
@@ -443,6 +453,7 @@ impl RodioSink {
             watch: None,
             buffer_ms,
             control,
+            open: open_output,
         }
     }
 
@@ -481,35 +492,50 @@ impl RodioSink {
     }
 
     /// Opens the output if it is not open, or if it died since.
-    fn ensure_open(&mut self) -> SinkResult<()> {
+    fn open_if_needed(&mut self) -> Result<(), OpenError> {
         if self.output.as_ref().is_some_and(Output::failed) {
             log::warn!("the audio output stopped working; reopening it");
             self.output = None;
         }
-        if self.output.is_some() {
-            return Ok(());
+        if self.output.is_none() {
+            self.output = Some((self.open)(
+                self.device.as_deref(),
+                self.buffer_ms,
+                &self.control,
+            )?);
+            self.applied_volume = -1.0;
         }
-        match open_output(self.device.as_deref(), self.buffer_ms, &self.control) {
-            Ok(output) => {
-                self.output = Some(output);
-                self.applied_volume = -1.0;
-                Ok(())
-            }
-            Err(error) => {
-                let message = error.to_string();
-                log::error!("{message}");
-                (self.on_error)(message.clone());
-                Err(SinkError::ConnectionRefused(message))
-            }
-        }
+        Ok(())
+    }
+
+    /// As `open_if_needed`, reporting a failure to the interface.
+    fn ensure_open(&mut self) -> SinkResult<()> {
+        self.open_if_needed().map_err(|error| {
+            let message = error.to_string();
+            log::error!("{message}");
+            (self.on_error)(message.clone());
+            SinkError::ConnectionRefused(message)
+        })
     }
 }
 
 impl Sink for RodioSink {
+    /// Never fails: an output that cannot open is reported by the first
+    /// `write` instead (#623).
+    ///
+    /// librespot starts the sink from inside its playing loop and, when
+    /// `start` fails, pauses and then carries on as if it were still
+    /// playing. It finds itself paused, calls that an invalid state and
+    /// exits the process. A failed `write` pauses too, but at a point
+    /// where librespot expects it, so playback stops with a message and
+    /// the app stays up as a Connect remote.
     fn start(&mut self) -> SinkResult<()> {
         take_precedence();
         self.follow_default(true);
-        self.ensure_open()?;
+        if let Err(error) = self.open_if_needed() {
+            log::debug!("audio output not open at start: {error}");
+            return Ok(());
+        }
         self.apply_volume();
         if let Some(output) = &mut self.output {
             output.transport.fade_in();
@@ -729,7 +755,7 @@ fn default_output_name() -> Option<String> {
 
 #[derive(Debug, thiserror::Error)]
 enum OpenError {
-    #[error("No audio output device was found. Connect or enable one, then press play again.")]
+    #[error("{NO_DEVICE}")]
     NoDevice,
     #[error("Cannot list the audio devices: {0}")]
     Devices(#[from] cpal::DevicesError),
@@ -886,6 +912,48 @@ mod tests {
             Err(other) => panic!("unexpected error: {other}"),
         }
         assert!(sink.stop().is_ok());
+    }
+
+    fn no_device(_: Option<&str>, _: u32, _: &AudioControl) -> Result<Output, OpenError> {
+        Err(OpenError::NoDevice)
+    }
+
+    /// #623: a PC with no output at all. librespot exits the process when
+    /// `start` fails from its playing loop, but pauses cleanly when `write`
+    /// fails, so the failure has to surface from `write`, reported to the
+    /// interface once per attempt to play.
+    #[test]
+    fn with_no_output_at_all_playing_fails_at_the_first_packet_not_at_start() {
+        let reported: Arc<Mutex<Vec<String>>> = Arc::default();
+        let store = Arc::clone(&reported);
+        let mut sink = RodioSink {
+            open: no_device,
+            ..RodioSink::new(
+                None,
+                Arc::new(move |message| store.lock().unwrap().push(message)),
+                Box::new(librespot_playback::mixer::NoOpVolume),
+                DEFAULT_BUFFER_MS,
+                AudioControl::new(DEFAULT_BUFFER_MS),
+            )
+        };
+        let mut converter = Converter::new(None);
+        let packet = || AudioPacket::Samples(vec![0.0; 441 * NUM_CHANNELS as usize]);
+
+        for attempt in 1..=2 {
+            assert!(sink.start().is_ok(), "librespot exits when start fails");
+            assert_eq!(reported.lock().unwrap().len(), attempt - 1);
+
+            let Err(SinkError::ConnectionRefused(message)) = sink.write(packet(), &mut converter)
+            else {
+                panic!("the first packet must report the missing output");
+            };
+            assert_eq!(message, NO_DEVICE);
+            assert_eq!(reported.lock().unwrap().len(), attempt);
+            assert_eq!(reported.lock().unwrap().last().unwrap(), NO_DEVICE);
+
+            // librespot pauses on the failed write, which stops the sink.
+            assert!(sink.stop().is_ok());
+        }
     }
 
     /// A rate that keeps a ramp short enough to step through in a test.

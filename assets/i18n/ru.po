@@ -6,7 +6,7 @@ msgstr ""
 "Project-Id-Version: Spotifast\n"
 "Report-Msgid-Bugs-To: https://github.com/crmne/spotifast/issues/new?"
 "template=translation.yml\n"
-"POT-Creation-Date: 2026-09-30 00:29+0200\n"
+"POT-Creation-Date: 2026-09-30 23:42+0200\n"
 "PO-Revision-Date: 2026-09-23 20:00+0000\n"
 "Last-Translator: Spotifast contributors\n"
 "Language-Team: Russian\n"
@@ -29,12 +29,12 @@ msgstr "Приостановить {name}"
 msgid "Play {name}"
 msgstr "Воспроизвести {name}"
 
-#: src/ui/sidebar.rs:289 src/app.rs:2404 src/app.rs:16248
+#: src/ui/sidebar.rs:289 src/app.rs:2404 src/app.rs:16278
 #: src/ui/collection.rs:1695 src/ui/collection.rs:1872
 msgid "Playlist"
 msgstr "Плейлист"
 
-#: src/ui/sidebar.rs:299 src/app.rs:2378 src/app.rs:16253
+#: src/ui/sidebar.rs:299 src/app.rs:2378 src/app.rs:16283
 #: src/ui/collection.rs:1865 src/ui/home.rs:49 src/ui/keys.rs:258
 #: src/ui/winamp/playlist.rs:653
 msgid "Liked Songs"
@@ -738,7 +738,7 @@ msgid "Queue cleared"
 msgstr "Очередь очищена"
 
 #. Translators: Keep {date} unchanged. It is a date in YYYY-MM-DD form.
-#: src/app.rs:4398 src/app.rs:16238
+#: src/app.rs:4398 src/app.rs:16268
 #, rust-format
 msgid "Queue {date}"
 msgstr "Очередь {date}"
@@ -1047,16 +1047,22 @@ msgstr "Не удалось изменить режим перемешивани
 msgid "Couldn't change repeat"
 msgstr "Не удалось изменить режим повтора"
 
-#: src/app.rs:10323
+#: src/app.rs:10325
+msgid ""
+"No audio output device was found. Connect or enable one, then press play "
+"again."
+msgstr "Устройство вывода звука не найдено. Подключи или включи его, затем снова нажми «Воспроизвести»."
+
+#: src/app.rs:10336
 msgid ""
 "Spotify doesn't make this playlist's songs available to third-party apps."
 msgstr "Spotify не открывает треки этого плейлиста сторонним приложениям."
 
-#: src/app.rs:10453
+#: src/app.rs:10466
 msgid "Spotify sign-in expired. Sign in again, then retry the cover upload."
 msgstr "Срок входа в Spotify истёк. Войди снова и повтори загрузку обложки."
 
-#: src/app.rs:10458
+#: src/app.rs:10471
 msgid ""
 "Spotify refused this cover. Check that you own the playlist, then sign in "
 "again to grant image upload permission. If using a personal app, reconnect "
@@ -1066,20 +1072,20 @@ msgstr ""
 "войди снова, чтобы разрешить загрузку изображений. Если используешь личное "
 "приложение, переподключи его и в настройках."
 
-#: src/app.rs:10462
+#: src/app.rs:10475
 msgid "Spotify rejected the image size. Choose a smaller image."
 msgstr ""
 "Spotify отклонил изображение из-за размера. Выбери изображение поменьше."
 
 #. Translators: {error} is an error message.
-#: src/app.rs:10465
+#: src/app.rs:10478
 #, rust-format
 msgid "Couldn't upload the cover: {error}. Try again."
 msgstr "Не удалось загрузить обложку: {error}. Попробуй ещё раз."
 
 #. Translators: Keep {track} unchanged. It is the name of the song,
 #. playlist, album, or artist the radio is based on, not translated.
-#: src/app.rs:16258 src/app/radio.rs:38
+#: src/app.rs:16288 src/app/radio.rs:38
 #, rust-format
 msgid "{track} Radio"
 msgstr "Радио по треку «{track}»"
@@ -3137,15 +3143,15 @@ msgstr[0] "{count} неделю назад"
 msgstr[1] "{count} недели назад"
 msgstr[2] "{count} недель назад"
 
-#: src/util.rs:262
+#: src/util.rs:310
 msgid "Good morning"
 msgstr "Доброе утро"
 
-#: src/util.rs:263
+#: src/util.rs:311
 msgid "Good afternoon"
 msgstr "Добрый день"
 
-#: src/util.rs:264
+#: src/util.rs:312
 msgid "Good evening"
 msgstr "Добрый вечер"
 
