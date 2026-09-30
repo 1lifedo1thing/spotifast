@@ -56,6 +56,32 @@ features:
     link_text: Read the source
 ---
 
+<video class="hero-film image-src" controls muted loop playsinline preload="metadata" poster="/assets/images/launch-film-poster.jpg" aria-label="Spotifast in a minute: a film of the app, made with its built-in demo content" hidden>
+  <source src="/assets/videos/launch-film.mp4" type="video/mp4">
+</video>
+
+<script>
+  // The theme's hero takes a picture; the film takes its place where
+  // scripts run, and the screenshot stays where they do not.
+  (function () {
+    var film = document.querySelector(".hero-film");
+    var slot = document.querySelector(".VPHero .image-container");
+    if (!film || !slot) return;
+    slot.replaceChildren(film);
+    film.hidden = false;
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      film.play().catch(function () {});
+    }
+  })();
+</script>
+
+<style>
+  .hero-film {
+    display: block;
+    background: #0b0e0c;
+  }
+</style>
+
 ## It turns into Winamp
 
 Load a classic `.wsz` skin from the
