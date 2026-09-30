@@ -111,6 +111,23 @@ Flathub support is planned.
 Packages from other stores are maintained by their publishers. Report
 problems specific to those packages to their maintainers.
 
+### AppImage
+
+- [AppImage (Intel and AMD, 64-bit)]({{ base }}/spotifast-{{ v }}-x86_64.AppImage)
+- [AppImage (ARM, 64-bit)]({{ base }}/spotifast-{{ v }}-aarch64.AppImage)
+
+One file, no installation: make it executable and run it.
+
+```sh
+chmod +x ~/Downloads/spotifast-{{ v }}-x86_64.AppImage
+~/Downloads/spotifast-{{ v }}-x86_64.AppImage
+```
+
+The AppImage bundles no libraries: like the DEB and RPM, it needs glibc 2.39
+or newer and your desktop's own libraries. Running it needs FUSE; without
+FUSE, start it with `--appimage-extract-and-run`. It does not update itself:
+download the new file when Spotifast says a release is out.
+
 ### Other distributions
 
 - [Linux archive (Intel and AMD, 64-bit)]({{ base }}/spotifast-v{{ v }}-x86_64-unknown-linux-gnu.tar.gz)
