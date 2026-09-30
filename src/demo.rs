@@ -803,6 +803,15 @@ pub fn apply_flags(app: &mut App, page: Option<&str>, show: Option<&str>) {
                 app.local.playback = crate::player::Playback::Playing;
                 app.winamp.tap.push(&demo_sound(), 1.0);
             }
+            // The sign-in card and the card while the session connects.
+            "signed-out" => {
+                app.auth = AuthStatus::SignedOut;
+                app.user = None;
+            }
+            "connecting" => {
+                app.auth = AuthStatus::Connecting;
+                app.user = None;
+            }
             "recents" => {
                 app.show_queue_panel = true;
                 app.queue_tab = QueueTab::Recents;
