@@ -2,7 +2,7 @@
 
 [`native-packages.yaml`](native-packages.yaml) is the packaging configuration:
 it pins the shared CLI and nFPM versions and declares Linux amd64/arm64 inputs,
-DEB/RPM contents, dependencies, recipe templates and downstream repositories.
+DEB/RPM/AppImage contents, dependencies, recipe templates and downstream repositories.
 Application assets and native recipes stay in `packaging/`.
 
 Public AUR, Homebrew, DEB/RPM and release download names use Spotifast.
@@ -36,14 +36,15 @@ Linux desktop assets beside its binaries and packages the signed macOS
 desktop hooks.
 
 ```sh
-gem install native-packages --version 0.6.0
+gem install native-packages --version 0.8.1
 native-packages validate
 native-packages doctor --target linux-amd64 --target linux-arm64
 native-packages build --release v1.2.3 --target linux-amd64 --target linux-arm64
 ```
 
 Replace `v1.2.3` with an existing stable application release. Local use also
-requires nFPM 2.47.0, `bsdtar` and `readelf`; AUR generation needs `makepkg`
+requires nFPM 2.47.0, `bsdtar`, `readelf` and, for the AppImage,
+`mksquashfs` (squashfs-tools); AUR generation needs `makepkg`
 or Docker. CI installs its tooling. To package local release archives, put
 the selected target inputs and recipe assets under `dist/`, then run
 `native-packages build --version 1.2.3 --target linux-amd64 --target linux-arm64`.
@@ -111,7 +112,7 @@ Homebrew automation needs `PUBLISH_HOMEBREW=true` and
 The macOS target, Windows and Flatpak build steps remain responsible
 for their native artifacts. Additional nFPM formats require suitable platform
 inputs and dependencies; adding a format does not port the application.
-See the [shared CLI documentation](https://github.com/crmne/native-packages/tree/v0.6.0)
+See the [shared CLI documentation](https://github.com/crmne/native-packages/tree/v0.8.1)
 for commands and supported formats.
 
 The manual **Flatpak from release** workflow can rebuild a missing Flatpak from
@@ -151,7 +152,7 @@ secrets, which the job exposes as environment variables:
 A complete set enables notarization automatically. An incomplete set fails;
 no values retain local builds without Developer ID signing. Application inputs
 and the user's normal keychains remain unchanged. See the shared
-[Apple setup and phase contract](https://github.com/crmne/native-packages/blob/v0.6.0/docs/apple-notarization.md).
+[Apple setup and phase contract](https://github.com/crmne/native-packages/blob/v0.8.1/docs/apple-notarization.md).
 
 After preparing `dist/macos-input` on a Mac, test packaging without publishing:
 

@@ -613,7 +613,7 @@ for the technical details.
 
 Package-managed installations continue to update through their package manager,
 including Homebrew, Flatpak, apt, dnf, pacman, Nix, and Cargo. Unrecognized
-installations use the download page. Portable archives identify themselves with
+installations, the AppImage among them, use the download page. Portable archives identify themselves with
 `spotifast-portable.txt`; older archives need one manual upgrade to an
 update-enabled build.
 
