@@ -2111,9 +2111,16 @@ impl Worker {
                         }
                         self.on_web_signed_in(source, token);
                     } else {
-                        self.emit(Event::Error(
-                            "Spotify permissions changed. Sign in again.".into(),
-                        ));
+                        // Signing in renews only the shared app's grant, so a
+                        // personal app has to be authorized again where it was
+                        // set up (#634).
+                        let message = if source == ApiSource::Shared {
+                            "Spotify permissions changed. Sign in again."
+                        } else {
+                            "Spotify permissions changed for your personal app. \
+                             Authorize it again in Settings, under Account."
+                        };
+                        self.emit(Event::Error(message.into()));
                     }
                 }
             }
@@ -5603,8 +5610,16 @@ mod authorization_tests {
             assert!(worker.web_tokens[slot.index()].is_none());
             assert!(!worker.signed_in);
             let emitted: Vec<_> = events.try_iter().collect();
+            // Signing in renews the shared app; a personal app is renewed only
+            // by authorizing it again in Settings (#634).
+            let advice = if slot == CredentialSlot::Shared {
+                "Sign in again."
+            } else {
+                "Authorize it again in Settings, under Account."
+            };
             assert!(emitted.iter().any(|event| matches!(event,
-                Event::Error(message) if message.contains("permissions changed"))));
+                Event::Error(message)
+                    if message.contains("permissions changed") && message.ends_with(advice))));
             assert!(
                 emitted
                     .iter()
