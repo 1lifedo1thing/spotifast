@@ -2738,6 +2738,9 @@ mod tests {
         assert!(!app.show_update);
         app.actions.push(Action::ShowUpdate);
         accessible_frame(&ctx, &mut app, vec![]);
+        // The window's first frame only measures it, and egui keeps
+        // widgets it has not shown out of the screen-reader tree.
+        accessible_frame(&ctx, &mut app, vec![]);
         let tree = accessible_frame(&ctx, &mut app, vec![]);
         let download = accessible_node(&tree, "Download update", Role::Button);
         accessible_frame(
@@ -3337,7 +3340,10 @@ mod tests {
             tree.focus, more,
             "More must remain reachable after focus leaves the song row"
         );
-        let (tree, _) = render(1, vec![keyboard(egui::Key::Enter, egui::Modifiers::NONE)]);
+        render(1, vec![keyboard(egui::Key::Enter, egui::Modifiers::NONE)]);
+        // The menu's first frame only measures it, and egui keeps widgets it
+        // has not shown out of the screen-reader tree.
+        let (tree, _) = render(1, vec![]);
         assert!(
             tree.nodes
                 .iter()
