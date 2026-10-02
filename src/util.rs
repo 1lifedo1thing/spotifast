@@ -517,6 +517,18 @@ mod tests {
             format_relative_date(Locale::Swedish, "2026-08-30T12:00:00Z", now),
             "för 1 dag sedan"
         );
+        assert_eq!(format_date(Locale::Turkish, "2024-01-05"), "5 Oca 2024");
+        assert_eq!(format_date(Locale::Turkish, "2024-09"), "Eyl 2024");
+        assert_eq!(format_total_ms(Locale::Turkish, 7_980_000), "2 sa 13 dk");
+        assert_eq!(format_episode_ms(Locale::Turkish, 2_280_000), "38 dk");
+        for (added, expected) in [
+            ("2026-08-31T11:59:59Z", "1 saniye önce"),
+            ("2026-08-31T11:58:00Z", "2 dakika önce"),
+            ("2026-08-30T12:00:00Z", "1 gün önce"),
+            ("2026-08-17T12:00:00Z", "2 hafta önce"),
+        ] {
+            assert_eq!(format_relative_date(Locale::Turkish, added, now), expected);
+        }
     }
 
     #[test]

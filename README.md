@@ -677,9 +677,9 @@ request. It covers project scope and required checks.
 
 Translations use standard gettext `.po` files in `assets/i18n/`, with an English
 `.pot` template. The interface is marked for translation throughout and ships
-with 13 translations, including Portuguese and Chinese variants.
-Spanish is complete; the others cover the earlier navigation, player and panel
-labels and fall back to English for the rest. See
+with 14 translations, including Portuguese and Chinese variants.
+Spanish and Turkish are complete; the others cover the earlier navigation,
+player and panel labels and fall back to English for the rest. See
 [Translating Spotifast](docs/_reference/translating.md) for editing with existing
 translation tools, previewing, and reporting translation problems.
 

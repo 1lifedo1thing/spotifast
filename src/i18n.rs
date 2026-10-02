@@ -37,6 +37,8 @@ pub enum Locale {
     ChineseSimplified,
     #[value(name = "zh-Hant")]
     ChineseTraditional,
+    #[value(name = "tr")]
+    Turkish,
 }
 
 impl fastframe_i18n::Locale for Locale {
@@ -56,6 +58,7 @@ impl fastframe_i18n::Locale for Locale {
             Self::Japanese => Some(&ja::Translator),
             Self::ChineseSimplified => Some(&zh_hans::Translator),
             Self::ChineseTraditional => Some(&zh_hant::Translator),
+            Self::Turkish => Some(&tr::Translator),
         }
     }
 }
@@ -79,6 +82,7 @@ impl Locale {
             Self::Japanese => "ja",
             Self::ChineseSimplified => "zh-Hans",
             Self::ChineseTraditional => "zh-Hant",
+            Self::Turkish => "tr",
         }
     }
 
@@ -107,6 +111,7 @@ impl Locale {
             Self::Japanese => "日本語",
             Self::ChineseSimplified => "简体中文",
             Self::ChineseTraditional => "繁體中文",
+            Self::Turkish => "Türkçe",
         }
     }
 
@@ -143,6 +148,7 @@ impl Locale {
             "ru" => Self::Russian,
             "it" => Self::Italian,
             "ja" => Self::Japanese,
+            "tr" => Self::Turkish,
             // Portuguese outside Brazil follows the European standard. A bare
             // "pt" goes to Brazil, where most Portuguese speakers live.
             "pt" => match region {
@@ -233,6 +239,7 @@ pub const LOCALES: &[Locale] = &[
     Locale::PortugueseBrazil,
     Locale::PortuguesePortugal,
     Locale::Swedish,
+    Locale::Turkish,
     Locale::Russian,
     Locale::Japanese,
     Locale::ChineseSimplified,
@@ -271,6 +278,9 @@ mod tests {
             ("ru_UA.UTF-8", Locale::Russian),
             ("it-CH", Locale::Italian),
             ("ja-JP", Locale::Japanese),
+            ("tr", Locale::Turkish),
+            ("tr-TR", Locale::Turkish),
+            ("tr_TR.UTF-8", Locale::Turkish),
             ("pt-BR", Locale::PortugueseBrazil),
             ("pt_BR.UTF-8", Locale::PortugueseBrazil),
             ("pt", Locale::PortugueseBrazil),
@@ -327,6 +337,7 @@ mod tests {
         );
         assert_eq!(Locale::from_tag("de"), Some(Locale::German));
         assert_eq!(Locale::from_tag("en-US"), Some(Locale::English));
+        assert_eq!(Locale::from_tag("tr"), Some(Locale::Turkish));
         assert_eq!(Locale::from_tag("klingon"), None);
     }
 
@@ -357,14 +368,18 @@ mod tests {
             assert_eq!(Locale::German.liked_song_count(count), german);
         }
     }
+
     #[test]
     fn short_counts_are_localized_without_parsing_complete_phrases() {
         assert_eq!(Locale::German.song_count(2), "2 Songs");
         assert_eq!(Locale::Japanese.song_count(2), "2曲");
+        assert_eq!(Locale::Turkish.song_count(2), "2 şarkı");
         assert_eq!(Locale::German.playlist_count(1), "1 Playlist");
         assert_eq!(Locale::German.playlist_count(2), "2 Playlists");
         assert_eq!(Locale::Polish.playlist_count(2), "2 playlisty");
         assert_eq!(Locale::Russian.playlist_count(5), "5 плейлистов");
+        assert_eq!(Locale::Turkish.playlist_count(1), "1 çalma listesi");
+        assert_eq!(Locale::Turkish.playlist_count(2), "2 çalma listesi");
         for (locale, count, expected) in [
             (Locale::English, 1, "Folder • 1 playlist"),
             (Locale::English, 2, "Folder • 2 playlists"),
@@ -378,6 +393,8 @@ mod tests {
             (Locale::Russian, 5, "Папка • 5 плейлистов"),
             (Locale::Japanese, 1, "フォルダ • 1件のプレイリスト"),
             (Locale::Japanese, 4, "フォルダ • 4件のプレイリスト"),
+            (Locale::Turkish, 1, "Klasör • 1 çalma listesi"),
+            (Locale::Turkish, 2, "Klasör • 2 çalma listesi"),
         ] {
             assert_eq!(
                 locale.folder_playlist_count(count),
@@ -396,6 +413,14 @@ mod tests {
         assert_eq!(
             Locale::German.folder_state_label("Unterwegs", false),
             "Unterwegs, Ordner, ausgeklappt"
+        );
+        assert_eq!(
+            Locale::Turkish.folder_state_label("Yolculuk", true),
+            "Yolculuk, klasör, daraltılmış"
+        );
+        assert_eq!(
+            Locale::Turkish.folder_state_label("Yolculuk", false),
+            "Yolculuk, klasör, genişletilmiş"
         );
     }
 
@@ -426,6 +451,9 @@ mod tests {
             (Locale::Japanese, 2, "プレイリスト • 2曲"),
             (Locale::ChineseSimplified, 2, "歌单 • 2 首歌曲"),
             (Locale::ChineseTraditional, 2, "播放清單 • 2 首歌曲"),
+            (Locale::Turkish, 0, "Çalma listesi • 0 şarkı"),
+            (Locale::Turkish, 1, "Çalma listesi • 1 şarkı"),
+            (Locale::Turkish, 2, "Çalma listesi • 2 şarkı"),
         ] {
             assert_eq!(locale.liked_song_count(count), expected);
         }
