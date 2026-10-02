@@ -806,51 +806,68 @@ fn extras(app: &mut App, ui: &mut egui::Ui, now: Option<&NowPlaying>) {
         Some(fraction) => (fraction * 100.0).round() as u8,
         None => volume,
     };
-    match thin_slider(
-        ui,
-        &palette,
-        egui::Id::new("volume-slider"),
-        &gettext(app.locale, "Volume (%)"),
-        shown as f32 / 100.0,
-        92.0,
-        Some(0.05),
-    ) {
-        SliderEvent::Dragging(value) => {
-            app.volume_preview = Some(value);
-            // Local volume is cheap to apply continuously; remote goes on release.
-            if now.is_none_or(|now| now.local) {
-                app.actions
-                    .push(Action::PreviewVolume((value * 100.0).round() as u8));
+    // Some remote devices, such as a phone playing over Bluetooth, refuse
+    // volume changes from other apps: show their volume but don't offer to
+    // change it.
+    let adjustable = now.is_none_or(|now| now.can_set_volume);
+    let controls = ui.add_enabled_ui(adjustable, |ui| {
+        match thin_slider(
+            ui,
+            &palette,
+            egui::Id::new("volume-slider"),
+            &gettext(app.locale, "Volume (%)"),
+            shown as f32 / 100.0,
+            92.0,
+            Some(0.05),
+        ) {
+            SliderEvent::Dragging(value) => {
+                app.volume_preview = Some(value);
+                // Local volume is cheap to apply continuously; remote goes on release.
+                if now.is_none_or(|now| now.local) {
+                    app.actions
+                        .push(Action::PreviewVolume((value * 100.0).round() as u8));
+                }
             }
+            SliderEvent::Committed(value) => {
+                app.volume_preview = None;
+                app.actions
+                    .push(Action::SetVolume((value * 100.0).round() as u8));
+            }
+            SliderEvent::None => {}
         }
-        SliderEvent::Committed(value) => {
-            app.volume_preview = None;
-            app.actions
-                .push(Action::SetVolume((value * 100.0).round() as u8));
+        let volume_icon = match shown {
+            0 => Icon::VolumeX,
+            1..=33 => Icon::Volume,
+            34..=66 => Icon::Volume1,
+            _ => Icon::Volume2,
+        };
+        if theme::icon_button(
+            ui,
+            volume_icon,
+            18.0,
+            palette.secondary,
+            palette.text,
+            &if shown == 0 {
+                gettext(app.locale, "Unmute")
+            } else {
+                gettext(app.locale, "Mute")
+            },
+        )
+        .clicked()
+        {
+            app.actions.push(Action::ToggleMute);
         }
-        SliderEvent::None => {}
-    }
-    let volume_icon = match shown {
-        0 => Icon::VolumeX,
-        1..=33 => Icon::Volume,
-        34..=66 => Icon::Volume1,
-        _ => Icon::Volume2,
-    };
-    if theme::icon_button(
-        ui,
-        volume_icon,
-        18.0,
-        palette.secondary,
-        palette.text,
-        &if shown == 0 {
-            gettext(app.locale, "Unmute")
-        } else {
-            gettext(app.locale, "Mute")
-        },
-    )
-    .clicked()
-    {
-        app.actions.push(Action::ToggleMute);
+    });
+    if !adjustable {
+        ui.interact(
+            controls.response.rect,
+            egui::Id::new("volume-fixed"),
+            egui::Sense::hover(),
+        )
+        .on_hover_text(gettext(
+            app.locale,
+            "This device's volume can't be changed from Spotifast",
+        ));
     }
     ui.add_space(4.0);
     let remote = now.is_some_and(|now| !now.local);

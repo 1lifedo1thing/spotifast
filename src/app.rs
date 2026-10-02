@@ -134,6 +134,9 @@ pub struct NowPlaying {
     pub repeat: RepeatMode,
     pub volume_percent: u8,
     pub can_control: bool,
+    /// Whether Spotify lets this app change the device's volume. A phone
+    /// playing over Bluetooth, for one, reports that it does not.
+    pub can_set_volume: bool,
     pub is_episode: bool,
     /// The remembered song from the last session, shown paused before a
     /// first press. Nothing is playing yet.
@@ -1411,6 +1414,7 @@ impl App {
             now.repeat = actual.repeat;
             now.volume_percent = actual.volume_percent;
             now.can_control = actual.can_control;
+            now.can_set_volume = actual.can_set_volume;
         }
         Some(now)
     }
@@ -1464,6 +1468,7 @@ impl App {
                 repeat: self.local.repeat,
                 volume_percent: volume_to_percent(self.local.volume),
                 can_control: true,
+                can_set_volume: true,
                 is_episode: track.is_episode,
                 resuming: false,
             });
@@ -1550,6 +1555,9 @@ impl App {
             repeat: RepeatMode::from_api(&remote.state.repeat_state),
             volume_percent: volume,
             can_control: device.is_none_or(|device| !device.is_restricted),
+            can_set_volume: device.is_none_or(|device| {
+                !device.is_restricted && device.supports_volume != Some(false)
+            }),
             is_episode,
             resuming: false,
         })
@@ -1588,6 +1596,7 @@ impl App {
             repeat: RepeatMode::Off,
             volume_percent: volume_to_percent(self.local.volume),
             can_control: true,
+            can_set_volume: true,
             is_episode: false,
             resuming: true,
         })
@@ -7268,6 +7277,13 @@ impl App {
 
     /// `settle` is false while the slider is still moving: the level is heard
     /// at once, and Spotify is told where it ended up on release.
+    /// Whether the playing device takes volume changes from Spotifast.
+    /// Spotify refuses them for some remote devices, so the controls are
+    /// disabled for those rather than failing when used.
+    pub fn can_set_volume(&self) -> bool {
+        self.now_playing().is_none_or(|now| now.can_set_volume)
+    }
+
     fn set_volume(&mut self, percent: u8, settle: bool) {
         let percent = percent.min(100);
         match self.target() {
@@ -7288,7 +7304,7 @@ impl App {
                     PlayerCommand::VolumePreview(volume)
                 });
             }
-            Target::Remote(_) if !settle => {}
+            Target::Remote(_) if !settle || !self.can_set_volume() => {}
             Target::Remote(device_id) => {
                 self.pending_remote_volume = Some((percent, Instant::now()));
                 self.backend.api(ApiRequest::Remote {
@@ -8397,6 +8413,9 @@ impl App {
                 }
             }
             Action::ToggleMute => {
+                if !self.can_set_volume() {
+                    return;
+                }
                 let current = self
                     .now_playing()
                     .map(|now| now.volume_percent)
@@ -12347,6 +12366,7 @@ mod tests {
             repeat: RepeatMode::Off,
             volume_percent: 50,
             can_control: true,
+            can_set_volume: true,
             is_episode: true,
             resuming: false,
         });
@@ -20999,6 +21019,38 @@ mod tests {
                 ..
             }]
         ));
+        app.backend.shutdown();
+    }
+
+    /// A remote device that refuses volume changes, such as a phone playing
+    /// over Bluetooth, gets no volume request: Spotify would only answer
+    /// with an error (#627).
+    #[test]
+    fn a_remote_device_without_volume_control_is_not_asked_to_change_it() {
+        let ctx = egui::Context::default();
+        let mut app = headless_app();
+        app.attach(&ctx);
+        crate::demo::populate(&mut app);
+        app.local_ready = false;
+        app.frame_now = None;
+        let device = app.remote.as_mut().unwrap().state.device.as_mut().unwrap();
+        device.supports_volume = Some(false);
+        device.volume_percent = Some(40);
+        assert!(matches!(app.target(), Target::Remote(_)));
+        assert!(!app.can_set_volume());
+        assert!(!app.now_playing().unwrap().can_set_volume);
+
+        app.apply(Action::SetVolume(10), &ctx);
+        app.apply(Action::VolumeBy(-5), &ctx);
+        app.apply(Action::ToggleMute, &ctx);
+        assert!(app.pending_remote_volume.is_none());
+        assert_eq!(app.now_playing().unwrap().volume_percent, 40);
+
+        let device = app.remote.as_mut().unwrap().state.device.as_mut().unwrap();
+        device.supports_volume = None;
+        assert!(app.can_set_volume());
+        app.apply(Action::SetVolume(10), &ctx);
+        assert!(matches!(app.pending_remote_volume, Some((10, _))));
         app.backend.shutdown();
     }
 

@@ -2508,7 +2508,9 @@ pub fn thin_slider(
     {
         event = SliderEvent::Committed(v);
     }
-    if let Some(step) = wheel_step {
+    if let Some(step) = wheel_step
+        && response.enabled()
+    {
         let notches = wheel_notches(ui, &response);
         if notches != 0 {
             event = SliderEvent::Committed((value + step * notches as f32).clamp(0.0, 1.0));

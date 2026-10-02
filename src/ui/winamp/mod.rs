@@ -1570,6 +1570,7 @@ mod tests {
             repeat: RepeatMode::Off,
             volume_percent: 50,
             can_control: true,
+            can_set_volume: true,
             is_episode: false,
             resuming: false,
         }
