@@ -578,6 +578,8 @@ pub(crate) fn run() -> eframe::Result<()> {
     #[cfg(feature = "demo")]
     let demo_inner = cli.demo_size;
     #[cfg(feature = "demo")]
+    spotifast::window::set_fixed_size(demo_inner.is_some());
+    #[cfg(feature = "demo")]
     let demo_storage = app.dirs.cache.join("demo-window.ron");
     let window_profile = app.dirs.window_profile();
     fastframe_shell::Shell::new(app, &waker)
@@ -835,7 +837,7 @@ fn native_options(
                 // Removing its decorations lets the app surface fill the window.
                 .with_decorations(main_window_decorated(spotifast::window::custom_titlebar()))
                 .with_inner_size(size)
-                .with_min_inner_size(inner_size.unwrap_or([760.0, 520.0]))
+                .with_min_inner_size(inner_size.unwrap_or(spotifast::window::MAIN_MIN_SIZE))
                 .with_fullscreen(fullscreen);
             if inner_size.is_some() {
                 viewport = viewport.with_max_inner_size(size);

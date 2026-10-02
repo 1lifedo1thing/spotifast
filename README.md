@@ -86,7 +86,9 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   access finds playlists. Each part appears independently, even if the other fails.
 
   Since 0.8.0, the search field stays clear of the device and update
-  badges in narrow windows; hover their icons to read the labels.
+  badges in narrow windows; hover their icons to read the labels. In a
+  narrow window, Library, Queue and Lyrics give up width before the top
+  bar's controls run together, and get it back when the window widens.
 - **Home** with Made for you, Recently played, your top artists and songs, and
   recommendations. Right-click playlist shortcuts and shelf cards for their actions.
   Since 0.10.0, **Your podcasts** lists episodes of your saved

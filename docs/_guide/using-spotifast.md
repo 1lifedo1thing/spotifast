@@ -308,6 +308,10 @@ Spotifast on Windows, macOS, or X11 again.
 Since 0.8.0, the top bar reserves room for the device and update
 badges beside Search. In narrow windows those badges show only their icons.
 The bar stays above the page. Library, Queue and Lyrics keep their full height.
+When the window narrows, Library, Queue and Lyrics give up width before the
+top bar runs out of room, and return to the widths you chose once it widens.
+With Queue or Lyrics open, the window cannot be made narrower than the room
+they need beside the page.
 Hover to read the device name or available version; click to open the device
 picker or update window.
 
