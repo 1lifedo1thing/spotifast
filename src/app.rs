@@ -7628,8 +7628,12 @@ impl App {
             }
         }
         // Drop any queue fetch already in flight: it was asked for before
-        // the move and would otherwise land with the pre-move order.
+        // the move and would otherwise land with the pre-move order. Each
+        // change gets the full allowance of stale answers: the engine
+        // reports every step of the clear and re-add, and a budget spent on
+        // an earlier move would let one of those half-done answers through.
         self.queue_seq += 1;
+        self.queue_stale_retries = 0;
         self.queue_reorder_pending = Some(Instant::now());
         self.queue_recheck_at = Some(Instant::now() + QUEUE_RECHECK);
     }
@@ -7731,6 +7735,32 @@ impl App {
             }
             self.remove_manual_queue_row(index);
         }
+    }
+
+    /// Puts the first `queued_len` rows on show, the Playing next section,
+    /// in `manual_queue` order, which is the order the engine is given. A
+    /// move works on `manual_queue`; when an accepted answer from Spotify
+    /// had those rows in another order, moving the shown row at the same
+    /// index would move a different song than the engine does.
+    fn show_manual_queue_order(&mut self, queued_len: usize) {
+        let Loadable::Loaded(queue) = &mut self.queue else {
+            return;
+        };
+        let queued_len = queued_len.min(queue.queue.len());
+        let mut shown: Vec<Option<PlayableItem>> =
+            queue.queue.drain(..queued_len).map(Some).collect();
+        let mut ordered = Vec::with_capacity(shown.len());
+        for uri in &self.manual_queue {
+            if let Some(item) = shown
+                .iter_mut()
+                .find(|item| item.as_ref().is_some_and(|item| item.uri() == uri))
+                .and_then(Option::take)
+            {
+                ordered.push(item);
+            }
+        }
+        ordered.extend(shown.into_iter().flatten());
+        queue.queue.splice(0..0, ordered);
     }
 
     /// Index after manual queue rows and before context rows.
@@ -8401,12 +8431,6 @@ impl App {
                 if from >= queued_len || to > queued_len || from == to || to == from + 1 {
                     return;
                 }
-                if let Loadable::Loaded(queue) = &mut self.queue {
-                    let item = queue.queue.remove(from);
-                    queue
-                        .queue
-                        .insert(if to > from { to - 1 } else { to }, item);
-                }
                 if from < self.manual_queue.len() {
                     let uri = self.manual_queue.remove(from);
                     let at = (if to > from { to - 1 } else { to }).min(self.manual_queue.len());
@@ -8423,6 +8447,7 @@ impl App {
                             addition.manual_index += 1;
                         }
                     }
+                    self.show_manual_queue_order(queued_len);
                 }
                 self.session_dirty = true;
                 self.resync_local_queue();
@@ -14149,6 +14174,116 @@ mod tests {
                 "pending addition must still name the song at its own index"
             );
         }
+    }
+
+    /// Local playback with three songs under Playing next and one context
+    /// row after them, for the repeated-move tests (#598).
+    fn app_with_local_manual_queue() -> App {
+        let mut app = headless_app();
+        app.auth = AuthStatus::Connected {
+            username: "alice".into(),
+        };
+        app.local_ready = true;
+        app.local.track = Some(crate::player::LocalTrack {
+            uri: "spotify:track:playing".into(),
+            ..Default::default()
+        });
+        app.local.playback = Playback::Playing;
+        app.manual_queue = vec![
+            "spotify:track:a".into(),
+            "spotify:track:b".into(),
+            "spotify:track:c".into(),
+        ];
+        app.queue = loaded_queue(
+            "spotify:track:playing",
+            &[
+                "spotify:track:a",
+                "spotify:track:b",
+                "spotify:track:c",
+                "spotify:track:ctx",
+            ],
+        );
+        app
+    }
+
+    /// Each local move gets the full stale-answer allowance. Moves made in
+    /// quick succession used to share one budget, so an answer from the
+    /// middle of the engine's clear-and-re-add was accepted after a later
+    /// move and dropped the queued songs from Playing next (#598).
+    #[test]
+    fn every_local_move_restarts_the_stale_queue_allowance() {
+        let mut app = app_with_local_manual_queue();
+        let ctx = egui::Context::default();
+        // Mid-resync, the engine reports the context with no queued songs.
+        let mid_resync = Queue {
+            currently_playing: Some(queued_song("spotify:track:playing")),
+            queue: vec![queued_song("spotify:track:ctx")],
+        };
+        let answer_stale = |app: &mut App| {
+            app.refresh_queue(true);
+            let seq = app.queue_seq;
+            app.handle_api(ApiResponse::Queue {
+                seq,
+                result: Ok(mid_resync.clone()),
+            });
+        };
+
+        app.apply(Action::MoveInQueue { from: 0, to: 2 }, &ctx);
+        for _ in 0..QUEUE_STALE_RETRIES - 1 {
+            answer_stale(&mut app);
+        }
+        app.apply(Action::MoveInQueue { from: 2, to: 0 }, &ctx);
+        let moved = vec![
+            "spotify:track:c".to_string(),
+            "spotify:track:b".to_string(),
+            "spotify:track:a".to_string(),
+            "spotify:track:ctx".to_string(),
+        ];
+        for _ in 0..QUEUE_STALE_RETRIES - 1 {
+            answer_stale(&mut app);
+            assert_eq!(
+                queue_uris(&app).1,
+                moved,
+                "a lagging answer must not undo the latest move"
+            );
+        }
+        assert_eq!(app.queued_rows_len(), 3);
+    }
+
+    /// When the queue on show disagrees with the order the engine was
+    /// given, a move must still move the dragged song, and the rows must
+    /// then show the order that will actually play (#598).
+    #[test]
+    fn moving_a_row_shows_the_order_that_will_play() {
+        let mut app = app_with_local_manual_queue();
+        // Spotify's answer was accepted with two queued rows swapped.
+        app.queue = loaded_queue(
+            "spotify:track:playing",
+            &[
+                "spotify:track:b",
+                "spotify:track:a",
+                "spotify:track:c",
+                "spotify:track:ctx",
+            ],
+        );
+        let ctx = egui::Context::default();
+        // The view resolves the dragged "b" to its manual_queue index.
+        app.apply(Action::MoveInQueue { from: 1, to: 3 }, &ctx);
+
+        assert_eq!(
+            app.manual_queue,
+            ["spotify:track:a", "spotify:track:c", "spotify:track:b"]
+        );
+        assert_eq!(
+            queue_uris(&app).1,
+            [
+                "spotify:track:a",
+                "spotify:track:c",
+                "spotify:track:b",
+                "spotify:track:ctx",
+            ],
+            "the rows must match the order sent to the engine"
+        );
     }
 
     /// Inserting a dropped song into "Playing next" must keep every earlier
