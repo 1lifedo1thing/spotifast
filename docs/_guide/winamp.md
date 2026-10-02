@@ -16,9 +16,7 @@ the shortcut again, to return to the main window.
 ## Skins and window size
 
 Drop a `.wsz` file on either window to install and use it. Settings lists the
-installed skins and can open the skins folder. On Wayland, dropping files on
-the window is not available yet: put the `.wsz` file in the skins folder
-instead.
+installed skins and can open the skins folder.
 
 Choose **Random**, first in that list, to get a different skin each time you
 switch to the mini player, never the same one twice in a row. Settings says

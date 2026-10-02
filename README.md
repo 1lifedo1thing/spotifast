@@ -205,9 +205,7 @@ AUR and Homebrew packages now use the Spotifast name. See [rename compatibility]
   skins, drawn at 1x to 4x scale. It includes a spectrum analyser, playlist,
   and equalizer. It keeps its shade mode and, where the desktop permits,
   its own position when switching views. Drop a skin from the
-  [Winamp Skin Museum](https://skins.webamp.org) on either window to add it,
-  or, on Wayland, where dropping files on the window is not available yet,
-  put it in the skins folder that Settings opens.
+  [Winamp Skin Museum](https://skins.webamp.org) on either window to add it.
   Since 0.9.0, switching to the mini player preserves the main
   window's size even if its native close takes another frame.
   On Windows, since 0.10.0, the main window uses the standard
