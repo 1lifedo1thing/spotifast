@@ -36,7 +36,9 @@ Winamp 3 and 5 skin formats are not supported; choose classic Winamp 2 skins.
 
 ## Main controls
 
-Most controls match Winamp. These work differently:
+Most controls match Winamp. As in Winamp, Play on a song that is already
+playing starts it again from the beginning; Pause pauses. These work
+differently:
 
 - **Stop** pauses and rewinds.
 - **I** opens the playing album in the main window.
