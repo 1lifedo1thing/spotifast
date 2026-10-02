@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use librespot_playback::audio_backend::{Sink, SinkError, SinkResult};
 use librespot_playback::convert::Converter;
 use librespot_playback::decoder::AudioPacket;
@@ -410,7 +410,7 @@ pub struct RodioSink {
 
 struct Output {
     sink: Arc<rodio::Sink>,
-    _stream: rodio::OutputStream,
+    stream: Stream,
     /// The name of the device the stream was opened on.
     device_name: Option<String>,
     /// Set from the audio thread when the stream dies (device unplugged).
@@ -538,6 +538,7 @@ impl Sink for RodioSink {
         }
         self.apply_volume();
         if let Some(output) = &mut self.output {
+            output.stream.resume(&output.failed);
             output.transport.fade_in();
             output.sink.play();
         }
@@ -557,6 +558,9 @@ impl Sink for RodioSink {
                 thread::sleep(Duration::from_millis(10));
             }
             output.sink.pause();
+            // With the queue played out, the device can stop asking for
+            // sound until Play: a paused app costs no audio work (#636).
+            output.stream.pause(&output.failed);
             output.transport.close();
             output.fed = false;
             output.last_write = None;
@@ -583,7 +587,7 @@ impl Sink for RodioSink {
         if self.control.take_reset()
             && let Some(output) = &mut self.output
         {
-            let sink = Arc::new(rodio::Sink::connect_new(output._stream.mixer()));
+            let sink = Arc::new(rodio::Sink::connect_new(&output.stream.mixer));
             let envelope = Envelope::rising(output.sample_rate, INTERRUPT_FADE);
             self.control.register(&sink, Arc::clone(&envelope));
             output.sink = sink;
@@ -601,6 +605,8 @@ impl Sink for RodioSink {
                 "the audio output is not open".into(),
             ));
         };
+        // Sound arriving without a Play first still has a device to go to.
+        output.stream.resume(&output.failed);
         let samples = match &mut output.resampler {
             Some(resampler) => resampler.process(&samples),
             None => samples,
@@ -647,9 +653,124 @@ impl Sink for RodioSink {
     }
 }
 
+/// The device's stream and the mixer it plays, held here rather than in
+/// rodio's `OutputStream` so that Pause can stop it.
+///
+/// rodio keeps its cpal stream private and running until it is dropped, so
+/// a paused player still had the device asking for sound and the mixer
+/// making silence for it, for as long as the app stayed open (#636).
+/// Pausing the stream stops those callbacks but keeps the device open, so
+/// Play starts again at once.
+struct Stream {
+    stream: cpal::Stream,
+    mixer: rodio::mixer::Mixer,
+    sample_rate: u32,
+    /// Whether the device is asking for sound.
+    running: bool,
+}
+
+impl Stream {
+    fn open(
+        device: &cpal::Device,
+        config: &cpal::StreamConfig,
+        format: cpal::SampleFormat,
+        on_error: impl FnMut(cpal::StreamError) + Send + 'static,
+    ) -> Result<Self, rodio::StreamError> {
+        let (mixer, source) = rodio::mixer::mixer(
+            config.channels as rodio::ChannelCount,
+            config.sample_rate.0 as rodio::SampleRate,
+        );
+        let stream = build_stream(device, config, format, source, on_error)?;
+        stream.play().map_err(rodio::StreamError::PlayStreamError)?;
+        Ok(Self {
+            stream,
+            mixer,
+            sample_rate: config.sample_rate.0,
+            running: true,
+        })
+    }
+
+    /// Has the device ask for sound again. A device that will not is
+    /// marked `failed`, so the next write reopens the output.
+    fn resume(&mut self, failed: &AtomicBool) {
+        if self.running {
+            return;
+        }
+        match self.stream.play() {
+            Ok(()) => self.running = true,
+            Err(error) => {
+                log::error!("cannot restart the audio output: {error}");
+                failed.store(true, Ordering::Relaxed);
+            }
+        }
+    }
+
+    /// Stops the device asking for sound, keeping it open. Never fails: a
+    /// stream that cannot pause keeps running, as it always used to.
+    fn pause(&mut self, failed: &AtomicBool) {
+        if !self.running {
+            return;
+        }
+        match self.stream.pause() {
+            Ok(()) => self.running = false,
+            Err(cpal::PauseStreamError::DeviceNotAvailable) => {
+                log::warn!("the audio output went away while pausing");
+                failed.store(true, Ordering::Relaxed);
+            }
+            Err(error) => log::warn!("cannot pause the audio output: {error}"),
+        }
+    }
+}
+
+/// Builds a stream that plays `source` in the device's sample format, with
+/// silence whenever the mixer has nothing, as rodio's own stream does.
+fn build_stream(
+    device: &cpal::Device,
+    config: &cpal::StreamConfig,
+    format: cpal::SampleFormat,
+    source: rodio::mixer::MixerSource,
+    on_error: impl FnMut(cpal::StreamError) + Send + 'static,
+) -> Result<cpal::Stream, rodio::StreamError> {
+    fn build<T>(
+        device: &cpal::Device,
+        config: &cpal::StreamConfig,
+        mut source: rodio::mixer::MixerSource,
+        on_error: impl FnMut(cpal::StreamError) + Send + 'static,
+    ) -> Result<cpal::Stream, cpal::BuildStreamError>
+    where
+        T: cpal::SizedSample + cpal::FromSample<rodio::Sample>,
+    {
+        device.build_output_stream::<T, _, _>(
+            config,
+            move |data: &mut [T], _| {
+                for out in data {
+                    *out = source.next().map(T::from_sample_).unwrap_or(T::EQUILIBRIUM);
+                }
+            },
+            on_error,
+            None,
+        )
+    }
+    use cpal::SampleFormat as Format;
+    match format {
+        Format::F32 => build::<f32>(device, config, source, on_error),
+        Format::F64 => build::<f64>(device, config, source, on_error),
+        Format::I8 => build::<i8>(device, config, source, on_error),
+        Format::I16 => build::<i16>(device, config, source, on_error),
+        Format::I32 => build::<i32>(device, config, source, on_error),
+        Format::I64 => build::<i64>(device, config, source, on_error),
+        Format::U8 => build::<u8>(device, config, source, on_error),
+        Format::U16 => build::<u16>(device, config, source, on_error),
+        Format::U32 => build::<u32>(device, config, source, on_error),
+        Format::U64 => build::<u64>(device, config, source, on_error),
+        _ => return Err(rodio::StreamError::UnsupportedSampleFormat),
+    }
+    .map_err(rodio::StreamError::BuildStreamError)
+}
+
 /// Opens the stream at Spotify's stereo 44.1 kHz, so nothing is converted,
 /// else at the device's own rate, which Windows insists on for a shared
-/// device, else at whatever rodio can find.
+/// device, else at any configuration the device lists.
 ///
 /// The first two attempts request the configured buffer. The fallback lets
 /// the driver choose its buffer size.
@@ -657,35 +778,59 @@ fn open_stream(
     device: &cpal::Device,
     on_error: impl FnMut(cpal::StreamError) + Send + Clone + 'static,
     buffer_ms: u32,
-) -> Result<rodio::OutputStream, rodio::StreamError> {
-    let supported = device
+) -> Result<Stream, rodio::StreamError> {
+    let default = device
         .default_output_config()
-        .map(|config| *config.buffer_size())
-        .unwrap_or(cpal::SupportedBufferSize::Unknown);
-    let builder = |sample_rate: u32, buffer: bool| -> Result<_, rodio::StreamError> {
-        let builder = rodio::OutputStreamBuilder::from_device(device.clone())?
-            .with_channels(NUM_CHANNELS as rodio::ChannelCount)
-            .with_sample_rate(sample_rate as rodio::SampleRate)
-            .with_error_callback(on_error.clone());
-        Ok(if buffer {
-            builder.with_buffer_size(engine_buffer(sample_rate, buffer_ms, supported))
+        .map_err(rodio::StreamError::DefaultStreamConfigError)?;
+    let format = default.sample_format();
+    let config = |sample_rate: u32, buffer: bool| cpal::StreamConfig {
+        channels: NUM_CHANNELS as cpal::ChannelCount,
+        sample_rate: cpal::SampleRate(sample_rate),
+        buffer_size: if buffer {
+            engine_buffer(sample_rate, buffer_ms, *default.buffer_size())
         } else {
-            builder
-        })
+            cpal::BufferSize::Default
+        },
     };
     // The fixed engine buffer addresses Windows shared-mode underruns (#88).
     // CoreAudio, ALSA, PulseAudio, and PipeWire keep their proven
     // driver-selected callback periods.
     let fixed_buffer = cfg!(windows);
-    if let Ok(stream) = builder(SAMPLE_RATE, fixed_buffer)?.open_stream() {
+    if let Ok(stream) = Stream::open(
+        device,
+        &config(SAMPLE_RATE, fixed_buffer),
+        format,
+        on_error.clone(),
+    ) {
         return Ok(stream);
     }
-    if let Ok(config) = device.default_output_config()
-        && let Ok(stream) = builder(config.sample_rate().0, fixed_buffer)?.open_stream()
-    {
+    if let Ok(stream) = Stream::open(
+        device,
+        &config(default.sample_rate().0, fixed_buffer),
+        format,
+        on_error.clone(),
+    ) {
         return Ok(stream);
     }
-    builder(SAMPLE_RATE, false)?.open_stream_or_fallback()
+    Stream::open(
+        device,
+        &config(SAMPLE_RATE, false),
+        format,
+        on_error.clone(),
+    )
+    .or_else(|error| {
+        for supported in rodio::stream::supported_output_configs(device)? {
+            if let Ok(stream) = Stream::open(
+                device,
+                &supported.config(),
+                supported.sample_format(),
+                on_error.clone(),
+            ) {
+                return Ok(stream);
+            }
+        }
+        Err(error)
+    })
 }
 
 /// Raises the Windows decoder thread one step above normal to prevent queued
@@ -796,23 +941,22 @@ fn open_output(
         log::error!("audio stream error: {error}");
         flag.store(true, Ordering::Relaxed);
     };
-    let mut stream = open_stream(&device, on_error, buffer_ms)?;
-    stream.log_on_drop(false);
-    let sample_rate = stream.config().sample_rate();
+    let stream = open_stream(&device, on_error, buffer_ms)?;
+    let sample_rate = stream.sample_rate;
     let resampler = Resampler::new(SAMPLE_RATE, sample_rate, NUM_CHANNELS as usize);
     if resampler.is_some() {
         log::info!(
             "the output runs at {sample_rate} Hz; the music is converted from {SAMPLE_RATE} Hz"
         );
     }
-    let sink = Arc::new(rodio::Sink::connect_new(stream.mixer()));
+    let sink = Arc::new(rodio::Sink::connect_new(&stream.mixer));
     let envelope = Envelope::open(sample_rate, INTERRUPT_FADE);
     // The first Play has silence to come up from instead of a hard edge.
     let transport = Envelope::closed(sample_rate, TRANSPORT_FADE);
     control.register(&sink, Arc::clone(&envelope));
     Ok(Output {
         sink,
-        _stream: stream,
+        stream,
         device_name,
         failed,
         sample_rate,
@@ -911,6 +1055,42 @@ mod tests {
             }
             Err(other) => panic!("unexpected error: {other}"),
         }
+        assert!(sink.stop().is_ok());
+    }
+
+    /// #636: a paused player stops the device asking for sound, and Play,
+    /// or sound arriving without one, starts it again. Needs an output, so
+    /// a machine without audio has nothing to check.
+    #[test]
+    fn pause_stops_the_device_and_play_starts_it_again() {
+        let mut sink = RodioSink::new(
+            None,
+            Arc::new(|_| {}),
+            Box::new(librespot_playback::mixer::NoOpVolume),
+            DEFAULT_BUFFER_MS,
+            AudioControl::new(DEFAULT_BUFFER_MS),
+        );
+        assert!(sink.start().is_ok());
+        let running = |sink: &RodioSink| sink.output.as_ref().map(|output| output.stream.running);
+        if running(&sink).is_none() {
+            return;
+        }
+        let mut converter = Converter::new(None);
+        // Silence, so a test run plays nothing on the speakers.
+        let packet = || AudioPacket::Samples(vec![0.0; 441 * NUM_CHANNELS as usize]);
+        sink.write(packet(), &mut converter).unwrap();
+        assert_eq!(running(&sink), Some(true));
+
+        assert!(sink.stop().is_ok());
+        assert_eq!(running(&sink), Some(false), "paused, the device is quiet");
+        assert!(sink.stop().is_ok(), "stopping twice is harmless");
+
+        assert!(sink.start().is_ok());
+        assert_eq!(running(&sink), Some(true), "Play starts it again");
+
+        assert!(sink.stop().is_ok());
+        sink.write(packet(), &mut converter).unwrap();
+        assert_eq!(running(&sink), Some(true), "and so does sound");
         assert!(sink.stop().is_ok());
     }
 
