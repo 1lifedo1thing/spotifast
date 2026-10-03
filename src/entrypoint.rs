@@ -241,14 +241,7 @@ fn run_control(control: Control) -> i32 {
 /// sandbox's app id, which Flatpak always sets in `FLATPAK_ID`.
 #[cfg(target_os = "linux")]
 fn desktop_entry() -> String {
-    desktop_entry_for(std::env::var("FLATPAK_ID").ok().as_deref()).to_owned()
-}
-
-#[cfg(target_os = "linux")]
-fn desktop_entry_for(flatpak_id: Option<&str>) -> &str {
-    flatpak_id
-        .filter(|id| !id.is_empty())
-        .unwrap_or("spotifast")
+    fastframe_now_playing::desktop_entry("spotifast")
 }
 
 #[cfg(target_os = "linux")]
@@ -829,19 +822,6 @@ fn demo_native_options(
 #[cfg(test)]
 mod native_window_tests {
     use super::*;
-
-    /// Inside a Flatpak the window carries the sandbox's app id, the name
-    /// the desktop entry is exported under; elsewhere the plain name.
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn desktop_entry_matches_the_installed_flatpak_id() {
-        assert_eq!(
-            desktop_entry_for(Some("rocks.spotifast.Spotifast")),
-            "rocks.spotifast.Spotifast"
-        );
-        assert_eq!(desktop_entry_for(None), "spotifast");
-        assert_eq!(desktop_entry_for(Some("")), "spotifast");
-    }
 
     #[test]
     fn window_geometry_is_kept_without_touching_demo_storage() {

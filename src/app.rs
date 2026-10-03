@@ -641,6 +641,8 @@ fn tray_config() -> fastframe_tray::Config {
         title: "Spotifast".into(),
         icon: util::app_icon_rgba,
         template_icon: Some(util::tray_template_rgba),
+        themed_icon: true,
+        menu_on_click: false,
         menu: vec![
             MenuItem::action(TRAY_SHOW, "Show or hide Spotifast"),
             MenuItem::Separator,
@@ -1045,9 +1047,6 @@ impl App {
                 pos[0], pos[1],
             )));
         }
-        // A new window has its own context, so its scrolling starts afresh
-        // and sets the 120-point wheel step there too (#32).
-        self.scrolling = fastframe_scroll::Scrolling::default();
     }
 
     /// The window is gone but the process stays: audio, the tray, and the
@@ -1064,7 +1063,10 @@ impl App {
     /// Whether closing the window keeps the app in the tray rather than
     /// quitting.
     pub fn hides_to_tray(&self) -> bool {
-        self.tray.is_some() && self.settings.keep_playing_in_background
+        self.tray
+            .as_ref()
+            .is_some_and(fastframe_tray::Tray::is_shown)
+            && self.settings.keep_playing_in_background
     }
 
     // ---- derived state -----------------------------------------------------
@@ -9111,7 +9113,11 @@ impl App {
                 }
             }
             Action::HideWindow => {
-                if self.tray.is_some() {
+                if self
+                    .tray
+                    .as_ref()
+                    .is_some_and(fastframe_tray::Tray::is_shown)
+                {
                     self.hide_intent = true;
                     ctx.send_viewport_cmd(egui::ViewportCommand::Close);
                 }
@@ -9637,7 +9643,7 @@ impl App {
     /// Runs background work with or without a main window.
     pub fn background_frame(&mut self, ctx: &egui::Context) {
         if self.autoscroll.cancel_if_unfocused(ctx) {
-            self.scrolling = fastframe_scroll::Scrolling::default();
+            self.scrolling.stop();
         }
         self.handle_control_commands();
         self.handle_events();
@@ -9751,7 +9757,7 @@ impl App {
         let autoscroll_on = crate::autoscroll::enabled(self.settings.middle_click_autoscroll);
         self.autoscroll.begin(ctx, autoscroll_on);
         if self.autoscroll.active() {
-            self.scrolling = fastframe_scroll::Scrolling::default();
+            self.scrolling.stop();
             ctx.input_mut(|input| input.smooth_scroll_delta = egui::Vec2::ZERO);
         } else {
             self.scrolling.apply(ctx);
@@ -9789,7 +9795,7 @@ impl App {
             crate::autoscroll::enabled(self.settings.middle_click_autoscroll),
         );
         if autoscroll.scrolling {
-            self.scrolling = fastframe_scroll::Scrolling::default();
+            self.scrolling.stop();
         }
         if autoscroll.stop_following_lyrics {
             self.lyrics_following = false;

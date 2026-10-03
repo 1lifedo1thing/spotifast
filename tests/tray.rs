@@ -27,6 +27,8 @@ fn config() -> fastframe_tray::Config {
         title: "Spotifast".into(),
         icon: spotifast::util::app_icon_rgba,
         template_icon: None,
+        themed_icon: true,
+        menu_on_click: false,
         menu: vec![fastframe_tray::MenuItem::action(
             "show",
             "Show or hide Spotifast",
@@ -65,10 +67,10 @@ fn flatpak_tray_registers_without_owning_a_name() {
             .unwrap();
         assert_eq!(tray.events(), vec![fastframe_tray::Event::Toggle]);
         server.close().unwrap();
-        assert!(
-            fastframe_tray::Tray::spawn(config(), || {}).is_none(),
-            "no watcher still means no tray"
-        );
+        // Without a watcher the tray waits for a panel to appear, and says
+        // it isn't shown, so closing the window quits instead of hiding.
+        let waiting = fastframe_tray::Tray::spawn(config(), || {}).expect("a tray that waits");
+        assert!(!waiting.is_shown(), "no watcher means no tray on screen");
         return;
     }
 
