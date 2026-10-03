@@ -154,6 +154,9 @@ fn the_command_forwards_links_to_the_existing_instance_on_a_private_bus() {
                 "--nocapture",
             ])
             .env(CHILD, "1")
+            // The running copy's slot lives in the runtime directory, so a
+            // Spotifast already running on this machine is left alone.
+            .env("XDG_RUNTIME_DIR", &scratch.0)
             .output()
             .expect("the Linux test environment needs dbus-run-session");
         assert!(

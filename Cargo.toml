@@ -37,43 +37,47 @@ egui = "0.36"
 egui_extras = { version = "0.36", features = ["image", "svg"] }
 # The shared foundation of Spotifast, ZapFast, RekordFlash and TonePush
 # (crmne/fastframe). Every crate comes from the same revision; move them
-# together. Pinned to a commit on fastframe's main for scrolling and the
-# single-instance guard while Carmine tries them; they move to tag v0.4.0
-# together once it exists.
-fastframe-text = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
-fastframe-fonts = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
-fastframe-icons = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
-fastframe-theme = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+# together. Pinned to a commit on fastframe's main for scrolling, the
+# single-instance guard and the media controls while Carmine tries them;
+# they move to tag v0.4.0 together once it exists.
+fastframe-text = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
+fastframe-fonts = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
+fastframe-icons = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
+fastframe-theme = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # Colour emoji in the platform's own style (Apple Color Emoji, Segoe UI
 # Emoji, the desktop's colour emoji font), in every text through its egui
 # plugin.
-fastframe-emoji = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-emoji = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # Catalogs compiled from PO files at build time (see build.rs) and the
 # system's preferred languages. No libintl or runtime catalog parsing.
-fastframe-i18n = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-i18n = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # The log file for bug reports and the panic log (env_logger underneath).
-fastframe-log = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-log = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # The tray item, so closing the window can keep the music playing:
 # StatusNotifier on Linux, the notification area on Windows, the menu bar
 # on macOS.
-fastframe-tray = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-tray = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # Keeps the app running without a window around eframe::run_native.
-fastframe-shell = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-shell = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # The macOS title-bar double-click setting (does nothing elsewhere).
-fastframe-macos = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-macos = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # Self-update from GitHub releases, on the reqwest client below.
-fastframe-update = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b", features = ["reqwest"] }
+fastframe-update = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2", features = ["reqwest"] }
 # The audio device stream: it pauses, so a paused player costs no CPU (#636),
 # follows the default output and reopens after a failure. Its cpal 0.18
 # cannot share a build with the cpal 0.16 of librespot's rodio backend (both
 # link ALSA), so that backend is left out.
-fastframe-audio = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-audio = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # The wheel step, the Linux touchpad scale and glide, and the axis a scroll
 # gesture holds.
-fastframe-scroll = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-scroll = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # One running copy per user: a lock and a private channel that a second
 # launch and the command line hand their requests to.
-fastframe-instance = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+fastframe-instance = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
+# The desktop's media controls: MPRIS on Linux, the media overlay on
+# Windows, Now Playing on macOS. The media keys and those panels send
+# commands back, and closing the window keeps the music playing.
+fastframe-now-playing = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2" }
 # Reading installed fonts for MilkDrop's overlays, the Winamp playlist's
 # pixel text, and the playlist face. skrifa is the parser epaint already
 # rasterizes with, and the version has to track epaint's or the binary
@@ -133,9 +137,9 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-
 # HTTP proxy (environment, and the OS proxy on macOS and Windows).
 hyper-util = { version = "0.1", default-features = false, features = ["client-proxy", "client-proxy-system"] }
 http = "1"
-# `fs` is used by the playlist cache in `backend.rs`. On Linux the
-# mpris-server dependency happens to turn it on, which is why leaving it out
-# built there and nowhere else. `net` is the local HTTP-proxy tests.
+# `fs` is used by the playlist cache in `backend.rs`. On Linux the MPRIS
+# dependency happens to turn it on, which is why leaving it out built
+# there and nowhere else. `net` is the local HTTP-proxy tests.
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros", "fs", "net", "io-util"] }
 sha1 = "0.10"
 sha2 = "0.10"
@@ -154,11 +158,6 @@ pbkdf2 = "0.12"
 aes = "0.8"
 ctr = "0.9"
 
-[target.'cfg(not(target_os = "linux"))'.dependencies]
-# The desktop's media controls on Windows and macOS, so closing the window
-# keeps the music playing there too. Linux has mpris-server below.
-souvlaki = { version = "0.8", default-features = false }
-
 [target.'cfg(target_os = "macos")'.dependencies]
 apple-native-keyring-store = { version = "1.0.2", features = ["keychain"] }
 # The application menus and Dock menu (src/mac_menu.rs). "exception" lets
@@ -173,18 +172,16 @@ objc2-foundation = { version = "0.3", default-features = false, features = ["std
 
 [target.'cfg(windows)'.dependencies]
 windows-native-keyring-store = { version = "1.1", default-features = false }
-# A hidden window for the media controls to belong to, and message loops.
+# Message loops, the taskbar thumbnail buttons and window styles.
 windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_Globalization", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_LibraryLoader", "Win32_System_Registry", "Win32_System_Threading", "Win32_UI_Accessibility", "Win32_UI_HiDpi", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Reuses the zbus/Tokio stack already used for desktop integration.
 zbus-secret-service-keyring-store = { version = "1.0.1", features = ["rt-tokio-crypto-rust"] }
 librespot-playback = { version = "0.8", default-features = false, features = ["pulseaudio-backend", "rustls-tls-native-roots"] }
-mpris-server = { version = "0.10", features = ["tokio"] }
-# The bus mpris-server already speaks, named directly so its interface macro
-# resolves: the running instance answers `Open` on its own name for the
-# launch a Spotify link makes (src/single_instance.rs). Same version, so
-# nothing new is compiled.
+# The session bus, for the desktop's light or dark preference
+# (src/appearance.rs). fastframe-now-playing's MPRIS already compiles this
+# version.
 zbus = { version = "5", default-features = false, features = ["tokio"] }
 # Keeps the X11 mini player out of the taskbar with _NET_WM_STATE_SKIP_TASKBAR
 # (src/window.rs), which winit only offers on Windows. winit already
@@ -194,7 +191,7 @@ x11rb = { version = "0.13", default-features = false }
 [build-dependencies]
 # Drops unfinished PO entries and compiles catalog text and gettext plural
 # expressions to Rust. Ordinary builds do not need gettext tools.
-fastframe-i18n = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b", features = ["build"] }
+fastframe-i18n = { git = "https://github.com/crmne/fastframe", rev = "c62c229199fa3d26514e8ae6cdd89a8a921273d2", features = ["build"] }
 
 [dev-dependencies]
 # Checks that every catalog covers the template and keeps its placeholders.

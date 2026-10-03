@@ -17,8 +17,6 @@ use crate::backend::{
     PLAYLIST_PAGE_SIZE, PlaylistCacheRows, RecentsFor, RemoteAction, Waker,
 };
 use crate::i18n::{Locale, gettext, ngettext};
-use crate::media::{MediaCommand, MediaState, MediaTrack};
-use crate::media_controls::MediaService;
 use crate::model::QueueTab;
 use crate::model::*;
 use crate::paths::AppDirs;
@@ -27,6 +25,10 @@ use crate::settings::{CachedRootlist, SessionState, Settings, ThemeChoice};
 use crate::single_instance::ControlCommand;
 use crate::theme::{self, Palette};
 use crate::util;
+use fastframe_now_playing::{
+    Command as MediaCommand, NowPlaying as MediaControls, Playback as MediaPlayback,
+    Repeat as MediaRepeat, State as MediaState, Track as MediaTrack,
+};
 
 const REMOTE_POLL_ACTIVE: Duration = Duration::from_secs(4);
 const REMOTE_POLL_IDLE: Duration = Duration::from_secs(20);
@@ -234,7 +236,7 @@ pub struct App {
     settings_dirty: bool,
     last_settings_save: Instant,
     pub backend: Backend,
-    media_controls: Option<MediaService>,
+    media_controls: Option<MediaControls>,
     /// The desktop's light or dark preference, for "Follow system".
     #[cfg(target_os = "linux")]
     system_appearance: Option<crate::appearance::SystemAppearance>,
@@ -571,6 +573,14 @@ const HOME_PODCAST_SHOWS: usize = 8;
 /// endpoint limit is fifty. A shorter page marks the end.
 const RECENTS_PAGE: u32 = 50;
 
+/// Who the desktop's media controls belong to. Links to Spotify, as
+/// `spotify:` URIs or web addresses, are what they may ask Spotifast to open.
+fn media_app() -> fastframe_now_playing::App {
+    let mut app = fastframe_now_playing::App::new("spotifast", "Spotifast");
+    app.uri_schemes = vec!["spotify".into(), "https".into(), "http".into()];
+    app
+}
+
 const TRAY_SHOW: &str = "show";
 const TRAY_PLAY_PAUSE: &str = "play-pause";
 const TRAY_NEXT: &str = "next";
@@ -685,7 +695,7 @@ impl App {
         let wake = waker.clone();
         let media_controls = options
             .media_controls
-            .then(|| MediaService::spawn(move || wake.wake()));
+            .then(|| MediaControls::start(media_app(), move || wake.wake()));
         #[cfg(target_os = "linux")]
         let system_appearance = {
             let wake = waker.clone();
@@ -699,7 +709,10 @@ impl App {
             if let (Some(controls), Some(track)) =
                 (&mut media_controls, session.last_track.as_deref())
             {
-                controls.claim_resume(track, session.last_position_ms);
+                controls.claim(
+                    track,
+                    Duration::from_millis(u64::from(session.last_position_ms)),
+                );
             }
             media_controls
         };
@@ -2217,7 +2230,7 @@ impl App {
         if state.seek_sequence != self.local.seek_sequence
             && let Some(controls) = &self.media_controls
         {
-            controls.seeked(state.position_ms);
+            controls.seeked(Duration::from_millis(u64::from(state.position_ms)));
         }
         if let Some(error) = &state.error
             && self.local.error.as_deref() != Some(error.as_str())
@@ -3313,11 +3326,7 @@ impl App {
     }
 
     fn handle_media_commands(&mut self) {
-        let Some(commands) = self
-            .media_controls
-            .as_ref()
-            .map(MediaService::drain_commands)
-        else {
+        let Some(commands) = self.media_controls.as_ref().map(MediaControls::commands) else {
             return;
         };
         for command in commands {
@@ -3329,18 +3338,19 @@ impl App {
                 MediaCommand::Next => Some(Action::Next),
                 MediaCommand::Previous => Some(Action::Previous),
                 MediaCommand::SeekBy(offset) => Some(Action::SeekBy(offset)),
-                MediaCommand::SetPosition {
-                    track_uri,
-                    position_ms,
-                } => self
+                MediaCommand::SetPosition { track_id, position } => self
                     .now_playing()
-                    .filter(|now| now.uri == track_uri)
-                    .map(|_| Action::Seek(position_ms)),
+                    .filter(|now| now.uri == track_id)
+                    .map(|_| Action::Seek(u32::try_from(position.as_millis()).unwrap_or(u32::MAX))),
                 MediaCommand::SetVolume(volume) => Some(Action::SetVolume(
                     (volume.clamp(0.0, 1.0) * 100.0).round() as u8,
                 )),
                 MediaCommand::SetShuffle(shuffle) => Some(Action::SetShuffle(shuffle)),
-                MediaCommand::SetRepeat(mode) => Some(Action::SetRepeat(mode)),
+                MediaCommand::SetRepeat(mode) => Some(Action::SetRepeat(match mode {
+                    MediaRepeat::Off => RepeatMode::Off,
+                    MediaRepeat::Track => RepeatMode::Track,
+                    MediaRepeat::Playlist => RepeatMode::Context,
+                })),
                 MediaCommand::OpenUri(uri) => {
                     if crate::link::search_query(&uri).is_some() {
                         crate::link::parse(&uri).map(Action::OpenLink)
@@ -3365,7 +3375,7 @@ impl App {
     ///
     /// Windows and macOS are handed a file rather than the URL, so the disk
     /// is asked until the download lands and the answer remembered after
-    /// that; see `media_native::file_url` for why a URL will not do. The
+    /// that; macOS aborts on a remote image that fails to load. The
     /// player bar only ever draws the small cover, so on a miss the full-size
     /// artwork is fetched here -- the one request the controls add.
     ///
@@ -3425,15 +3435,14 @@ impl App {
             .and_then(|url| self.media_art_file(ctx, &url));
         let state = match self.now_playing() {
             Some(now) => MediaState {
+                // Still loading reads as paused: Play resumes it.
                 playback: if now.playing {
-                    Playback::Playing
-                } else if now.loading {
-                    Playback::Loading
+                    MediaPlayback::Playing
                 } else {
-                    Playback::Paused
+                    MediaPlayback::Paused
                 },
                 track: Some(MediaTrack {
-                    uri: now.uri.clone(),
+                    id: now.uri.clone(),
                     title: now.title.clone(),
                     artists: now
                         .artists
@@ -3441,17 +3450,28 @@ impl App {
                         .map(|artist| artist.name.clone())
                         .collect(),
                     album: now.album_name.clone(),
-                    art_url: now.art_url.clone(),
+                    duration: Some(Duration::from_millis(u64::from(now.duration_ms))),
                     art_file,
-                    duration_ms: now.duration_ms,
+                    art_url: now.art_url.clone(),
+                    url: Some(now.uri.clone()),
+                    ..MediaTrack::default()
                 }),
-                position_ms: now.position_ms,
-                volume: f64::from(now.volume_percent) / 100.0,
-                shuffle: now.shuffle,
-                repeat: now.repeat,
-                can_control: now.can_control,
+                position: Duration::from_millis(u64::from(now.position_ms)),
+                volume: Some(f64::from(now.volume_percent) / 100.0),
+                shuffle: Some(now.shuffle),
+                repeat: Some(match now.repeat {
+                    RepeatMode::Off => MediaRepeat::Off,
+                    RepeatMode::Track => MediaRepeat::Track,
+                    RepeatMode::Context => MediaRepeat::Playlist,
+                }),
+                ..MediaState::default()
             },
-            None => MediaState::default(),
+            None => MediaState {
+                volume: Some(1.0),
+                shuffle: Some(false),
+                repeat: Some(MediaRepeat::Off),
+                ..MediaState::default()
+            },
         };
         if let Some(controls) = &mut self.media_controls {
             controls.update(state);
@@ -22324,7 +22344,7 @@ mod tests {
             id: "me".into(),
             ..User::default()
         });
-        app.media_controls = Some(MediaService::spawn(|| {}));
+        app.media_controls = Some(MediaControls::start(media_app(), || {}));
         let client = zbus::blocking::connection::Builder::session()
             .unwrap()
             .method_timeout(Duration::from_secs(2))

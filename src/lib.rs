@@ -27,13 +27,6 @@ pub mod mac_links;
 pub mod mac_menu;
 #[cfg(target_os = "macos")]
 pub mod mac_touchbar_crash_guard;
-pub mod media;
-#[cfg(target_os = "linux")]
-#[path = "mpris.rs"]
-pub mod media_controls;
-#[cfg(not(target_os = "linux"))]
-#[path = "media_native.rs"]
-pub mod media_controls;
 pub mod milkdrop;
 pub mod model;
 pub mod opener;

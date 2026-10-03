@@ -236,6 +236,21 @@ fn run_control(control: Control) -> i32 {
     }
 }
 
+/// The desktop entry's name, which the window's app id has to match for the
+/// desktop to find its icon: inside a Flatpak the entry is exported under the
+/// sandbox's app id, which Flatpak always sets in `FLATPAK_ID`.
+#[cfg(target_os = "linux")]
+fn desktop_entry() -> String {
+    desktop_entry_for(std::env::var("FLATPAK_ID").ok().as_deref()).to_owned()
+}
+
+#[cfg(target_os = "linux")]
+fn desktop_entry_for(flatpak_id: Option<&str>) -> &str {
+    flatpak_id
+        .filter(|id| !id.is_empty())
+        .unwrap_or("spotifast")
+}
+
 #[cfg(target_os = "linux")]
 const PULSEAUDIO_PROPERTIES: [(&str, &str); 2] = [
     ("PULSE_PROP_application.name", "Spotifast"),
@@ -723,7 +738,7 @@ fn native_options(
         eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"))
     });
     #[cfg(target_os = "linux")]
-    let app_id = spotifast::media_controls::desktop_entry();
+    let app_id = desktop_entry();
     #[cfg(not(target_os = "linux"))]
     let app_id = "spotifast";
     let icon = if cfg!(target_os = "macos") {
@@ -815,6 +830,19 @@ fn demo_native_options(
 mod native_window_tests {
     use super::*;
 
+    /// Inside a Flatpak the window carries the sandbox's app id, the name
+    /// the desktop entry is exported under; elsewhere the plain name.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn desktop_entry_matches_the_installed_flatpak_id() {
+        assert_eq!(
+            desktop_entry_for(Some("rocks.spotifast.Spotifast")),
+            "rocks.spotifast.Spotifast"
+        );
+        assert_eq!(desktop_entry_for(None), "spotifast");
+        assert_eq!(desktop_entry_for(Some("")), "spotifast");
+    }
+
     #[test]
     fn window_geometry_is_kept_without_touching_demo_storage() {
         let main = profile_options(native_options(false, None, None));
@@ -847,7 +875,7 @@ mod native_window_tests {
         );
         #[cfg(target_os = "linux")]
         {
-            let id = spotifast::media_controls::desktop_entry();
+            let id = desktop_entry();
             assert_eq!(main.viewport.app_id.as_deref(), Some(id.as_str()));
             assert_eq!(mini.viewport.app_id, main.viewport.app_id);
             assert_eq!(

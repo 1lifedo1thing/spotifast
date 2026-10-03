@@ -613,7 +613,8 @@ OpenGL renderer, plus window-creation errors even when launched without a consol
 - `src/backend.rs`: the tokio runtime and channels used by the interface.
 - `src/images.rs`: album art loading, caching, and accent-colour extraction.
 - `src/app.rs`, `src/model.rs`, `src/ui/`: state, navigation, and views.
-- `src/mpris.rs`: Linux media controls.
+- `src/single_instance.rs`: the running copy's guard and the remote control
+  the `spotifast` command speaks.
 
 Spotifast pins its Rust toolchain in `rust-toolchain.toml`; `cargo test`
 covers the API models, dual-session routing, PKCE, the player state machine,
