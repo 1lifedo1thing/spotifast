@@ -1880,6 +1880,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastframe-instance"
+version = "0.3.1"
+source = "git+https://github.com/crmne/fastframe?rev=46cdbad5ba95155743f568bd6ec816f91ac4020b#46cdbad5ba95155743f568bd6ec816f91ac4020b"
+dependencies = [
+ "directories",
+ "getrandom 0.4.3",
+ "log",
+]
+
+[[package]]
 name = "fastframe-log"
 version = "0.3.1"
 source = "git+https://github.com/crmne/fastframe?rev=46cdbad5ba95155743f568bd6ec816f91ac4020b#46cdbad5ba95155743f568bd6ec816f91ac4020b"
@@ -5845,6 +5855,7 @@ dependencies = [
  "fastframe-fonts",
  "fastframe-i18n",
  "fastframe-icons",
+ "fastframe-instance",
  "fastframe-log",
  "fastframe-macos",
  "fastframe-scroll",

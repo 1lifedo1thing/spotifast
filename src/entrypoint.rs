@@ -167,9 +167,8 @@ enum Repeat {
     Track,
 }
 
-/// Sends one control verb to the running instance. Speaks over the
-/// single-instance loopback socket, which Linux does not have.
-#[cfg(not(target_os = "linux"))]
+/// Sends one control verb to the running instance over the
+/// single-instance channel.
 fn run_control(control: Control) -> i32 {
     let raw = matches!(
         control,
@@ -238,28 +237,6 @@ fn run_control(control: Control) -> i32 {
 }
 
 #[cfg(target_os = "linux")]
-fn run_control(control: Control) -> i32 {
-    let result = match control {
-        Control::Like => single_instance::toggle_saved(),
-        Control::ReloadThemes => single_instance::reload_themes(),
-        _ => {
-            eprintln!(
-                "On Linux the running instance speaks MPRIS instead; use e.g. \
-                 `playerctl --player=spotifast play-pause`."
-            );
-            return 2;
-        }
-    };
-    match result {
-        Ok(()) => 0,
-        Err(error) => {
-            eprintln!("Spotifast is not running or does not support remote control: {error}");
-            1
-        }
-    }
-}
-
-#[cfg(target_os = "linux")]
 const PULSEAUDIO_PROPERTIES: [(&str, &str); 2] = [
     ("PULSE_PROP_application.name", "Spotifast"),
     ("PULSE_PROP_stream.description", "Spotify playback"),
@@ -288,7 +265,6 @@ fn configure_pulseaudio_properties() {
 }
 
 /// The `nowplaying` snapshot as one human-readable line.
-#[cfg(not(target_os = "linux"))]
 fn format_now_playing(snapshot: &str) -> String {
     let mut fields = snapshot.split('\t');
     let state = fields.next().unwrap_or_default();
@@ -313,7 +289,6 @@ fn format_now_playing(snapshot: &str) -> String {
 
 /// The `devices` snapshot as one line per device, the active one marked.
 /// The id comes first because `spotifast transfer` is what it is for.
-#[cfg(not(target_os = "linux"))]
 fn format_devices(snapshot: &str) -> String {
     let Ok(devices) = serde_json::from_str::<Vec<serde_json::Value>>(snapshot) else {
         return String::new();

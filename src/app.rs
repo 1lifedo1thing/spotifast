@@ -254,8 +254,7 @@ pub struct App {
     /// big window or the Winamp mini player.
     pub switch_intent: bool,
     /// Commands from control clients (a second `spotifast <verb>` launch,
-    /// a Raycast script), on the platforms where they do not arrive through
-    /// MPRIS. Drained every frame.
+    /// a Raycast script, a link the desktop opens). Drained every frame.
     control_commands: Option<std::sync::Arc<std::sync::Mutex<Vec<ControlCommand>>>>,
     /// Now-playing snapshot for the control channel.
     control_now_playing: Option<std::sync::Arc<std::sync::Mutex<String>>>,

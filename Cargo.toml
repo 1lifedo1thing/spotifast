@@ -71,6 +71,9 @@ fastframe-audio = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5b
 # The wheel step, the Linux touchpad scale and glide, and the axis a scroll
 # gesture holds.
 fastframe-scroll = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
+# One running copy per user: a lock and a private channel that a second
+# launch and the command line hand their requests to.
+fastframe-instance = { git = "https://github.com/crmne/fastframe", rev = "46cdbad5ba95155743f568bd6ec816f91ac4020b" }
 # Reading installed fonts for MilkDrop's overlays, the Winamp playlist's
 # pixel text, and the playlist face. skrifa is the parser epaint already
 # rasterizes with, and the version has to track epaint's or the binary

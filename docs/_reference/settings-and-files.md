@@ -201,6 +201,16 @@ On macOS, settings, state, and the logs are in
 `%LOCALAPPDATA%\paolino\spotifast\data`, and the caches in
 `%LOCALAPPDATA%\paolino\spotifast\cache`.
 
+The running copy keeps its single-instance files in a private directory:
+`$XDG_RUNTIME_DIR/spotifast` on Linux (inside Flatpak, the app's own runtime
+directory), and an `instance` folder in the state directory on macOS and
+Windows. `instance.lock` marks the running copy; the system releases it when
+Spotifast quits or crashes. `instance.sock` (Linux and macOS) is the socket
+a second launch and the `spotifast` command reach it through, which only your
+user can open. On Windows, `instance.key` holds the loopback port and a
+random token that every request must carry. Spotifast writes them on each
+start; nothing in them needs keeping.
+
 ## settings.json
 
 Settings are stored in one readable JSON file and written atomically. Its

@@ -475,12 +475,8 @@ middle click usually pastes there. See [autoscroll](docs/_guide/using-spotifast.
 
 ## Controlling it from outside
 
-On Linux, Spotifast is an MPRIS player, so `playerctl --player=spotifast
-play-pause` already works. `spotifast like` adds or removes the playing
-track from your library.
-
-macOS and Windows have no such bus, so the same verbs are subcommands. They
-talk to the instance already running and print nothing on success:
+The `spotifast` command controls the copy already running, on every
+platform. Each verb prints nothing on success:
 
 ```
 spotifast play-pause          spotifast volume 40
@@ -528,8 +524,14 @@ or `https://open.spotify.com/search` to open an empty search box. Encode spaces
 as `%20`; a `+` in the path remains a literal plus. Ordinary MPRIS playback
 URIs still start playback.
 
-Launchers such as Raycast or Alfred can use these commands. The Stream Deck
-plugin uses the same interface.
+On Linux, Spotifast is also an MPRIS player, so `playerctl
+--player=spotifast play-pause` and media keys work too.
+
+Launchers such as Raycast or Alfred, and the Stream Deck plugin, can use
+these commands. Since the next release, they reach Spotifast through a
+private channel only your user can open (on Windows, a loopback port that
+answers only requests carrying a random token), instead of a fixed port
+any program could reach. Use the command rather than the channel itself.
 
 ## Settings
 
