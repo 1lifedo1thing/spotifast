@@ -20,47 +20,32 @@ class ReleaseNamesTest(unittest.TestCase):
         self.assertTrue(notes.is_file(), f"Write {notes} before tagging the release")
         self.assertTrue(notes.read_text().strip(), "Release notes must not be empty")
 
-    def test_releases_after_the_bridge_have_only_the_new_name(self):
+    def test_checksums_cover_every_download_and_are_repeatable(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "spotifast-v0.9.2-linux.tar.gz").write_bytes(b"new build")
-            release_names.prepare(root, "v0.9.2")
-            self.assertEqual(len((root / "checksums.txt").read_text().splitlines()), 1)
-            self.assertFalse((root / "fastpotify-v0.9.2-linux.tar.gz").exists())
-            (root / "fastpotify-v0.9.2-linux.tar.gz").write_bytes(b"legacy build")
-            with self.assertRaisesRegex(ValueError, "forbidden"):
-                release_names.prepare(root, "v0.9.2")
-
-    def test_old_and_new_inputs_keep_their_bytes_and_checksums(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            (root / "fastpotify-v0.8.0-linux.tar.gz").write_bytes(b"unchanged Linux build")
-            (root / "spotifast-v0.8.0-macos.dmg").write_bytes(b"notarized Mac build")
-            release_names.prepare(root, "v0.8.0")
-            self.assertEqual((root / "spotifast-v0.8.0-linux.tar.gz").read_bytes(), b"unchanged Linux build")
-            self.assertEqual((root / "fastpotify-v0.8.0-macos.dmg").read_bytes(), b"notarized Mac build")
+            (root / "spotifast-v0.12.0-linux.tar.gz").write_bytes(b"Linux build")
+            (root / "spotifast-v0.12.0-macos.dmg").write_bytes(b"Mac build")
+            (root / "spotifast-v0.11.2-linux.tar.gz").write_bytes(b"another release")
+            release_names.prepare(root, "v0.12.0")
             before = (root / "checksums.txt").read_bytes()
-            self.assertEqual(len(before.splitlines()), 4)
-            release_names.prepare(root, "v0.8.0")
+            names = [line.split()[1] for line in before.decode().splitlines()]
+            self.assertEqual(names, ["spotifast-v0.12.0-linux.tar.gz", "spotifast-v0.12.0-macos.dmg"])
+            release_names.prepare(root, "v0.12.0")
             self.assertEqual((root / "checksums.txt").read_bytes(), before)
 
-    def test_conflicting_inputs_fail_without_replacing_either_file(self):
+    def test_links_are_refused(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            old = root / "fastpotify-v0.8.0-linux.tar.gz"
-            new = root / "spotifast-v0.8.0-linux.tar.gz"
-            old.write_bytes(b"old")
-            new.write_bytes(b"new")
-            with self.assertRaisesRegex(ValueError, "Different bytes"):
-                release_names.prepare(root, "v0.8.0")
-            self.assertEqual(old.read_bytes(), b"old")
-            self.assertEqual(new.read_bytes(), b"new")
+            (root / "build").write_bytes(b"build")
+            (root / "spotifast-v0.12.0-linux.tar.gz").symlink_to(root / "build")
+            with self.assertRaisesRegex(ValueError, "regular release file"):
+                release_names.prepare(root, "v0.12.0")
             self.assertFalse((root / "checksums.txt").exists())
 
     def test_missing_inputs_fail(self):
         with tempfile.TemporaryDirectory() as directory:
             with self.assertRaisesRegex(ValueError, "No release"):
-                release_names.prepare(Path(directory), "v0.8.0")
+                release_names.prepare(Path(directory), "v0.12.0")
 
 
 if __name__ == "__main__":

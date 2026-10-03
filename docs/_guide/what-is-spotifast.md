@@ -1,5 +1,4 @@
 ---
-redirect_from: /what-is-fastpotify/
 title: What is Spotifast?
 description: What Spotifast offers, what you need to use it, and its current limits.
 nav_order: 0
@@ -11,9 +10,6 @@ nav_order: 0
 Linux, macOS, and Windows. It opens in well under a second and typically uses
 100–250 MB of memory, while Spotify's desktop app often uses 600 MB to over 1 GB.
 
-Spotifast was previously called **Fastpotify**. Version 0.8.0 is the first
-release with the new name. Your settings and sign-ins carry over when updating,
-except for Flatpak, which needs a [separate switch](/renaming/#flatpak).
 Your Spotify playlists stay on your account.
 
 **Playback needs Spotify Premium.** Free accounts can browse and search, but

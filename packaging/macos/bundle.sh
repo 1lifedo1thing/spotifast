@@ -20,11 +20,6 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 
 executable=Spotifast
 identifier=rocks.spotifast.Spotifast
-if [ "$version" = "0.9.1" ]; then
-    # Last bridge for older updaters' bundle identity validation.
-    executable=fastpotify
-    identifier=me.paolino.fastpotify
-fi
 cp "$binary" "$app/Contents/MacOS/$executable"
 chmod 755 "$app/Contents/MacOS/$executable"
 # The build number has to be numbers: a release candidate's -rc1 comes off.

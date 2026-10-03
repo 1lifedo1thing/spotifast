@@ -4,13 +4,6 @@ description: Download the app for macOS, Windows, or Linux, with install instruc
 nav_order: 1
 ---
 
-Spotifast was previously called **Fastpotify**. Version 0.9.1 completed the
-profile and package rename. Choose Spotifast when installing or updating.
-Your settings and sign-ins carry over, except when
-[switching the Flatpak installation](/renaming/#flatpak).
-If you use a version older than 0.9.1, see the [upgrade guide](/renaming/)
-before updating: 0.9.1 was the last release older updaters can install.
-
 {% assign v = site.spotifast_version %}
 {% assign base = "https://github.com/crmne/spotifast/releases/download/v" | append: v %}
 
@@ -85,10 +78,6 @@ yay -S spotifast          # the release, built from source
 yay -S spotifast-git      # built from the latest commit
 ```
 
-If you already have an old `fastpotify` package, install the corresponding
-`spotifast` package above and accept the replacement. Your settings and saved
-sign-ins are kept.
-
 ### Flatpak
 
 Download the [Spotifast Flatpak]({{ base }}/spotifast-v{{ v }}-x86_64.flatpak?flatpak-id=rocks.spotifast.Spotifast).
@@ -100,10 +89,7 @@ flatpak install --user ~/Downloads/spotifast-v{{ v }}-x86_64.flatpak
 flatpak run rocks.spotifast.Spotifast
 ```
 
-The application ID is **`rocks.spotifast.Spotifast`**. Existing Fastpotify
-Flatpak users install this as a new application, then remove the old one.
-See [switching Flatpak installations](/renaming/#flatpak) to retain settings
-and history. Sign in again after switching.
+The application ID is **`rocks.spotifast.Spotifast`**.
 
 To update this Flatpak installation, download and install the new release.
 Flathub support is planned.

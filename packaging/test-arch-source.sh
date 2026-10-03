@@ -13,11 +13,7 @@ sed -e "s/@VERSION@/$version/g" -e 's/@PKGREL@/1/g' \
   -e 's/@SOURCE_SHA256@/unused/g' "$recipe" > "$work/PKGBUILD"
 
 srcdir="$work/src"
-if [[ -d "$srcdir/spotifast-$version" ]]; then
-  expected="$srcdir/spotifast-$version"
-else
-  expected="$srcdir/fastpotify-$version"
-fi
+expected="$srcdir/spotifast-$version"
 test -f "$expected/Cargo.toml"
 test -f "$expected/Cargo.lock"
 

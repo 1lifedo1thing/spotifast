@@ -106,9 +106,6 @@ On Linux, after installing the current app launcher:
 xdg-mime default spotifast.desktop x-scheme-handler/spotify
 ```
 
-Version 0.8.0 used the old launcher name; update the app before using this command.
-See [rename compatibility](/renaming/) for details.
-
 ## If your network needs a proxy
 
 **In development, not included in 0.8.0:** you can configure a proxy, a server

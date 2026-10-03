@@ -8,9 +8,9 @@ Spotifast is a desktop app that runs entirely on your computer. It has no
 account of its own, no server, no telemetry, no analytics, and no advertising.
 Its author receives nothing about you or how you use it.
 
-This page covers the Spotifast app, version 0.8.0 and later. Earlier versions,
-released as Fastpotify, kept sign-ins in files instead of the system credential
-store; update to a current release.
+This page covers the Spotifast app, version 0.8.0 and later. Earlier versions
+kept sign-ins in files instead of the system credential store; update to a
+current release.
 
 ## What stays on your computer
 

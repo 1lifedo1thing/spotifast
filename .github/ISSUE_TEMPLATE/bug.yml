@@ -11,8 +11,6 @@ body:
         - macOS: `~/Library/Application\ Support/me.paolino.spotifast/spotifast.log`
         - Windows: `%LOCALAPPDATA%\paolino\spotifast\data\spotifast.log`
 
-        Versions through 0.9.0 use `fastpotify` instead of `spotifast` in these paths and in the log filename.
-
         If the app crashed or vanished, include `panic.log` from the same folder.
   - type: input
     id: version

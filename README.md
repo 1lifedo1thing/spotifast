@@ -1,10 +1,5 @@
 # Spotifast
 
-Previously **Fastpotify**. Same native Spotify client, now at
-[spotifast.rocks](https://spotifast.rocks/). The new name starts with version 0.8.0;
-your existing settings and sign-ins carry over, except when
-[switching the Flatpak installation](docs/_reference/renaming.md#flatpak).
-
 **Spotify, native and fast.** Spotifast is a Spotify client written in
 Rust with [egui](https://github.com/emilk/egui). It plays music through
 [librespot](https://github.com/librespot-org/librespot). It typically uses
@@ -25,11 +20,6 @@ See [spotifast.rocks](https://spotifast.rocks/) for installation, setup,
 everyday use, and connection details.
 
 ![Spotifast Home with the playlist library, recommendations, queue, and player visible](docs/screenshot.png)
-
-`spotifast` is the main command and `fastpotify` remains available
-for existing scripts. Starting with 0.9.1, the existing profile and protected
-sign-ins migrate to Spotifast's names. Existing destination profiles are preserved.
-AUR and Homebrew packages now use the Spotifast name. See [rename compatibility](docs/_reference/renaming.md).
 
 ## What it does
 
@@ -263,9 +253,6 @@ yay -S spotifast          # the release, built from source
 yay -S spotifast-git      # built from the latest commit
 ```
 
-Existing AUR installations can switch with the matching command above. Accept
-the offer to replace the old package; saved settings and sign-ins are kept.
-
 On macOS, with [Homebrew](https://brew.sh):
 
 ```sh
@@ -278,32 +265,11 @@ the Mac download passes Apple's security checks. Open it from Applications
 and confirm the normal downloaded-app prompt. No Terminal commands or changes
 to security settings are needed.
 
-On Gentoo, [niko-overlays](https://github.com/NikoMalik/niko-overlays) offers
-an optional **community-maintained** package. Its current `0.7.1` ebuild
-builds post-release snapshot `67b8dfb`, rather than the `v0.7.1` release, and
-omits MilkDrop. Use the released binary or build instructions below if you
-want the standard release and feature set.
-
-To enable the overlay with `eselect-repository`, run as root:
-
-```sh
-emerge --ask app-eselect/eselect-repository
-eselect repository add niko-overlays git https://github.com/NikoMalik/niko-overlays.git
-emaint sync -r niko-overlays
-emerge --ask --autounmask-write media-sound/fastpotify::niko-overlays
-```
-
-Review and apply any proposed keyword changes with `dispatch-conf`, then
-repeat the final `emerge` command.
-
-Everywhere else, build the single binary with Rust 1.98 or newer:
+Elsewhere, build the single binary with Rust 1.98 or newer:
 
 ```bash
 cargo install --path . --locked
 ```
-
-Upgrading a previous Cargo installation requires `--force` once to transfer
-the existing commands to the renamed package.
 
 MilkDrop uses libprojectM, which is built from source. This needs CMake, a C++
 compiler, and libclang. To build without MilkDrop or those tools, run
@@ -379,8 +345,7 @@ Since 0.10.0, the Linux launcher is
 `packaging/applications/spotifast.desktop`. Its icon and window identity also
 use Spotifast, while existing settings and window positions are preserved.
 After installing it, `xdg-mime default spotifast.desktop x-scheme-handler/spotify`
-chooses Spotifast for `spotify:` links. The published 0.8.0 packages still use
-`fastpotify.desktop`; use that name with `xdg-mime` until updating.
+chooses Spotifast for `spotify:` links.
 
 Spotifast draws its window with OpenGL 2.0 or newer, which the graphics
 driver of any current PC or Mac provides. A virtual machine or remote session
@@ -423,10 +388,7 @@ failed keychain deletion from silently restoring a signed-out session.
 See [credential storage and file locations](docs/_reference/settings-and-files.md).
 Since 0.8.0, Flatpak also preserves its fallback state directory
 across full quits, including on older Flatpak versions.
-New Flatpak builds use the application ID `rocks.spotifast.Spotifast`.
-Existing Flatpak users install the new application and remove the old one;
-see [switching Flatpak installations](docs/_reference/renaming.md#flatpak)
-for retaining settings and history.
+The Flatpak application ID is `rocks.spotifast.Spotifast`.
 
 Playback approval requests Spotify's streaming permission separately. A
 verified personal app can complete sign-in while the shared app is busy.

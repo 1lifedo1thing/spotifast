@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Release identity changes must keep the packaged version honest."""
+"""The packaged metainfo must be the release's own, for that version."""
 
 import importlib.util
 from pathlib import Path
@@ -20,16 +20,16 @@ spec.loader.exec_module(metainfo)
 
 
 class ReleaseMetainfoTests(unittest.TestCase):
-    def fixture(self, app_id=metainfo.LEGACY_ID, version="0.8.0"):
+    def fixture(self, app_id=metainfo.APP_ID, version="0.8.0"):
         return f"""<component type="desktop-application">
-          <id>{app_id}</id><name>Fastpotify</name>
+          <id>{app_id}</id><name>Spotifast</name>
           <launchable type="desktop-id">{app_id}.desktop</launchable>
           <description><p>Existing release description.</p></description>
           <releases><release version="{version}" date="2026-09-14" /></releases>
         </component>"""
 
-    def test_renames_old_identity_without_changing_release_details(self):
-        result = ET.fromstring(metainfo.rename_metainfo(self.fixture(), "0.8.0"))
+    def test_keeps_the_release_details(self):
+        result = ET.fromstring(metainfo.check_metainfo(self.fixture(), "0.8.0"))
         self.assertEqual(result.findtext("id"), metainfo.APP_ID)
         self.assertEqual(result.findtext("launchable"), metainfo.APP_ID + ".desktop")
         self.assertEqual(result.findtext("name"), "Spotifast")
@@ -37,20 +37,20 @@ class ReleaseMetainfoTests(unittest.TestCase):
         self.assertEqual(result.find("releases/release").attrib,
                          {"version": "0.8.0", "date": "2026-09-14"})
 
-    def test_current_identity_is_idempotent(self):
-        first = metainfo.rename_metainfo(self.fixture(metainfo.APP_ID), "0.8.0")
-        self.assertEqual(metainfo.rename_metainfo(first, "0.8.0"), first)
+    def test_checking_is_idempotent(self):
+        first = metainfo.check_metainfo(self.fixture(), "0.8.0")
+        self.assertEqual(metainfo.check_metainfo(first, "0.8.0"), first)
 
     def test_rejects_another_version_or_application(self):
         for contents in [self.fixture(version="0.8.1"), self.fixture("org.example.App"),
-                         self.fixture().replace(metainfo.LEGACY_ID + ".desktop", "wrong.desktop")]:
+                         self.fixture().replace(metainfo.APP_ID + ".desktop", "wrong.desktop")]:
             with self.subTest(contents=contents), self.assertRaises(ValueError):
-                metainfo.rename_metainfo(contents, "0.8.0")
+                metainfo.check_metainfo(contents, "0.8.0")
 
     def test_reads_the_tag_when_the_checkout_owner_differs(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            original = root / "packaging/flatpak" / (metainfo.LEGACY_ID + ".metainfo.xml")
+            original = root / "packaging/flatpak" / (metainfo.APP_ID + ".metainfo.xml")
             original.parent.mkdir(parents=True)
             original.write_text(self.fixture())
             def git(*args):

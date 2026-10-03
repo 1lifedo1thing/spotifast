@@ -5,21 +5,14 @@ it pins the shared CLI and nFPM versions and declares Linux amd64/arm64 inputs,
 DEB/RPM/AppImage contents, dependencies, recipe templates and downstream repositories.
 Application assets and native recipes stay in `packaging/`.
 
-Public AUR, Homebrew, DEB/RPM and release download names use Spotifast.
-AUR and native Linux packages declare the old package replacements, and the
-Homebrew tap contains a `fastpotify` to `spotifast` cask rename mapping. Linux packages install `spotifast` as the executable and keep `fastpotify` as a compatibility alias. See [rename compatibility](docs/_reference/renaming.md)
-for the macOS bundle and updater requirements.
+Public AUR, Homebrew, DEB/RPM and release download names use Spotifast, and
+Linux packages install `spotifast` as the only executable.
 
-On main, after 0.8.0, Linux builds provide `spotifast.desktop` and
-`spotifast.svg`, matching the native window and MPRIS desktop-entry ID.
-Flatpak installs those assets under its full application ID and sets the
-window class to match. Version 0.9.1 migrates main-window state to the new profile.
-Historical release payloads keep their original launcher/icon names and
-window class: the package-only 0.8.0 rename did not rebuild those executables.
-AUR recipes and nFPM take the identity from the input payload; the git recipe
-requires the current Spotifast assets. Existing release files are not rewritten.
-`python3 packaging/test-launchers.py` exercises both input generations through
-the actual AUR and Flatpak installation commands, using Ruby to read YAML.
+Linux builds provide `spotifast.desktop` and `spotifast.svg`, matching the
+native window and MPRIS desktop-entry ID. Flatpak installs those assets under
+its full application ID and sets the window class to match.
+`python3 packaging/test-launchers.py` exercises the actual AUR and Flatpak
+installation commands with a release payload, using Ruby to read YAML.
 
 Linux packages also install the optional Omarchy template and hook under
 `share/spotifast/omarchy` in their installation prefix. The normal application
@@ -68,21 +61,17 @@ inspection only discovers linked dependencies. The ALSA library mapping also
 uses the Debian/Ubuntu `libasound2t64` name for this baseline.
 
 Packaging CI builds both architectures using a pinned published release
-(`v0.9.0`) for pushes and PRs, or the requested version for manual and release
+(`v0.11.2`) for pushes and PRs, or the requested version for manual and release
 runs. It then installs and removes each package in clean Ubuntu 24.04, Debian
 13, Fedora 41 and current Fedora containers on native amd64 and arm64 runners.
-Each case first installs the original Fastpotify 0.8.0 package, replaces it
-with Spotifast, and verifies that the old package is gone and a settings
-fixture survives installation and removal. The checks run both `spotifast --version` and `fastpotify --version`, load the GUI libraries with `dlopen`,
-and verify the desktop entry and icon. They cover installation and library
+Each case verifies that a settings fixture survives installation and removal,
+runs `spotifast --version`, loads the GUI libraries with `dlopen`, and
+verifies the desktop entry and icon. They cover installation and library
 resolution, not a running desktop or Spotify playback. On release runs these
 checks follow artifact attachment; a failure marks the workflow as failed.
 The generated Homebrew cask is also installed, launched with `--version`,
 signature-checked, and uninstalled on a native macOS runner. Wait for this
 check before publishing the staged cask to the tap.
-The install script defaults to the new `spotifast` desktop ID; its fourth
-argument is explicitly `fastpotify` only when checking the historical 0.8.0
-fixture. Both cases reject a second launcher and check removal of both names.
 
 To repeat a check locally on the matching architecture, with Docker and a C
 compiler available:
@@ -164,18 +153,6 @@ native-packages build \
 Secret configuration applies to future builds. Existing published DMGs retain
 their original signatures; this setup does not replace release assets.
 
-`packaging/release-names.py DIST TAG` prepares the public `spotifast-` names
-and checksums. Through 0.9.1 it also creates byte-identical compatibility
-downloads; later versions reject old-named downloads. The 0.9.1 portable
-archives contain both directory layouts for older updaters. Later archives
-contain only the Spotifast layout and executable. The macOS bundle retains
-the old executable and bundle ID for 0.9.1 only; that release's updater accepts
-the new bundle identity used afterward. Run `python3 packaging/test-release-names.py`
+`packaging/release-names.py DIST TAG` checks the release's `spotifast-`
+downloads and writes their checksums. Run `python3 packaging/test-release-names.py`
 when changing this step. Published historical downloads are never rewritten.
-
-Native Linux package builds accept archives from 0.9.0 onward, which contain
-the Spotifast executable. The directory-name wildcard accommodates the old
-0.9.0 layout and the new layout. The 0.9.1 compatibility directory contains
-only its executable, so it cannot duplicate packaged desktop files or licenses.
-AUR and Flatpak also accept older fixtures; `packaging/test-launchers.py`
-tests their installation commands.

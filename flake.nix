@@ -172,8 +172,6 @@
               # The GUI dlopens its Wayland, X11 and GL libraries at run time.
               postFixup =
                 pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
-                  wrapProgram $out/bin/fastpotify \
-                    --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
                   wrapProgram $out/bin/spotifast \
                     --prefix LD_LIBRARY_PATH : ${pkgs.lib.makeLibraryPath runtimeLibs}
                 ''
@@ -197,10 +195,6 @@
                   mkdir -p "$app/MacOS" "$app/Resources"
                   executable=Spotifast
                   identifier=rocks.spotifast.Spotifast
-                  if [ "${version}" = "0.9.1" ]; then
-                    executable=fastpotify
-                    identifier=me.paolino.fastpotify
-                  fi
                   cp "$out/bin/spotifast" "$app/MacOS/$executable"
                   icnsify packaging/macos/icon-1024.png -o "$app/Resources/spotifast.icns"
                   substitute packaging/macos/Info.plist "$app/Info.plist" \
@@ -222,10 +216,8 @@
         {
           default = spotifast;
           inherit spotifast;
-          fastpotify = spotifast;
         }
         // pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin {
-          fastpotify-app = spotifast;
           spotifast-app = spotifast;
         }
       );

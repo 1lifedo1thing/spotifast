@@ -30,7 +30,6 @@
 #define AppName "Spotifast"
 #define AppExeName "spotifast.exe"
 #define AppIdentity "Spotifast"
-#define LegacyBinary ExtractFileDir(Binary) + "\fastpotify.exe"
 
 [Setup]
 ; Never change: this is how Windows tells an update from a new program.
@@ -73,17 +72,6 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Files]
 Source: "{#Binary}"; DestDir: "{app}"; Flags: ignoreversion
-#if Version != "0.9.1"
-; Updaters up to 0.10.2 relaunch the executable they were started from, so
-; an update begun as fastpotify.exe needs that file to come back (#582). The
-; app deletes the copy once it starts as spotifast.exe with no update running,
-; and later updaters relaunch spotifast.exe themselves.
-Source: "{#Binary}"; DestDir: "{app}"; DestName: "fastpotify.exe"; Flags: ignoreversion
-#endif
-#if Version == "0.9.1"
-Source: "{#LegacyBinary}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "fastpotify-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
-#endif
 Source: "..\..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "spotifast-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
@@ -92,18 +80,7 @@ Source: "spotifast-installer.txt"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
-[InstallDelete]
-Type: files; Name: "{autoprograms}\Fastpotify.lnk"
-Type: files; Name: "{autodesktop}\Fastpotify.lnk"
-#if Version != "0.9.1"
-Type: files; Name: "{app}\fastpotify-installer.txt"
-#endif
-
 [Registry]
-; Retire only the old application's registrations, not the shared Spotify scheme.
-Root: HKCU; Subkey: "Software\Classes\Fastpotify.spotify"; Flags: deletekey
-Root: HKCU; Subkey: "Software\Fastpotify\Capabilities"; Flags: deletekey
-Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueName: "Fastpotify"; Flags: deletevalue
 ; Spotify links (spotify:track:…) open in Spotifast. Registered for this
 ; user only, like the program itself. The official client registers the same
 ; scheme when it is installed; whichever was set up last has the links, and

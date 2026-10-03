@@ -6,7 +6,7 @@ permalink: /
 hero:
   name: Spotifast
   text: Spotify, native and fast
-  tagline: Formerly Fastpotify. A lightweight Spotify app for Linux, macOS, and Windows. Listen on your computer, browse your music, and control your other devices.
+  tagline: A lightweight Spotify app for Linux, macOS, and Windows. Listen on your computer, browse your music, and control your other devices.
   actions:
     - theme: brand
       text: Download

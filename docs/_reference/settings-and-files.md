@@ -6,15 +6,7 @@ nav_order: 0
 
 ## Where things live
 
-Starting with 0.9.1, Spotifast moves the previous profile to the paths below
-on its first normal launch. Settings, skins, presets, history, caches and window
-positions carry over. An existing destination profile is never overwritten or
-merged. Saved sign-ins migrate within the protected credential store, with the
-replacement read back before the old entry is deleted. An unlocked store is
-required. See [the rename guide](/renaming/) for older installations.
-
-The old default Connect device name becomes `Spotifast`; custom names stay as
-chosen. Linux media controls now use `playerctl --player=spotifast`.
+Linux media controls use `playerctl --player=spotifast`.
 
 Spotifast follows each platform's conventions. On Linux:
 
@@ -198,13 +190,9 @@ automatic requests and shows a Retry button in the reserved row space.
 Since 0.8.0, Flatpak also preserves the fallback
 state directory used when `XDG_STATE_HOME` is unset. Session state, history,
 logs, and credential revocation markers survive a full quit and relaunch under
-`~/.var/app/rocks.spotifast.Spotifast/.local/state/spotifast/` in newly named
-Flatpak builds. Older bundles use `~/.var/app/rocks.fastpotify.Fastpotify/`
-as their application data root. Configuration
+`~/.var/app/rocks.spotifast.Spotifast/.local/state/spotifast/`. Configuration
 and caches remain under the app's `config/` and `cache/` directories. State
 already lost on quitting an older release cannot be recovered.
-See [switching Flatpak installations](/renaming/#flatpak) to retain existing
-settings and history when installing the new application ID.
 
 On macOS, settings, state, and the logs are in
 `~/Library/Application Support/me.paolino.spotifast` and the caches in

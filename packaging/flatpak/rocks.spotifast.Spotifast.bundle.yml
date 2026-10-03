@@ -17,16 +17,13 @@ finish-args:
   - --talk-name=org.freedesktop.secrets
   - --talk-name=org.kde.StatusNotifierWatcher
   - --own-name=org.mpris.MediaPlayer2.spotifast
-  # Historical release binaries still advertise this name.
-  - --own-name=org.mpris.MediaPlayer2.fastpotify
   - --own-name=rocks.fastpotify.Instance
   - --persist=.local/state
 modules:
   - name: spotifast
     buildsystem: simple
     build-commands:
-      - binary=spotifast; test -f $binary || binary=fastpotify; install -Dm755 $binary /app/bin/spotifast
-      - ln -s spotifast /app/bin/fastpotify
+      - install -Dm755 spotifast /app/bin/spotifast
       - install -Dm644 packaging/applications/*.desktop /app/share/applications/rocks.spotifast.Spotifast.desktop
       - sed -i 's/^Icon=.*$/Icon=rocks.spotifast.Spotifast/;s/^StartupWMClass=spotifast$/StartupWMClass=rocks.spotifast.Spotifast/' /app/share/applications/rocks.spotifast.Spotifast.desktop
       - install -Dm644 packaging/icons/*.svg /app/share/icons/hicolor/scalable/apps/rocks.spotifast.Spotifast.svg
