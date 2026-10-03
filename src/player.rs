@@ -663,6 +663,20 @@ fn command_interrupts_audio(state: &LocalState, command: &PlayerCommand) -> bool
         )
 }
 
+/// The librespot backend a saved setting names, when this build has it.
+///
+/// Spotifast's own output has always been saved as "rodio". librespot's
+/// rodio backend is no longer built in, so that name, an empty setting and
+/// any backend this build lacks all play through Spotifast's own output.
+fn librespot_backend(name: Option<&str>) -> Option<audio_backend::SinkBuilder> {
+    let name = name.filter(|name| *name != crate::sink::NAME)?;
+    let builder = audio_backend::find(Some(name.to_string()));
+    if builder.is_none() {
+        log::warn!("audio backend {name:?} is unavailable; using the default");
+    }
+    builder
+}
+
 /// Builds the audio sink and chooses where volume is applied.
 ///
 /// The default sink opens the device on playback and reports errors instead
@@ -693,28 +707,18 @@ fn sink_builder(
         };
         notify(EngineEvent::State(snapshot));
     });
-    if let Some(name) = config
-        .backend
-        .as_deref()
-        .filter(|name| *name != crate::sink::NAME)
-    {
-        match audio_backend::find(Some(name.to_string())) {
-            Some(builder) => {
-                // Apply volume after the tap so visualizers are independent of
-                // volume, including at zero.
-                let applied = mixer.get_soft_volume();
-                let normalisation = Arc::clone(&normalisation);
-                return (
-                    Box::new(move || {
-                        let sink = builder(device, AudioFormat::S16);
-                        Box::new(Tapped::new(sink, tap, applied, true, eq, normalisation))
-                            as Box<dyn Sink>
-                    }),
-                    Box::new(NoOpVolume),
-                );
-            }
-            None => log::warn!("audio backend {name:?} is unavailable; using the default"),
-        }
+    if let Some(builder) = librespot_backend(config.backend.as_deref()) {
+        // Apply volume after the tap so visualizers are independent of
+        // volume, including at zero.
+        let applied = mixer.get_soft_volume();
+        let normalisation = Arc::clone(&normalisation);
+        return (
+            Box::new(move || {
+                let sink = builder(device, AudioFormat::S16);
+                Box::new(Tapped::new(sink, tap, applied, true, eq, normalisation)) as Box<dyn Sink>
+            }),
+            Box::new(NoOpVolume),
+        );
     }
     let volume = mixer.get_soft_volume();
     // The output applies volume to queued audio. The wrapper reads the same
@@ -1274,6 +1278,23 @@ mod tests {
 
     use super::*;
     use librespot_core::SpotifyUri;
+
+    /// Settings saved before librespot's rodio backend left the build name
+    /// "rodio", which has always meant Spotifast's own output; that and any
+    /// backend this build lacks still play, through that output.
+    #[test]
+    fn an_old_rodio_setting_plays_through_spotifasts_own_output() {
+        assert!(librespot_backend(Some("rodio")).is_none());
+        assert!(librespot_backend(None).is_none());
+        assert!(librespot_backend(Some("no-such-backend")).is_none());
+        assert!(
+            audio_backend::find(Some("rodio".into())).is_none(),
+            "librespot's rodio backend is not built in"
+        );
+        if cfg!(target_os = "linux") {
+            assert!(librespot_backend(Some("pulseaudio")).is_some());
+        }
+    }
 
     fn uri() -> SpotifyUri {
         SpotifyUri::from_uri("spotify:track:14XWXWv5FoCbFzLksawpEe").unwrap()

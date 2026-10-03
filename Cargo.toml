@@ -66,6 +66,12 @@ fastframe-shell = { git = "https://github.com/crmne/fastframe", tag = "v0.2.3" }
 fastframe-macos = { git = "https://github.com/crmne/fastframe", tag = "v0.2.3" }
 # Self-update from GitHub releases, on the reqwest client below.
 fastframe-update = { git = "https://github.com/crmne/fastframe", tag = "v0.2.3", features = ["reqwest"] }
+# The audio device stream: it pauses, so a paused player costs no CPU (#636),
+# follows the default output and reopens after a failure. Pinned to the
+# commit that adds it until the next fastframe tag, then it moves to that tag
+# with the crates above. Its cpal 0.18 cannot share a build with the cpal 0.16
+# of librespot's rodio backend (both link ALSA), so that backend is left out.
+fastframe-audio = { git = "https://github.com/crmne/fastframe", rev = "174a4bd" }
 # Reading installed fonts for MilkDrop's overlays, the Winamp playlist's
 # pixel text, and the playlist face. skrifa is the parser epaint already
 # rasterizes with, and the version has to track epaint's or the binary
@@ -105,7 +111,7 @@ raw-window-handle = "0.6"
 # same stack as the rest of the client. SOCKS5 still covers the Web API but
 # not the engine: librespot only speaks HTTP CONNECT.
 librespot-core = { version = "0.8", default-features = false, features = ["rustls-tls-native-roots"] }
-librespot-playback = { version = "0.8", default-features = false, features = ["rodio-backend", "rustls-tls-native-roots"] }
+librespot-playback = { version = "0.8", default-features = false, features = ["rustls-tls-native-roots"] }
 librespot-connect = { version = "0.8", default-features = false }
 librespot-metadata = { version = "0.8", default-features = false }
 librespot-protocol = { version = "0.8", default-features = false }
@@ -113,10 +119,9 @@ librespot-protocol = { version = "0.8", default-features = false }
 protobuf = "3"
 # Local playback's audio sink is this crate's own (src/sink.rs): librespot's
 # rodio backend unwraps the device open on the player thread, and a release
-# build aborts on panic. Same rodio and cpal versions librespot-playback uses,
-# so nothing new is compiled.
-rodio = { version = "0.21", default-features = false, features = ["playback"] }
-cpal = "0.16"
+# build aborts on panic, so it is left out. rodio supplies the mixer and the
+# queue only; fastframe-audio below owns the device stream.
+rodio = { version = "0.21", default-features = false }
 # `socks` is SOCKS5 proxy support for the Web API, artwork, lyrics, and
 # update checks. HTTP proxies work without it. `system-proxy` reads the OS
 # proxy on macOS and Windows when the mode is System; Linux uses environment
@@ -172,7 +177,7 @@ windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_Globali
 [target.'cfg(target_os = "linux")'.dependencies]
 # Reuses the zbus/Tokio stack already used for desktop integration.
 zbus-secret-service-keyring-store = { version = "1.0.1", features = ["rt-tokio-crypto-rust"] }
-librespot-playback = { version = "0.8", default-features = false, features = ["rodio-backend", "pulseaudio-backend", "rustls-tls-native-roots"] }
+librespot-playback = { version = "0.8", default-features = false, features = ["pulseaudio-backend", "rustls-tls-native-roots"] }
 mpris-server = { version = "0.10", features = ["tokio"] }
 # The bus mpris-server already speaks, named directly so its interface macro
 # resolves: the running instance answers `Open` on its own name for the
