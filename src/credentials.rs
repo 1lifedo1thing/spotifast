@@ -20,7 +20,6 @@ use sha2::{Digest, Sha256};
 use crate::{auth::StoredToken, paths::AppDirs};
 
 const SERVICE: &str = "rocks.spotifast.Spotifast";
-const LEGACY_SERVICE: &str = "rocks.fastpotify.Fastpotify";
 const TIMEOUT: Duration = Duration::from_secs(20);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -176,22 +175,10 @@ trait ProtectedStore: Send {
 #[derive(Default)]
 struct NativeStore {
     store: Option<Arc<keyring_core::api::CredentialStore>>,
-    legacy_profile: bool,
 }
 
 impl NativeStore {
     fn entry(&mut self, key: &str) -> Result<keyring_core::Entry, Error> {
-        self.entry_in(
-            if self.legacy_profile {
-                LEGACY_SERVICE
-            } else {
-                SERVICE
-            },
-            key,
-        )
-    }
-
-    fn entry_in(&mut self, service: &str, key: &str) -> Result<keyring_core::Entry, Error> {
         if self.store.is_none() {
             #[cfg(target_os = "linux")]
             let store = zbus_secret_service_keyring_store::Store::new();
@@ -204,7 +191,7 @@ impl NativeStore {
         self.store
             .as_ref()
             .ok_or(Error::Unavailable)?
-            .build(service, key, None)
+            .build(SERVICE, key, None)
             .map_err(native_error)
     }
 }
@@ -213,22 +200,7 @@ impl ProtectedStore for NativeStore {
     fn read(&mut self, key: &str) -> Result<Option<Vec<u8>>, Error> {
         match self.entry(key)?.get_secret() {
             Ok(secret) => Ok(Some(secret)),
-            Err(keyring_core::Error::NoEntry) => {
-                let legacy = self.entry_in(LEGACY_SERVICE, key)?;
-                let secret = match legacy.get_secret() {
-                    Ok(secret) => secret,
-                    Err(keyring_core::Error::NoEntry) => return Ok(None),
-                    Err(error) => return Err(native_error(error)),
-                };
-                let current = self.entry(key)?;
-                current.set_secret(&secret).map_err(native_error)?;
-                if current.get_secret().map_err(native_error)? != secret {
-                    return Err(Error::Unavailable);
-                }
-                // Delete only after reading the replacement back successfully.
-                legacy.delete_credential().map_err(native_error)?;
-                Ok(Some(secret))
-            }
+            Err(keyring_core::Error::NoEntry) => Ok(None),
             Err(error) => Err(native_error(error)),
         }
     }
@@ -236,13 +208,10 @@ impl ProtectedStore for NativeStore {
         self.entry(key)?.set_secret(secret).map_err(native_error)
     }
     fn delete(&mut self, key: &str) -> Result<(), Error> {
-        for service in [SERVICE, LEGACY_SERVICE] {
-            match self.entry_in(service, key)?.delete_credential() {
-                Ok(()) | Err(keyring_core::Error::NoEntry) => (),
-                Err(error) => return Err(native_error(error)),
-            }
+        match self.entry(key)?.delete_credential() {
+            Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),
+            Err(error) => Err(native_error(error)),
         }
-        Ok(())
     }
 }
 
@@ -283,11 +252,7 @@ pub struct Loaded {
 
 impl Store {
     pub fn new(dirs: AppDirs) -> Self {
-        let backend = NativeStore {
-            legacy_profile: dirs.is_legacy_profile(),
-            ..Default::default()
-        };
-        Self::with_backend(dirs, Box::new(backend))
+        Self::with_backend(dirs, Box::new(NativeStore::default()))
     }
 
     #[cfg(test)]
@@ -776,7 +741,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn renamed_profile_keeps_grants_and_revocation_markers() {
+    async fn a_recorded_credential_profile_keeps_grants_and_revocation_markers() {
         let fixture = Fixture::new();
         let grant = web(crate::auth::DEFAULT_WEB_CLIENT_ID);
         fixture
@@ -792,7 +757,14 @@ mod tests {
             state: parent.join("new-state"),
             cache: parent.join("new-cache"),
         };
-        renamed.migrate_from(&fixture.dirs).unwrap();
+        // Profiles moved by the rename record the account identity of their
+        // original state folder; grants saved under it must stay reachable.
+        std::fs::rename(&fixture.dirs.state, &renamed.state).unwrap();
+        std::fs::write(
+            renamed.state.join("credential-profile"),
+            &fixture.store.inner.profile,
+        )
+        .unwrap();
         let store = Store::with_backend(renamed, Box::new(Backend(fixture.fake.clone())));
         assert_eq!(store.inner.profile, fixture.store.inner.profile);
         assert!(store.lease(Slot::Shared).load().await.unwrap().grant == Some(grant));
@@ -950,34 +922,14 @@ mod tests {
         let key = f.store.lease(Slot::Shared).key();
         tokio::task::spawn_blocking(move || {
             let mut native = NativeStore::default();
-            let legacy = native.entry_in(LEGACY_SERVICE, &key).unwrap();
-            legacy.set_secret(b"dummy-rename-probe").unwrap();
-            let mut trial = NativeStore {
-                legacy_profile: true,
-                ..Default::default()
-            };
-            assert_eq!(
-                trial.read(&key).unwrap().as_deref(),
-                Some(b"dummy-rename-probe".as_slice())
-            );
-            assert_eq!(legacy.get_secret().unwrap(), b"dummy-rename-probe");
-            assert!(matches!(
-                native.entry(&key).unwrap().get_secret(),
-                Err(keyring_core::Error::NoEntry)
-            ));
+            assert_eq!(native.read(&key).unwrap(), None);
+            native.write(&key, b"dummy-probe").unwrap();
             assert_eq!(
                 native.read(&key).unwrap().as_deref(),
-                Some(b"dummy-rename-probe".as_slice())
-            );
-            assert!(matches!(
-                legacy.get_secret(),
-                Err(keyring_core::Error::NoEntry)
-            ));
-            assert_eq!(
-                native.entry(&key).unwrap().get_secret().unwrap(),
-                b"dummy-rename-probe"
+                Some(b"dummy-probe".as_slice())
             );
             native.delete(&key).unwrap();
+            assert_eq!(native.read(&key).unwrap(), None);
         })
         .await
         .unwrap();

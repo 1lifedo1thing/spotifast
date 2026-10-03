@@ -13,16 +13,10 @@ pub use fastframe_update::{
 use fastframe_update::{MacConfig, ReqwestTransport, UpdateConfig};
 
 pub const CONFIG: UpdateConfig = UpdateConfig {
-    // Fastpotify, the name before the rename: its marker files, `fastpotify
-    // <version>` answers, and its Windows setup program's location.
-    legacy_names: &["fastpotify"],
-    legacy_windows_installs: &["Programs/Fastpotify/fastpotify.exe"],
     macos: MacConfig {
-        bundle_ids: &["rocks.spotifast.Spotifast", "me.paolino.fastpotify"],
-        // 0.9.1 kept "fastpotify" for older clients' validation; later
-        // releases may rename it to "Spotifast" (#538).
-        executable_names: &["fastpotify", "Spotifast"],
-        legacy_bundle_names: &["Fastpotify.app"],
+        bundle_ids: &["rocks.spotifast.Spotifast"],
+        executable_names: &["Spotifast"],
+        legacy_bundle_names: &[],
     },
     // Releases are verified against checksums.txt alone until they are
     // signed. Only a version shipped after the first signed release may

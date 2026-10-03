@@ -3166,7 +3166,7 @@ impl App {
 
     /// Adds the desktop's palettes (Omarchy on Linux) for a normal launch.
     pub fn enable_desktop_themes(&mut self) {
-        theme::enable_desktop_themes(&mut self.custom_themes, &self.dirs.config.join("themes"));
+        theme::enable_desktop_themes(&mut self.custom_themes);
     }
 
     fn poll_custom_themes(&mut self, ctx: &egui::Context) {

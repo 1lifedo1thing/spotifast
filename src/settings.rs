@@ -573,18 +573,6 @@ impl Settings {
                     Self::default()
                 });
                 settings.migrate_proxy(text);
-                if settings.device_name == "Fastpotify" {
-                    settings.device_name = "Spotifast".into();
-                }
-                for key in settings
-                    .pinned_contexts
-                    .iter_mut()
-                    .chain(settings.sidebar_order.iter_mut())
-                {
-                    if key == "fastpotify:liked-songs" {
-                        *key = LIKED_SONGS_KEY.into();
-                    }
-                }
                 settings.proxy_password_legacy = !settings.proxy_password.is_empty();
                 settings
             }
@@ -596,9 +584,7 @@ impl Settings {
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        let text = match self
-            .encode_for_profile(path == crate::paths::AppDirs::legacy().settings_file())
-        {
+        let text = match serde_json::to_string_pretty(self) {
             Ok(text) => text,
             Err(error) => {
                 log::warn!("unable to encode settings: {error}");
@@ -611,25 +597,6 @@ impl Settings {
         if let Err(error) = written {
             log::warn!("unable to save settings to {}: {error}", path.display());
         }
-    }
-
-    fn encode_for_profile(&self, legacy: bool) -> serde_json::Result<String> {
-        if !legacy {
-            return serde_json::to_string_pretty(self);
-        }
-        // A trial launch can still roll back to a client that only recognizes
-        // the previous local key. Keep its on-disk spelling until migration.
-        let mut saved = self.clone();
-        for key in saved
-            .pinned_contexts
-            .iter_mut()
-            .chain(saved.sidebar_order.iter_mut())
-        {
-            if key == LIKED_SONGS_KEY {
-                *key = "fastpotify:liked-songs".into();
-            }
-        }
-        serde_json::to_string_pretty(&saved)
     }
 
     pub fn platform_backend(&self) -> Option<String> {
@@ -930,24 +897,6 @@ impl ManualProxy {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn trial_launch_writes_keys_the_previous_release_can_still_read() {
-        let settings = super::Settings {
-            pinned_contexts: vec![super::LIKED_SONGS_KEY.into(), "spotify:playlist:one".into()],
-            sidebar_order: vec![super::LIKED_SONGS_KEY.into()],
-            ..Default::default()
-        };
-        for (legacy, key) in [
-            (true, "fastpotify:liked-songs"),
-            (false, super::LIKED_SONGS_KEY),
-        ] {
-            let saved: super::Settings =
-                serde_json::from_str(&settings.encode_for_profile(legacy).unwrap()).unwrap();
-            assert_eq!(saved.pinned_contexts, [key, "spotify:playlist:one"]);
-            assert_eq!(saved.sidebar_order, [key]);
-        }
-        assert_eq!(settings.pinned_contexts[0], super::LIKED_SONGS_KEY);
-    }
     use super::Settings;
 
     #[test]

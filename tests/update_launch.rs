@@ -5,36 +5,31 @@
 use std::process::Command;
 
 /// An update relaunch passes `--update-receipt` (or `--update-error`)
-/// alongside the app's own arguments. Both commands must accept them, which
-/// they only do if the flags are intercepted before clap parses the rest;
+/// alongside the app's own arguments. The command must accept them, which
+/// it only does if the flags are intercepted before clap parses the rest;
 /// `--version` also answers `<command> <version>`, as old helpers check.
 #[test]
 fn update_flags_are_intercepted_before_the_arguments_are_parsed() {
-    for (program, name) in [
-        (env!("CARGO_BIN_EXE_spotifast"), "spotifast"),
-        (env!("CARGO_BIN_EXE_fastpotify"), "fastpotify"),
+    for flags in [
+        [
+            "--update-receipt",
+            "/missing/.spotifast-update-0000000000000000/handoff.json",
+        ],
+        [
+            "--update-error",
+            "The update could not start. The previous version has been restored.",
+        ],
     ] {
-        for flags in [
-            [
-                "--update-receipt",
-                "/missing/.spotifast-update-0000000000000000/handoff.json",
-            ],
-            [
-                "--update-error",
-                "The update could not start. The previous version has been restored.",
-            ],
-        ] {
-            let output = Command::new(program)
-                .args(flags)
-                .arg("--version")
-                .output()
-                .unwrap();
-            assert!(output.status.success(), "{name} {flags:?}: {output:?}");
-            assert_eq!(
-                String::from_utf8_lossy(&output.stdout).trim(),
-                format!("{name} {}", env!("CARGO_PKG_VERSION"))
-            );
-        }
+        let output = Command::new(env!("CARGO_BIN_EXE_spotifast"))
+            .args(flags)
+            .arg("--version")
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{flags:?}: {output:?}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout).trim(),
+            format!("spotifast {}", env!("CARGO_PKG_VERSION"))
+        );
     }
 }
 

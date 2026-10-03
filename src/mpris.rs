@@ -380,9 +380,10 @@ mod tests {
 
     #[test]
     fn desktop_entry_matches_the_installed_flatpak_id() {
-        for id in ["rocks.spotifast.Spotifast", "rocks.fastpotify.Fastpotify"] {
-            assert_eq!(desktop_entry_for(Some(id), true), id);
-        }
+        assert_eq!(
+            desktop_entry_for(Some("rocks.spotifast.Spotifast"), true),
+            "rocks.spotifast.Spotifast"
+        );
         assert_eq!(desktop_entry_for(None, false), "spotifast");
         assert_eq!(desktop_entry_for(None, true), "rocks.spotifast.Spotifast");
         assert_eq!(

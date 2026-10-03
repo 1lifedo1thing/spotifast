@@ -22,17 +22,17 @@ use crate::model::*;
 fn image(seed: u32) -> Vec<Image> {
     vec![
         Image {
-            url: format!("https://picsum.photos/seed/fastpotify{seed}/640/640"),
+            url: format!("https://picsum.photos/seed/spotifast{seed}/640/640"),
             width: Some(640),
             height: Some(640),
         },
         Image {
-            url: format!("https://picsum.photos/seed/fastpotify{seed}/300/300"),
+            url: format!("https://picsum.photos/seed/spotifast{seed}/300/300"),
             width: Some(300),
             height: Some(300),
         },
         Image {
-            url: format!("https://picsum.photos/seed/fastpotify{seed}/64/64"),
+            url: format!("https://picsum.photos/seed/spotifast{seed}/64/64"),
             width: Some(64),
             height: Some(64),
         },
@@ -2731,7 +2731,7 @@ mod tests {
             url: "https://example.invalid/release".into(),
         });
         let installation = Installation {
-            executable: std::path::PathBuf::from("/test/fastpotify"),
+            executable: std::path::PathBuf::from("/test/spotifast"),
             kind: Kind::Portable,
         };
         app.update_support = Some(Ok(installation.clone()));
@@ -8956,7 +8956,7 @@ mod tests {
                     Some("Update ready"),
                     DownloadState::Ready(Box::new(Prepared::sample(
                         Installation {
-                            executable: "/test/fastpotify".into(),
+                            executable: "/test/spotifast".into(),
                             kind: Kind::Portable,
                         },
                         "9.9.9",

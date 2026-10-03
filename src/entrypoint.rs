@@ -1,5 +1,3 @@
-// Shared by the Spotifast command and its Fastpotify compatibility command.
-
 use spotifast::{app, backend, paths, settings, single_instance, util};
 
 use clap::{CommandFactory, FromArgMatches, Parser};
@@ -356,28 +354,11 @@ pub(crate) fn run() -> eframe::Result<()> {
         std::process::exit(spotifast::milkdrop::child::run(args));
     }
 
-    // Follow the invoked command, including the Linux package's spotifast
-    // symlink. Old updaters execute a file named fastpotify and require its
-    // original --version output; both commands otherwise start the same app.
-    let name = match launch
-        .arguments
-        .first()
-        .and_then(|arg| std::path::Path::new(arg).file_stem())
-        .and_then(|arg| arg.to_str())
-    {
-        Some(name) if name.eq_ignore_ascii_case("fastpotify") => "fastpotify",
-        _ => "spotifast",
-    };
-    let cli = Cli::from_arg_matches(
-        &Cli::command()
-            .name(name)
-            .get_matches_from(&launch.arguments),
-    )
-    .unwrap_or_else(|error| error.exit());
+    let cli = Cli::from_arg_matches(&Cli::command().get_matches_from(&launch.arguments))
+        .unwrap_or_else(|error| error.exit());
     // Demo mode invents plays, settings, and a signed-in account. Without a
     // folder of its own it would write them into the real profile, where
-    // they would pass for the user's history and stop the next real launch
-    // from moving an older profile across.
+    // they would pass for the user's history.
     #[cfg(feature = "demo")]
     let cli = if (cli.demo || cli.demo_shot.is_some()) && cli.demo_data.is_none() {
         Cli {
@@ -431,22 +412,6 @@ pub(crate) fn run() -> eframe::Result<()> {
     } else {
         None
     };
-    #[cfg(feature = "demo")]
-    let migrate = guarded && cli.demo_data.is_none() && launch.receipt.is_none();
-    #[cfg(not(feature = "demo"))]
-    let migrate = guarded && launch.receipt.is_none();
-    if migrate {
-        paths::AppDirs::discover()
-            .migrate_legacy()
-            .map_err(|error| eframe::Error::AppCreation(Box::new(error)))?;
-        if let (Some(old), Some(new)) = (
-            eframe::storage_dir("fastpotify"),
-            eframe::storage_dir("spotifast"),
-        ) {
-            paths::migrate_directory(&old, &new)
-                .map_err(|error| eframe::Error::AppCreation(Box::new(error)))?;
-        }
-    }
     let default_filter = if cli.verbose {
         "info,librespot=info,spotifast=debug"
     } else {
@@ -454,7 +419,7 @@ pub(crate) fn run() -> eframe::Result<()> {
         // one line per script at startup, for reports of odd-looking text.
         "warn,spotifast=info,fastframe_fonts=info"
     };
-    let dirs = paths::AppDirs::for_launch(launch.receipt.is_some());
+    let dirs = paths::AppDirs::discover();
     #[cfg(feature = "demo")]
     let dirs = cli
         .demo_data
@@ -581,7 +546,6 @@ pub(crate) fn run() -> eframe::Result<()> {
     spotifast::window::set_fixed_size(demo_inner.is_some());
     #[cfg(feature = "demo")]
     let demo_storage = app.dirs.cache.join("demo-window.ron");
-    let window_profile = app.dirs.window_profile();
     fastframe_shell::Shell::new(app, &waker)
         .idle(fastframe_tray::idle)
         .run(|lease| {
@@ -605,7 +569,7 @@ pub(crate) fn run() -> eframe::Result<()> {
             };
             #[cfg(not(feature = "demo"))]
             let options = native_options(false, mini, None);
-            let options = profile_options(options, window_profile);
+            let options = profile_options(options);
             let persist_memory = options.persist_window;
             #[cfg(windows)]
             let thumbbar_enabled = desktop_surfaces && options.viewport.taskbar != Some(false);
@@ -853,9 +817,9 @@ fn native_options(
     }
 }
 
-fn profile_options(mut options: eframe::NativeOptions, profile: &str) -> eframe::NativeOptions {
+fn profile_options(mut options: eframe::NativeOptions) -> eframe::NativeOptions {
     if options.persist_window {
-        options.persistence_path = eframe::storage_dir(profile).map(|dir| dir.join("app.ron"));
+        options.persistence_path = eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"));
     }
     options
 }
@@ -877,20 +841,18 @@ mod native_window_tests {
     use super::*;
 
     #[test]
-    fn updater_trial_keeps_previous_geometry_without_touching_demo_storage() {
-        for profile in ["fastpotify", "spotifast"] {
-            let main = profile_options(native_options(false, None, None), profile);
-            assert_eq!(
-                main.persistence_path,
-                eframe::storage_dir(profile).map(|dir| dir.join("app.ron"))
-            );
-            let demo_path = std::path::PathBuf::from("temporary/demo.ron");
-            let demo = profile_options(
-                demo_native_options(native_options(false, None, None), demo_path.clone()),
-                profile,
-            );
-            assert_eq!(demo.persistence_path, Some(demo_path));
-        }
+    fn window_geometry_is_kept_without_touching_demo_storage() {
+        let main = profile_options(native_options(false, None, None));
+        assert_eq!(
+            main.persistence_path,
+            eframe::storage_dir("spotifast").map(|dir| dir.join("app.ron"))
+        );
+        let demo_path = std::path::PathBuf::from("temporary/demo.ron");
+        let demo = profile_options(demo_native_options(
+            native_options(false, None, None),
+            demo_path.clone(),
+        ));
+        assert_eq!(demo.persistence_path, Some(demo_path));
     }
 
     #[test]
@@ -1391,7 +1353,7 @@ mod tests {
     #[test]
     fn a_link_and_a_verb_are_told_apart() {
         // #given / #when / #then
-        let launch = Cli::try_parse_from(["fastpotify", "spotify:track:4uLU6hMCjMI75M1A2tKUQC"])
+        let launch = Cli::try_parse_from(["spotifast", "spotify:track:4uLU6hMCjMI75M1A2tKUQC"])
             .expect("a link parses");
         assert_eq!(
             launch.link.as_deref(),
@@ -1400,7 +1362,7 @@ mod tests {
         assert!(launch.control.is_none());
 
         let launch = Cli::try_parse_from([
-            "fastpotify",
+            "spotifast",
             "https://open.spotify.com/album/1DFixLWuPkv3KT3TnV35m3?si=x",
             "--verbose",
         ])
@@ -1408,11 +1370,11 @@ mod tests {
         assert!(launch.link.is_some());
         assert!(launch.verbose);
 
-        let verb = Cli::try_parse_from(["fastpotify", "next"]).expect("a verb parses");
+        let verb = Cli::try_parse_from(["spotifast", "next"]).expect("a verb parses");
         assert!(matches!(verb.control, Some(Control::Next)));
         assert!(verb.link.is_none());
 
-        let bare = Cli::try_parse_from(["fastpotify"]).expect("a plain launch parses");
+        let bare = Cli::try_parse_from(["spotifast"]).expect("a plain launch parses");
         assert!(bare.link.is_none() && bare.control.is_none());
     }
 }
