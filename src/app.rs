@@ -495,21 +495,9 @@ pub struct App {
     queue_start_pending: Option<Target>,
     pub playlist_busy: bool,
     pub quit_requested: bool,
-    /// The axis a scroll gesture settled on, and when it last moved.
-    scroll_lock: Option<(ScrollAxis, Instant)>,
-    /// Whether the current scroll gesture comes from a trackpad.
-    scroll_from_trackpad: bool,
-    /// Recent scroll positions, to read the gesture's speed when it ends.
-    scroll_history: egui::util::History<egui::Vec2>,
-    /// Where the gesture has scrolled to so far, for the history.
-    scroll_accum: egui::Vec2,
-    /// The speed still carrying the page after the fingers lifted.
-    glide: Option<egui::Vec2>,
-    /// Time of the last scroll event, used to detect the end of a gesture.
-    scroll_last_event: Option<Instant>,
-    /// The platform says when fingers touch and lift (Wayland does, X11
-    /// does not), so a pause with fingers resting is not taken for a lift.
-    scroll_lift_announced: bool,
+    /// Wheel step, Linux touchpad scale and glide, and the axis a gesture
+    /// holds, for the window on screen.
+    scrolling: fastframe_scroll::Scrolling,
     autoscroll: crate::autoscroll::Autoscroll,
     /// How each table is sorted, per page, for as long as the app runs.
     /// The rows picked out in a track table, and the page they belong to.
@@ -575,22 +563,6 @@ pub struct App {
     pub player_bar_analyser: crate::vis::WideAnalyser,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum ScrollAxis {
-    Horizontal,
-    Vertical,
-}
-
-/// A trackpad gesture that pauses this long has ended; the next movement
-/// picks its axis afresh.
-const SCROLL_GESTURE_GAP: Duration = Duration::from_millis(150);
-
-/// How far short Linux trackpad deltas land of what other players scroll.
-const TRACKPAD_SCALE: f32 = 1.8;
-
-/// The glide's exponential decay time, in seconds; the speed below which a
-/// lift starts no glide; and the speed at which a glide stops, points per
-/// second.
 /// How many plays the Home shelf asks for: it shows sixteen cards.
 const HOME_RECENTS: u32 = 50;
 /// How many saved podcasts Home reads new episodes from, most recently
@@ -599,13 +571,6 @@ const HOME_PODCAST_SHOWS: usize = 8;
 /// How many plays the Recents tab asks for at a time. Spotify's own
 /// endpoint limit is fifty. A shorter page marks the end.
 const RECENTS_PAGE: u32 = 50;
-
-const GLIDE_DECAY: f32 = 0.35;
-const GLIDE_START: f32 = 120.0;
-const GLIDE_STOP: f32 = 40.0;
-/// How long fingers may rest on the pad before lifting and still glide,
-/// in seconds: the span the release speed is measured over.
-const GLIDE_REST: f64 = 0.1;
 
 const TRAY_SHOW: &str = "show";
 const TRAY_PLAY_PAUSE: &str = "play-pause";
@@ -927,13 +892,7 @@ impl App {
             queue_start_pending: None,
             playlist_busy: false,
             quit_requested: false,
-            scroll_lock: None,
-            scroll_from_trackpad: false,
-            scroll_history: egui::util::History::new(2..16, 0.1),
-            scroll_accum: egui::Vec2::ZERO,
-            glide: None,
-            scroll_last_event: None,
-            scroll_lift_announced: false,
+            scrolling: fastframe_scroll::Scrolling::default(),
             autoscroll: crate::autoscroll::Autoscroll::default(),
             selection: None,
             table_sorts: session
@@ -1074,10 +1033,9 @@ impl App {
                 pos[0], pos[1],
             )));
         }
-        // egui's consensus wheel speed is 40 points per line, about a third
-        // of what every other player scrolls per notch; trackpads report
-        // pixels and are unaffected (#32).
-        ctx.options_mut(|options| options.input_options.line_scroll_speed = 120.0);
+        // A new window has its own context, so its scrolling starts afresh
+        // and sets the 120-point wheel step there too (#32).
+        self.scrolling = fastframe_scroll::Scrolling::default();
     }
 
     /// The window is gone but the process stays: audio, the tray, and the
@@ -9660,8 +9618,7 @@ impl App {
     /// Runs background work with or without a main window.
     pub fn background_frame(&mut self, ctx: &egui::Context) {
         if self.autoscroll.cancel_if_unfocused(ctx) {
-            self.glide = None;
-            self.scroll_lock = None;
+            self.scrolling = fastframe_scroll::Scrolling::default();
         }
         self.handle_control_commands();
         self.handle_events();
@@ -9775,11 +9732,10 @@ impl App {
         let autoscroll_on = crate::autoscroll::enabled(self.settings.middle_click_autoscroll);
         self.autoscroll.begin(ctx, autoscroll_on);
         if self.autoscroll.active() {
-            self.glide = None;
-            self.scroll_lock = None;
+            self.scrolling = fastframe_scroll::Scrolling::default();
             ctx.input_mut(|input| input.smooth_scroll_delta = egui::Vec2::ZERO);
         } else {
-            self.lock_scroll_axis(ctx);
+            self.scrolling.apply(ctx);
         }
         if self.lyrics_fullscreen_restoring.is_some()
             && self.lyrics_fullscreen_restoring == ctx.input(|input| input.viewport().fullscreen)
@@ -9814,8 +9770,7 @@ impl App {
             crate::autoscroll::enabled(self.settings.middle_click_autoscroll),
         );
         if autoscroll.scrolling {
-            self.glide = None;
-            self.scroll_lock = None;
+            self.scrolling = fastframe_scroll::Scrolling::default();
         }
         if autoscroll.stop_following_lyrics {
             self.lyrics_following = false;
@@ -9865,144 +9820,6 @@ impl App {
             Target::Local if self.local.is_active() => REMOTE_POLL_IDLE,
             _ => REMOTE_POLL_ACTIVE,
         }
-    }
-
-    /// Locks each scroll gesture to one axis.
-    ///
-    /// Trackpads report small cross-axis deltas. Choose from the first movement
-    /// and hold that axis until the gesture ends.
-    fn lock_scroll_axis(&mut self, ctx: &egui::Context) {
-        let options = ctx.options(|options| options.input_options);
-        let (raw, from_trackpad, ended, announced, forced_axis) = ctx.input(|input| {
-            let mut sum = egui::Vec2::ZERO;
-            let mut pointish = false;
-            let mut ended = false;
-            let mut announced = false;
-            let mut forced_axis = None;
-            for event in &input.events {
-                if let egui::Event::MouseWheel {
-                    unit,
-                    delta,
-                    phase,
-                    modifiers,
-                } = event
-                {
-                    // egui applies scroll modifiers before producing smooth
-                    // deltas. Lock and measure momentum in that same direction.
-                    let horizontal = modifiers.matches_any(options.horizontal_scroll_modifier);
-                    let vertical = modifiers.matches_any(options.vertical_scroll_modifier);
-                    forced_axis = match (horizontal, vertical) {
-                        (true, false) => Some(ScrollAxis::Horizontal),
-                        (false, true) => Some(ScrollAxis::Vertical),
-                        _ => None,
-                    };
-                    sum += match forced_axis {
-                        Some(ScrollAxis::Horizontal) => egui::vec2(delta.x + delta.y, 0.0),
-                        Some(ScrollAxis::Vertical) => egui::vec2(0.0, delta.x + delta.y),
-                        None => *delta,
-                    };
-                    pointish |= *unit == egui::MouseWheelUnit::Point;
-                    ended |= matches!(phase, egui::TouchPhase::End | egui::TouchPhase::Cancel);
-                    announced |= *phase != egui::TouchPhase::Move;
-                }
-            }
-            (sum, pointish, ended, announced, forced_axis)
-        });
-        self.scroll_lift_announced |= announced;
-        let now = Instant::now();
-        if raw != egui::Vec2::ZERO {
-            self.scroll_from_trackpad = from_trackpad;
-        }
-        // Linux touchpad point deltas need scaling. Wheel deltas are already
-        // scaled, and macOS point deltas need no adjustment.
-        let trackpad_here = cfg!(target_os = "linux") && self.scroll_from_trackpad;
-        if trackpad_here {
-            ctx.input_mut(|input| input.smooth_scroll_delta *= TRACKPAD_SCALE);
-        }
-        // Add decaying momentum to Linux touchpad scrolling. Track the final
-        // 100 ms of movement to estimate release velocity.
-        if trackpad_here && raw != egui::Vec2::ZERO {
-            self.glide = None;
-            self.scroll_accum += raw * TRACKPAD_SCALE;
-            self.scroll_history
-                .add(ctx.input(|input| input.time), self.scroll_accum);
-            self.scroll_last_event = Some(now);
-            // Wayland announces the lift; where nothing does, the quiet-gap
-            // check below needs a frame to run in.
-            ctx.request_repaint_after(Duration::from_millis(60));
-        } else if raw != egui::Vec2::ZERO || ctx.input(|input| input.pointer.any_down()) {
-            // Wheel input or a press stops touchpad momentum.
-            self.glide = None;
-            self.scroll_history.clear();
-            self.scroll_last_event = None;
-        }
-        // Where the platform never says when fingers lift, a quiet gap is
-        // taken for one. Where it does, fingers resting on the pad are not.
-        let quiet = !self.scroll_lift_announced
-            && self
-                .scroll_last_event
-                .is_some_and(|at| now.duration_since(at).as_secs_f32() > 0.15);
-        if ended || quiet {
-            // Only movement just before the lift carries on: fingers that
-            // stopped and rested first leave nothing to glide on.
-            let lift_time = ctx.input(|input| input.time);
-            let rested = ended
-                && self
-                    .scroll_history
-                    .iter()
-                    .last()
-                    .is_some_and(|(time, _)| lift_time - time > GLIDE_REST);
-            let mut velocity = if rested {
-                egui::Vec2::ZERO
-            } else {
-                self.scroll_history.velocity().unwrap_or(egui::Vec2::ZERO)
-            };
-            if let Some((axis, _)) = self.scroll_lock {
-                match axis {
-                    ScrollAxis::Horizontal => velocity.y = 0.0,
-                    ScrollAxis::Vertical => velocity.x = 0.0,
-                }
-            }
-            self.glide = (velocity.length() > GLIDE_START).then_some(velocity);
-            self.scroll_history.clear();
-            self.scroll_accum = egui::Vec2::ZERO;
-            self.scroll_last_event = None;
-        }
-        if let Some(velocity) = self.glide {
-            if raw == egui::Vec2::ZERO {
-                let dt = ctx.input(|input| input.stable_dt).clamp(0.001, 0.05);
-                ctx.input_mut(|input| input.smooth_scroll_delta += velocity * dt);
-                let slower = velocity * (-dt / GLIDE_DECAY).exp();
-                self.glide = (slower.length() > GLIDE_STOP).then_some(slower);
-            }
-            ctx.request_repaint();
-        }
-        let moved = raw != egui::Vec2::ZERO;
-        // Separate wheel notches may change direction immediately, including
-        // when Shift is pressed or released. Only trackpad gestures hold it.
-        let held = forced_axis.or_else(|| {
-            self.scroll_lock
-                .filter(|(_, at)| {
-                    now.duration_since(*at) < SCROLL_GESTURE_GAP && (!moved || from_trackpad)
-                })
-                .map(|(axis, _)| axis)
-        });
-        let axis = match held {
-            Some(axis) => axis,
-            None if moved && raw.x.abs() > raw.y.abs() * 1.2 => ScrollAxis::Horizontal,
-            None if moved => ScrollAxis::Vertical,
-            None => {
-                self.scroll_lock = None;
-                return;
-            }
-        };
-        if moved {
-            self.scroll_lock = Some((axis, now));
-        }
-        ctx.input_mut(|input| match axis {
-            ScrollAxis::Horizontal => input.smooth_scroll_delta.y = 0.0,
-            ScrollAxis::Vertical => input.smooth_scroll_delta.x = 0.0,
-        });
     }
 
     /// Persist state when a window closes (to the tray or for good).
@@ -10919,7 +10736,7 @@ mod tests {
                 });
             }
             let mut output = ctx.run_ui(input, |ui| {
-                app.lock_scroll_axis(ui.ctx());
+                app.scrolling.apply(ui.ctx());
                 let page = egui::ScrollArea::vertical().show(ui, |ui| {
                     crate::ui::widgets::shelf(
                         ui,
@@ -10941,46 +10758,6 @@ mod tests {
         }
         assert!(shelf_left < initial_left, "Shift+wheel must move the shelf");
         assert_eq!(page_offset, 0.0, "the enclosing page must stay put");
-    }
-
-    #[test]
-    fn wheel_notches_can_change_direction_without_waiting_for_a_gesture_gap() {
-        let mut app = headless_app();
-        let ctx = egui::Context::default();
-        for (frame, (modifiers, delta, horizontal)) in [
-            (egui::Modifiers::NONE, egui::vec2(0.0, -3.0), false),
-            (egui::Modifiers::SHIFT, egui::vec2(0.0, -3.0), true),
-            (egui::Modifiers::NONE, egui::vec2(0.0, -3.0), false),
-            (egui::Modifiers::NONE, egui::vec2(-3.0, 0.0), true),
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            let mut output = ctx.run_ui(
-                egui::RawInput {
-                    time: Some(frame as f64 / 60.0),
-                    events: vec![egui::Event::MouseWheel {
-                        unit: egui::MouseWheelUnit::Line,
-                        delta,
-                        phase: egui::TouchPhase::Move,
-                        modifiers,
-                    }],
-                    ..Default::default()
-                },
-                |ui| {
-                    app.lock_scroll_axis(ui.ctx());
-                    let delta = ui.input(|input| input.smooth_scroll_delta);
-                    if horizontal {
-                        assert!(delta.x < 0.0, "horizontal notch {frame}: {delta:?}");
-                        assert_eq!(delta.y, 0.0);
-                    } else {
-                        assert!(delta.y < 0.0, "vertical notch {frame}: {delta:?}");
-                        assert_eq!(delta.x, 0.0);
-                    }
-                },
-            );
-            output.textures_delta.clear();
-        }
     }
 
     /// A song started outside a playlist must turn off the playlist's
@@ -12195,82 +11972,6 @@ mod tests {
         );
         app.backend.shutdown();
         let _ = std::fs::remove_dir_all(app.dirs.config.parent().unwrap());
-    }
-
-    /// One frame of touchpad scrolling at `time`, with its wheel events.
-    #[cfg(target_os = "linux")]
-    fn touchpad_frame(
-        app: &mut App,
-        ctx: &egui::Context,
-        time: f64,
-        events: &[(egui::TouchPhase, f32)],
-    ) {
-        let mut raw_input = egui::RawInput {
-            time: Some(time),
-            ..Default::default()
-        };
-        for &(phase, delta) in events {
-            raw_input.events.push(egui::Event::MouseWheel {
-                unit: egui::MouseWheelUnit::Point,
-                delta: egui::vec2(0.0, delta),
-                phase,
-                modifiers: egui::Modifiers::default(),
-            });
-        }
-        let mut output = ctx.run_ui(raw_input, |_ui| app.lock_scroll_axis(ctx));
-        output.textures_delta.clear();
-    }
-
-    /// Scrolls for a few frames, as a finger moving quickly down the pad.
-    #[cfg(target_os = "linux")]
-    fn touchpad_swipe(app: &mut App, ctx: &egui::Context, phase: egui::TouchPhase) {
-        use egui::TouchPhase::Move;
-        touchpad_frame(app, ctx, 0.0, &[(phase, 20.0)]);
-        for frame in 1..6 {
-            touchpad_frame(app, ctx, f64::from(frame) * 0.016, &[(Move, 20.0)]);
-        }
-    }
-
-    /// Lifting the fingers mid-swipe carries the page on.
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn a_touchpad_flick_glides_after_the_lift() {
-        use egui::TouchPhase::{End, Start};
-        let mut app = headless_app();
-        let ctx = egui::Context::default();
-        touchpad_swipe(&mut app, &ctx, Start);
-        touchpad_frame(&mut app, &ctx, 0.1, &[(End, 0.0)]);
-        assert!(app.glide.is_some());
-    }
-
-    /// Fingers that stop and rest on the pad do not fling the page, while
-    /// they rest or when they later lift (#503).
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn resting_fingers_do_not_glide_where_the_lift_is_announced() {
-        use egui::TouchPhase::{End, Start};
-        let mut app = headless_app();
-        let ctx = egui::Context::default();
-        touchpad_swipe(&mut app, &ctx, Start);
-        std::thread::sleep(Duration::from_millis(200));
-        touchpad_frame(&mut app, &ctx, 0.3, &[]);
-        assert!(app.glide.is_none(), "resting is not a lift");
-        touchpad_frame(&mut app, &ctx, 1.0, &[(End, 0.0)]);
-        assert!(app.glide.is_none(), "a lift after resting has no speed");
-    }
-
-    /// X11 never says when fingers lift, so a quiet gap still ends the
-    /// gesture and glides as before.
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn a_quiet_gap_glides_where_the_lift_is_never_announced() {
-        use egui::TouchPhase::Move;
-        let mut app = headless_app();
-        let ctx = egui::Context::default();
-        touchpad_swipe(&mut app, &ctx, Move);
-        std::thread::sleep(Duration::from_millis(200));
-        touchpad_frame(&mut app, &ctx, 0.1, &[]);
-        assert!(app.glide.is_some());
     }
 
     #[test]
