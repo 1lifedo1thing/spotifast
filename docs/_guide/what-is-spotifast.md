@@ -1,4 +1,5 @@
 ---
+redirect_from: /what-is-fastpotify/
 title: What is Spotifast?
 description: What Spotifast offers, what you need to use it, and its current limits.
 nav_order: 0

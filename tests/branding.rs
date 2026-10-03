@@ -49,6 +49,9 @@ fn no_file_outside_the_control_protocol_carries_the_old_name() {
     let allowed = [
         root.join("src/single_instance.rs"),
         root.join("packaging/release-notes"),
+        // Old guide URLs still redirect, so links from elsewhere keep working.
+        root.join("docs/_guide/using-spotifast.md"),
+        root.join("docs/_guide/what-is-spotifast.md"),
         // The Flatpak sandbox grants the protocol's D-Bus name.
         root.join("packaging/flatpak/rocks.spotifast.Spotifast.yml"),
         root.join("packaging/flatpak/rocks.spotifast.Spotifast.bundle.yml"),

@@ -1,4 +1,5 @@
 ---
+redirect_from: /using-fastpotify/
 title: Everyday Use
 description: Play music, arrange playlists, find lyrics, and make Spotifast your own.
 nav_order: 3
