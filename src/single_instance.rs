@@ -129,14 +129,16 @@ pub const NOTHING_PLAYING: &str = "stopped";
 pub const NO_DEVICES: &str = "[]";
 
 /// Where the running instance's lock and channel live: the per-user
-/// runtime directory on Linux (the app's own inside Flatpak), and beside
-/// Spotifast's state on macOS and Windows.
+/// runtime directory on Linux (the app's own inside Flatpak), the user's
+/// private temporary directory on macOS, where a socket path under
+/// Application Support can outgrow the 104 bytes macOS allows with a long
+/// user name, and beside Spotifast's state on Windows.
 fn slot() -> fastframe_instance::Slot {
-    #[cfg(target_os = "linux")]
+    #[cfg(not(windows))]
     {
         fastframe_instance::Slot::new(NAME)
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(windows)]
     {
         fastframe_instance::Slot::at(
             crate::paths::AppDirs::discover().state.join("instance"),
@@ -210,6 +212,10 @@ fn claim(
             Outcome::Only(guard)
         }
         fastframe_instance::Claim::Running(_) => Outcome::Surfaced,
+        fastframe_instance::Claim::Declined => {
+            log::warn!("Spotifast is already running and declined this launch's request");
+            Outcome::Surfaced
+        }
         fastframe_instance::Claim::Unanswered => {
             log::warn!(
                 "Spotifast is already running but did not answer; not starting a second copy"

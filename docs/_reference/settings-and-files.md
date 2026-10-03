@@ -203,7 +203,8 @@ On macOS, settings, state, and the logs are in
 
 The running copy keeps its single-instance files in a private directory:
 `$XDG_RUNTIME_DIR/spotifast` on Linux (inside Flatpak, the app's own runtime
-directory), and an `instance` folder in the state directory on macOS and
+directory), a `spotifast` folder in your private temporary directory
+(`$TMPDIR`) on macOS, and an `instance` folder in the state directory on
 Windows. `instance.lock` marks the running copy; the system releases it when
 Spotifast quits or crashes. `instance.sock` (Linux and macOS) is the socket
 a second launch and the `spotifast` command reach it through, which only your
