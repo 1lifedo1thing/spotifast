@@ -39,22 +39,17 @@ fn the_command_reports_its_name_and_passes_the_update_version_check() {
 }
 
 /// The app's name before the rename is gone from everything but the past
-/// release notes and the control protocol, which keeps it until that
-/// protocol moves to its new name. Spelled in two halves so this file does
-/// not match itself.
+/// release notes and the two old guide addresses that still redirect.
+/// Spelled in two halves so this file does not match itself.
 #[test]
-fn no_file_outside_the_control_protocol_carries_the_old_name() {
+fn no_file_carries_the_old_name() {
     let old = ["fast", "potify"].concat();
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let allowed = [
-        root.join("src/single_instance.rs"),
         root.join("packaging/release-notes"),
         // Old guide URLs still redirect, so links from elsewhere keep working.
         root.join("docs/_guide/using-spotifast.md"),
         root.join("docs/_guide/what-is-spotifast.md"),
-        // The Flatpak sandbox grants the protocol's D-Bus name.
-        root.join("packaging/flatpak/rocks.spotifast.Spotifast.yml"),
-        root.join("packaging/flatpak/rocks.spotifast.Spotifast.bundle.yml"),
     ];
     let skipped = [
         "target",
