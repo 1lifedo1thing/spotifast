@@ -203,6 +203,97 @@ This is the first part of screen-reader support. Windows testing with NVDA
 remains tracked in [#262](https://github.com/crmne/spotifast/issues/262).
 Winamp skins do not yet have equivalent accessibility coverage.
 
+## Keyboard shortcuts
+
+| Shortcut | What it does |
+| --- | --- |
+| `Space` | Play or pause |
+| `Ctrl+←` / `Ctrl+→` | Previous or next |
+| `Shift+←` / `Shift+→` | Seek 10 seconds |
+| `Ctrl+↑` / `Ctrl+↓` | Volume |
+| `M` | Mute |
+| `B` | Like or unlike the playing song |
+| `S` / `R` | Shuffle / cycle repeat |
+| `Q` | Queue panel |
+| `Ctrl+F` or `/` | Search |
+| `Ctrl+B` | Show or hide the sidebar |
+| `Alt+←` / `Alt+→` | Back or forward |
+| `Ctrl+H` / `Ctrl+L` | Home / Liked Songs |
+| `Ctrl+Shift+A` / `Ctrl+Shift+B` | Playing artist / album |
+| `Ctrl+A` | Select every song in a playlist, album or Liked Songs |
+| `Ctrl+C` / `Ctrl+V` | Copy the selected songs' links / add copied song links to your playlist |
+| `Ctrl+X` | Copy the selected songs' links and remove the songs from your playlist |
+| `Ctrl+M` | Winamp mini player |
+| `Ctrl+Shift+K` | MilkDrop |
+| `Ctrl+,` | Settings |
+| `Ctrl+/` or `?` | All shortcuts |
+| `Ctrl+Q` | Quit |
+
+On macOS, `Cmd` replaces `Ctrl`. A focused text field keeps its usual keys
+for its own text.
+
+## Controlling it from the command line
+
+The `spotifast` command controls the copy already running, on every
+platform. Each verb prints nothing on success:
+
+```
+spotifast play-pause          spotifast volume 40
+spotifast play                spotifast volume-up [percent]
+spotifast pause               spotifast volume-down [percent]
+spotifast next                spotifast mute
+spotifast previous            spotifast shuffle [on|off]
+spotifast seek 15             spotifast repeat [off|context|track]
+spotifast seek -- -15         spotifast like
+spotifast seek-to 90          spotifast play-uri spotify:playlist:37i9…
+spotifast show                spotifast transfer <device-id>
+spotifast now-playing [--raw] spotifast devices [--raw]
+```
+
+`shuffle` and `repeat` toggle when used without an argument. Pass a state to
+set it directly. `like` adds or removes the playing track from your library.
+
+`now-playing` prints one readable line. `--raw` prints tab-separated fields:
+state, title, artists, album, position_ms, duration_ms, volume, shuffle,
+repeat, art_url, saved, and device. `saved` is `yes`, `no`, or `unknown` while
+loading. New fields are appended to keep older scripts working.
+
+`devices` lists Spotify Connect devices with the ID first and the active one
+marked with `*`. `--raw` prints JSON. The command refreshes the device list,
+so the first call after startup may be empty. Run it again if needed.
+
+A verb exits non-zero when Spotifast is not running.
+
+`spotifast <link>` opens a Spotify link, a `spotify:` URI or an
+`open.spotify.com` address, in the running app, or starts the app on it.
+This is what the desktop runs when a link is clicked. On Linux, Spotifast is
+also an MPRIS player, so `playerctl --player=spotifast play-pause` and media
+keys work too.
+
+Launchers such as Raycast or Alfred, and the Stream Deck plugin, can use
+these commands. They reach Spotifast through a private channel only your user
+can open (on Windows, a loopback port that answers only requests carrying a
+random token). Use the command rather than the channel itself.
+
+## Updates
+
+The Windows installer, Mac app, and portable Windows and Linux downloads
+update from inside Spotifast. Click the green update button to download a
+release, then choose when to restart and install it. Settings can enable
+automatic background downloads; restarting always waits for your click.
+Closing the update window keeps a download running. You can also check for a
+new release from Settings, or on macOS from the application menu.
+
+Spotifast checks each download before installing it. An interrupted or damaged
+download leaves the running app alone, and a failed startup restores the
+previous installation. Updates keep your settings and sign-ins. On macOS,
+move Spotifast to Applications before updating it.
+
+Package-managed installations update through their package manager,
+including Homebrew, Flatpak, apt, dnf, pacman, Nix, and Cargo. Other
+installations, the AppImage among them, use the [Download page](/download/).
+Portable archives identify themselves with `spotifast-portable.txt`.
+
 ## Library order
 
 Since 0.8.0, the menu below the Library filters selects an order

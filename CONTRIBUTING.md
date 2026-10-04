@@ -139,7 +139,8 @@ RUSTDOCFLAGS='-D warnings' cargo doc --locked --all-features --no-deps
 (cd docs && bundle exec jekyll build)
 ```
 
-Linux needs the development packages listed in the README; `nix develop`
+Linux needs the development packages listed under
+[Build from source](https://spotifast.rocks/getting-started/#build-from-source); `nix develop`
 provides the complete development environment. The command compatibility test
 also needs `dbus-run-session`, to use a private bus instead of the desktop's.
 MilkDrop builds libprojectM

@@ -79,6 +79,8 @@ Spotifast uses your computer's fonts to display titles in different languages.
 macOS and Windows already include fonts for most languages. On Linux,
 install `noto-fonts` and `noto-fonts-cjk` (Arch) or `fonts-noto` and
 `fonts-noto-cjk` (Debian or Ubuntu) if letters are missing.
+For colour emoji, install the desktop's colour emoji font
+(`noto-fonts-emoji` on Arch, `fonts-noto-color-emoji` on Debian or Ubuntu).
 
 Titles can mix languages, including those written from right to left.
 Long titles are shortened with dots to fit the available space.
@@ -122,6 +124,38 @@ See [proxy options and limits](/how-it-connects/#proxy).
 
 ## Build from source
 
-If you want to build Spotifast yourself, follow the
-[build instructions in the README](https://github.com/crmne/spotifast#install).
-They list the Rust version and other tools needed for each system.
+Build the single binary with Rust 1.98 or newer:
+
+```bash
+cargo install --git https://github.com/crmne/spotifast --locked
+```
+
+MilkDrop uses libprojectM, which is built from source. This needs CMake, a C++
+compiler, and libclang. To build without MilkDrop or those tools, add
+`--no-default-features`. On Linux, you also need the development packages for
+ALSA, PulseAudio or PipeWire, and the windowing libraries. On Arch:
+
+```bash
+sudo pacman -S --needed alsa-lib libpulse libxkbcommon wayland cmake clang
+```
+
+On Debian or Ubuntu:
+
+```bash
+sudo apt install libasound2-dev libpulse-dev libxkbcommon-dev libwayland-dev \
+  cmake clang libclang-dev
+```
+
+On Fedora:
+
+```bash
+sudo dnf install alsa-lib-devel pulseaudio-libs-devel libxkbcommon-devel \
+  wayland-devel cmake clang clang-devel
+```
+
+On Windows, libprojectM is built with Visual Studio 2022, CMake, LLVM, and
+vcpkg (`vcpkg install glew:x64-windows-static`, with
+`VCPKG_INSTALLATION_ROOT` pointing at the vcpkg folder).
+
+With [Nix](https://nixos.org), `nix develop` in a checkout provides all of it,
+along with the exact toolchain `rust-toolchain.toml` pins.

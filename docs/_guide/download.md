@@ -124,7 +124,7 @@ from the bundled `packaging/` directory if you want it in your launcher and
 handling `spotify:` links.
 The binary needs ALSA, PulseAudio or PipeWire, and Wayland or X11.
 
-Or build from source: see the [build instructions](https://github.com/crmne/spotifast#install).
+Or build from source: see the [build instructions](/getting-started/#build-from-source).
 
 ## Nix
 

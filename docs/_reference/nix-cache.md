@@ -20,7 +20,7 @@ not a public Nix substituter.
    the Nix CI job publishes the result and its dependency closure. A configured
    cache without its upload token fails publication instead of claiming success.
 5. Verify the uploaded package can be substituted on a separate Nix machine.
-   Then replace the pending notice here and in the README with the actual
+   Then replace the pending notice here, and add to the Download page, the actual
    cache URL, public signing key, and user setup instructions from Cachix.
 
 Pull requests and manual workflow runs only read the public cache. The upload
