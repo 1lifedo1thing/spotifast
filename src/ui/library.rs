@@ -45,21 +45,26 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, page: Page) {
                 let id = album.id.clone();
                 let uri = album.uri.clone();
                 let subtitle = join_names(album.artists.iter().map(|artist| artist.name.as_str()));
+                let playing_here = app.playing_context_uri().as_deref() == Some(uri.as_str())
+                    && app.believed_playing();
                 let card = widgets::card(
                     ui,
                     app,
                     pick_image(&album.images, 640),
                     &album.name,
                     &subtitle,
-                    false,
-                    true,
+                    widgets::CardCover::square(playing_here),
                 );
                 if card.play {
-                    app.actions.push(Action::PlayContext {
-                        uri,
-                        offset_uri: None,
-                        offset_index: None,
-                    });
+                    if playing_here {
+                        app.actions.push(Action::TogglePlay);
+                    } else {
+                        app.actions.push(Action::PlayContext {
+                            uri,
+                            offset_uri: None,
+                            offset_index: None,
+                        });
+                    }
                 }
                 if card.clicked {
                     app.actions.push(Action::Open(Page::Album(id)));
@@ -97,21 +102,26 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, page: Page) {
                 let artist = app.library.artists.items[index].clone();
                 let id = artist.id.clone();
                 let uri = artist.uri.clone();
+                let playing_here = app.playing_context_uri().as_deref() == Some(uri.as_str())
+                    && app.believed_playing();
                 let card = widgets::card(
                     ui,
                     app,
                     pick_image(&artist.images, 640),
                     &artist.name,
                     &artist_label,
-                    true,
-                    true,
+                    widgets::CardCover::portrait(playing_here),
                 );
                 if card.play {
-                    app.actions.push(Action::PlayContext {
-                        uri,
-                        offset_uri: None,
-                        offset_index: None,
-                    });
+                    if playing_here {
+                        app.actions.push(Action::TogglePlay);
+                    } else {
+                        app.actions.push(Action::PlayContext {
+                            uri,
+                            offset_uri: None,
+                            offset_index: None,
+                        });
+                    }
                 }
                 if card.clicked {
                     app.actions.push(Action::Open(Page::Artist(id)));
@@ -155,8 +165,7 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, page: Page) {
                     pick_image(&show.images, 640),
                     &show.name,
                     &show.publisher,
-                    false,
-                    false,
+                    widgets::CardCover::default(),
                 );
                 if card.clicked {
                     app.actions.push(Action::Open(Page::Show(id)));

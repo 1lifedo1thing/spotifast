@@ -3424,7 +3424,7 @@ mod tests {
 
     #[test]
     fn accessible_tab_reaches_cards_beyond_the_visible_grid() {
-        use crate::ui::widgets::{card, card_row_height, virtual_wrapped_cards};
+        use crate::ui::widgets::{CardCover, card, card_row_height, virtual_wrapped_cards};
         use egui::accesskit::{Action as AccessibleAction, Role};
         let (ctx, mut app) = accessible_app("card-grid");
         let mut reached_last = false;
@@ -3451,8 +3451,7 @@ mod tests {
                                 None,
                                 &format!("Album {index}"),
                                 "Artist",
-                                false,
-                                false,
+                                CardCover::default(),
                             );
                         });
                     });
@@ -6766,6 +6765,33 @@ mod tests {
             played_contexts(&app),
             ["spotify:playlist:pl2"],
             "the second click must not play again"
+        );
+        app.backend.shutdown();
+    }
+
+    /// The cover's control follows its row: the playlist that is playing
+    /// offers pause on its cover, not a restart of the context.
+    #[test]
+    fn clicking_the_cover_of_the_playing_playlist_pauses() {
+        let (ctx, mut app) = accessible_app("sidebar-cover-pause");
+        let view = crate::ui::sidebar::show;
+        view_frame(&ctx, &mut app, vec![], view);
+        let painted = view_frame(&ctx, &mut app, vec![], view);
+        // The demo's remote snapshot plays the "Late night focus" playlist.
+        let name = sidebar_text(&painted, "Late night focus");
+        let cover = egui::pos2(name.left() - 34.0, name.center().y + 9.0);
+        app.actions.clear();
+        let [click, _] = double_click(cover);
+        view_frame(&ctx, &mut app, click, view);
+        assert!(
+            app.actions
+                .iter()
+                .any(|action| matches!(action, Action::TogglePlay)),
+            "the playing playlist's cover pauses"
+        );
+        assert!(
+            played_contexts(&app).is_empty(),
+            "the playing playlist must not be started over"
         );
         app.backend.shutdown();
     }

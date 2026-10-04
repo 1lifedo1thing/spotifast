@@ -1225,7 +1225,7 @@ impl App {
             .remote
             .as_ref()
             .and_then(|remote| remote.state.context.as_ref())
-            .map(|context| context.uri.clone());
+            .map(|context| crate::link::canonical_context_uri(&context.uri));
         if let Some(assumed) = &self.assumed_context {
             let held = assumed.at.elapsed() < ASSUMED_CONTEXT_HOLD;
             // A filtered or sorted context plays as plain tracks and will not
@@ -1234,11 +1234,9 @@ impl App {
             // tells the story from before, whatever device it describes.
             let contradicted = self.remote.as_ref().is_some_and(|snapshot| {
                 snapshot.received_at > assumed.at
-                    && snapshot
-                        .state
-                        .context
-                        .as_ref()
-                        .is_some_and(|context| context.uri != assumed.uri)
+                    && snapshot.state.context.as_ref().is_some_and(|context| {
+                        crate::link::canonical_context_uri(&context.uri) != assumed.uri
+                    })
             });
             if held || (!contradicted && self.believed_playing()) {
                 return (!assumed.uri.is_empty()).then(|| assumed.uri.clone());

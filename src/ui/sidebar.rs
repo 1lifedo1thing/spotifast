@@ -75,10 +75,13 @@ fn cover_play_button(
     index: usize,
     cover_rect: Rect,
     parent: &egui::Response,
+    playing: bool,
 ) -> bool {
     let Some(uri) = entry_play_uri(app, entry) else {
         return false;
     };
+    // The row's playing state drives the control: the context that is
+    // playing offers pause on its cover, every other row plays.
     let play = ui.interact(
         cover_rect,
         ui.id().with(("library-cover-play", index)),
@@ -96,34 +99,42 @@ fn cover_play_button(
             CornerRadius::same(radius),
             egui::Color32::from_black_alpha(120),
         );
+        let icon = if playing {
+            Icon::PauseFilled
+        } else {
+            Icon::PlayFilled
+        };
         let icon_size = (cover_rect.width() * 0.24).clamp(18.0, 26.0);
-        Icon::PlayFilled
-            .image(
-                if play_hover {
-                    app.palette.accent
-                } else {
-                    egui::Color32::WHITE
-                },
-                icon_size,
-            )
-            .paint_at(
-                ui,
-                Rect::from_center_size(
-                    cover_rect.center() + theme::play_glyph_offset(Icon::PlayFilled, icon_size),
-                    Vec2::splat(icon_size),
-                ),
-            );
+        icon.image(
+            if play_hover {
+                app.palette.accent
+            } else {
+                egui::Color32::WHITE
+            },
+            icon_size,
+        )
+        .paint_at(
+            ui,
+            Rect::from_center_size(
+                cover_rect.center() + theme::play_glyph_offset(icon, icon_size),
+                Vec2::splat(icon_size),
+            ),
+        );
     }
     if !play.clicked() {
         return false;
     }
     // The first click of a double click plays; the second must not play again.
     if !play.double_clicked() {
-        app.actions.push(Action::PlayContext {
-            uri,
-            offset_uri: None,
-            offset_index: None,
-        });
+        if playing {
+            app.actions.push(Action::TogglePlay);
+        } else {
+            app.actions.push(Action::PlayContext {
+                uri,
+                offset_uri: None,
+                offset_index: None,
+            });
+        }
     }
     true
 }
@@ -1448,8 +1459,9 @@ fn contents(app: &mut App, ui: &mut egui::Ui, grid_art: Option<Rect>) {
                             palette.secondary,
                         );
                         // Hovering the art offers to play right from here.
-                        cover_took_click =
-                            cover_play_button(app, ui, entry, index, cover_rect, &response);
+                        cover_took_click = cover_play_button(
+                            app, ui, entry, index, cover_rect, &response, playing,
+                        );
                     }
                     if playing {
                         let icon_rect = Rect::from_center_size(

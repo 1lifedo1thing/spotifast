@@ -129,6 +129,9 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                         palette.text,
                     );
                     if hovered && let Some(uri) = uri {
+                        let playing_here = app.playing_context_uri().as_deref()
+                            == Some(uri.as_str())
+                            && app.believed_playing();
                         let button = Rect::from_center_size(
                             pos2(rect.right() - 28.0, rect.center().y),
                             Vec2::splat(40.0),
@@ -139,20 +142,28 @@ fn quick_access(app: &mut App, ui: &mut egui::Ui) {
                             ));
                         if theme::circle_button(
                             &mut child,
-                            Icon::PlayFilled,
+                            if playing_here {
+                                Icon::PauseFilled
+                            } else {
+                                Icon::PlayFilled
+                            },
                             40.0,
                             palette.accent,
                             palette.accent_hover,
                             palette.on_accent,
-                            &gettext(app.locale, "Play"),
+                            &gettext(app.locale, if playing_here { "Pause" } else { "Play" }),
                         )
                         .clicked()
                         {
-                            app.actions.push(Action::PlayContext {
-                                uri: uri.clone(),
-                                offset_uri: None,
-                                offset_index: None,
-                            });
+                            if playing_here {
+                                app.actions.push(Action::TogglePlay);
+                            } else {
+                                app.actions.push(Action::PlayContext {
+                                    uri: uri.clone(),
+                                    offset_uri: None,
+                                    offset_index: None,
+                                });
+                            }
                         }
                     }
                 }
@@ -226,21 +237,27 @@ fn made_for_you(app: &mut App, ui: &mut egui::Ui) {
                         // Translators: {owner} is the name of the playlist's owner.
                         gettext(app.locale, "By {owner}").replace("{owner}", playlist.owner_name())
                     });
+                let playing_here = app.playing_context_uri().as_deref()
+                    == Some(playlist.uri.as_str())
+                    && app.believed_playing();
                 let card = widgets::card(
                     ui,
                     app,
                     pick_image(&playlist.images, 640),
                     &playlist.name,
                     &subtitle,
-                    false,
-                    true,
+                    widgets::CardCover::square(playing_here),
                 );
                 if card.play {
-                    app.actions.push(Action::PlayContext {
-                        uri: playlist.uri.clone(),
-                        offset_uri: None,
-                        offset_index: None,
-                    });
+                    if playing_here {
+                        app.actions.push(Action::TogglePlay);
+                    } else {
+                        app.actions.push(Action::PlayContext {
+                            uri: playlist.uri.clone(),
+                            offset_uri: None,
+                            offset_index: None,
+                        });
+                    }
                 }
                 if card.clicked {
                     app.actions
@@ -320,8 +337,7 @@ fn recently_played(app: &mut App, ui: &mut egui::Ui) {
                     track.image(640),
                     &track.name,
                     &track.artist_names(),
-                    false,
-                    true,
+                    widgets::CardCover::square(false),
                 );
                 if card.play {
                     app.actions.push(Action::PlayUris {
@@ -471,8 +487,7 @@ fn podcasts(app: &mut App, ui: &mut egui::Ui) {
                     pick_image(&episode.images, 640).or_else(|| pick_image(&show.images, 640)),
                     &episode.name,
                     &subtitle,
-                    false,
-                    true,
+                    widgets::CardCover::square(false),
                 );
                 if card.play {
                     app.actions.push(Action::PlayEpisode {
@@ -537,21 +552,27 @@ fn top_artists(app: &mut App, ui: &mut egui::Ui) {
         &gettext(app.locale, "Your top artists"),
         |ui| {
             for artist in &artists {
+                let playing_here = app.playing_context_uri().as_deref()
+                    == Some(artist.uri.as_str())
+                    && app.believed_playing();
                 let card = widgets::card(
                     ui,
                     app,
                     pick_image(&artist.images, 640),
                     &artist.name,
                     &gettext(app.locale, "Artist"),
-                    true,
-                    true,
+                    widgets::CardCover::portrait(playing_here),
                 );
                 if card.play {
-                    app.actions.push(Action::PlayContext {
-                        uri: artist.uri.clone(),
-                        offset_uri: None,
-                        offset_index: None,
-                    });
+                    if playing_here {
+                        app.actions.push(Action::TogglePlay);
+                    } else {
+                        app.actions.push(Action::PlayContext {
+                            uri: artist.uri.clone(),
+                            offset_uri: None,
+                            offset_index: None,
+                        });
+                    }
                 }
                 if card.clicked {
                     app.actions

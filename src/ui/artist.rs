@@ -129,21 +129,27 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, id: &str) {
                                 album.year().unwrap_or(""),
                                 app.album_kind_label(album)
                             );
+                            let playing_here = app.playing_context_uri().as_deref()
+                                == Some(album.uri.as_str())
+                                && app.believed_playing();
                             let card = widgets::card(
                                 ui,
                                 app,
                                 pick_image(&album.images, 640),
                                 &album.name,
                                 subtitle.trim_start_matches(" • "),
-                                false,
-                                true,
+                                widgets::CardCover::square(playing_here),
                             );
                             if card.play {
-                                app.actions.push(Action::PlayContext {
-                                    uri: album.uri.clone(),
-                                    offset_uri: None,
-                                    offset_index: None,
-                                });
+                                if playing_here {
+                                    app.actions.push(Action::TogglePlay);
+                                } else {
+                                    app.actions.push(Action::PlayContext {
+                                        uri: album.uri.clone(),
+                                        offset_uri: None,
+                                        offset_index: None,
+                                    });
+                                }
                             }
                             if card.clicked {
                                 app.actions
@@ -198,21 +204,27 @@ pub fn show(app: &mut App, ui: &mut egui::Ui, id: &str) {
                 let title = gettext(locale, "Fans also like");
                 widgets::shelf(ui, &palette, "related", &title, |ui| {
                     for artist in related {
+                        let playing_here = app.playing_context_uri().as_deref()
+                            == Some(artist.uri.as_str())
+                            && app.believed_playing();
                         let card = widgets::card(
                             ui,
                             app,
                             pick_image(&artist.images, 640),
                             &artist.name,
                             &artist_label,
-                            true,
-                            true,
+                            widgets::CardCover::portrait(playing_here),
                         );
                         if card.play {
-                            app.actions.push(Action::PlayContext {
-                                uri: artist.uri.clone(),
-                                offset_uri: None,
-                                offset_index: None,
-                            });
+                            if playing_here {
+                                app.actions.push(Action::TogglePlay);
+                            } else {
+                                app.actions.push(Action::PlayContext {
+                                    uri: artist.uri.clone(),
+                                    offset_uri: None,
+                                    offset_index: None,
+                                });
+                            }
                         }
                         if card.clicked {
                             app.actions

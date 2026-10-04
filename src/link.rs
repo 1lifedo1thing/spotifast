@@ -9,6 +9,23 @@
 /// Resource pages. Search links carry text instead of a resource id.
 const KINDS: [&str; 6] = ["track", "album", "artist", "playlist", "show", "episode"];
 
+/// The canonical form of a context URI Spotify reports as playing.
+/// Personalized playlists report their context with the owner embedded,
+/// `spotify:user:NAME:playlist:ID`, while the app's models hold the plain
+/// `spotify:playlist:ID`; strict comparisons need the one shape.
+pub fn canonical_context_uri(uri: &str) -> String {
+    if let Some(rest) = uri.strip_prefix("spotify:user:") {
+        const PLAYLIST: &str = ":playlist:";
+        if let Some(at) = rest.find(PLAYLIST) {
+            let id = &rest[at + PLAYLIST.len()..];
+            if !id.is_empty() && !id.contains(':') {
+                return format!("spotify:playlist:{id}");
+            }
+        }
+    }
+    uri.to_owned()
+}
+
 /// The canonical `spotify:<kind>:<id>` behind `text`, or `None` when it is
 /// not a link to a track, album, artist, playlist, show, episode, or search.
 ///

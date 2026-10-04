@@ -2254,6 +2254,36 @@ pub struct CardResponse {
     pub play: bool,
 }
 
+/// The cover a [`card`] shows: its shape and what its play control does.
+#[derive(Clone, Copy, Default)]
+pub struct CardCover {
+    /// A circular cover, as an artist's portrait.
+    pub circular: bool,
+    /// Hover offers a play control; cards that only navigate leave it off.
+    pub playable: bool,
+    /// The card's context is the one playing, so the control pauses.
+    pub playing: bool,
+}
+
+impl CardCover {
+    /// A square cover that plays on hover.
+    pub fn square(playing: bool) -> Self {
+        Self {
+            playable: true,
+            playing,
+            ..Self::default()
+        }
+    }
+
+    /// A circular artist portrait that plays on hover.
+    pub fn portrait(playing: bool) -> Self {
+        Self {
+            circular: true,
+            ..Self::square(playing)
+        }
+    }
+}
+
 /// Fixed height of a [`card`] row for virtualised grids.
 pub fn card_row_height(ui: &mut Ui) -> f32 {
     const PAD: f32 = 12.0;
@@ -2279,9 +2309,13 @@ pub fn card(
     image: Option<&str>,
     title: &str,
     subtitle: &str,
-    round: bool,
-    playable: bool,
+    cover: CardCover,
 ) -> CardResponse {
+    let CardCover {
+        circular,
+        playable,
+        playing,
+    } = cover;
     let palette = app.palette;
     const PAD: f32 = 12.0;
     const TITLE_GAP: f32 = 10.0;
@@ -2327,7 +2361,7 @@ pub fn card(
             );
         }
         let image_rect = Rect::from_min_size(rect.min + vec2(PAD, PAD), Vec2::splat(image_size));
-        let radius = if round { image_size / 2.0 } else { 6.0 };
+        let radius = if circular { image_size / 2.0 } else { 6.0 };
         paint_shadow(ui, &palette, image_rect, radius);
         paint_cover(
             ui,
@@ -2335,7 +2369,7 @@ pub fn card(
             image,
             image_rect,
             radius,
-            if round { Icon::User } else { Icon::Music },
+            if circular { Icon::User } else { Icon::Music },
             Some(app.backend.art()),
         );
         let text_left = rect.left() + PAD;
@@ -2382,12 +2416,16 @@ pub fn card(
             );
             play = theme::circle_button(
                 &mut child,
-                Icon::PlayFilled,
+                if playing {
+                    Icon::PauseFilled
+                } else {
+                    Icon::PlayFilled
+                },
                 44.0,
                 palette.accent,
                 palette.accent_hover,
                 palette.on_accent,
-                &gettext(app.locale, "Play"),
+                &gettext(app.locale, if playing { "Pause" } else { "Play" }),
             )
             .clicked();
         }

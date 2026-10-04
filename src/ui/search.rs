@@ -462,21 +462,26 @@ fn songs(app: &mut App, ui: &mut egui::Ui, results: &SearchResults, limit: usize
 }
 
 fn artist_card(app: &mut App, ui: &mut egui::Ui, artist: &Artist) {
+    let playing_here =
+        app.playing_context_uri().as_deref() == Some(artist.uri.as_str()) && app.believed_playing();
     let card = widgets::card(
         ui,
         app,
         pick_image(&artist.images, 640),
         &artist.name,
         &gettext(app.locale, "Artist"),
-        true,
-        true,
+        widgets::CardCover::portrait(playing_here),
     );
     if card.play {
-        app.actions.push(Action::PlayContext {
-            uri: artist.uri.clone(),
-            offset_uri: None,
-            offset_index: None,
-        });
+        if playing_here {
+            app.actions.push(Action::TogglePlay);
+        } else {
+            app.actions.push(Action::PlayContext {
+                uri: artist.uri.clone(),
+                offset_uri: None,
+                offset_index: None,
+            });
+        }
     }
     if card.clicked {
         app.actions
@@ -524,21 +529,26 @@ fn album_card(app: &mut App, ui: &mut egui::Ui, album: &crate::api::models::Albu
         album.year().unwrap_or(""),
         crate::api::models::join_names(album.artists.iter().map(|a| a.name.as_str()))
     );
+    let playing_here =
+        app.playing_context_uri().as_deref() == Some(album.uri.as_str()) && app.believed_playing();
     let card = widgets::card(
         ui,
         app,
         pick_image(&album.images, 640),
         &album.name,
         subtitle.trim_start_matches(" • "),
-        false,
-        true,
+        widgets::CardCover::square(playing_here),
     );
     if card.play {
-        app.actions.push(Action::PlayContext {
-            uri: album.uri.clone(),
-            offset_uri: None,
-            offset_index: None,
-        });
+        if playing_here {
+            app.actions.push(Action::TogglePlay);
+        } else {
+            app.actions.push(Action::PlayContext {
+                uri: album.uri.clone(),
+                offset_uri: None,
+                offset_index: None,
+            });
+        }
     }
     if card.clicked {
         app.actions
@@ -581,6 +591,8 @@ fn albums_grid(app: &mut App, ui: &mut egui::Ui, results: &SearchResults) {
 }
 
 fn playlist_card(app: &mut App, ui: &mut egui::Ui, playlist: &crate::api::models::Playlist) {
+    let playing_here = app.playing_context_uri().as_deref() == Some(playlist.uri.as_str())
+        && app.believed_playing();
     let card = widgets::card(
         ui,
         app,
@@ -588,15 +600,18 @@ fn playlist_card(app: &mut App, ui: &mut egui::Ui, playlist: &crate::api::models
         &playlist.name,
         // Translators: {owner} is the name of the playlist's owner.
         &gettext(app.locale, "By {owner}").replace("{owner}", playlist.owner_name()),
-        false,
-        true,
+        widgets::CardCover::square(playing_here),
     );
     if card.play {
-        app.actions.push(Action::PlayContext {
-            uri: playlist.uri.clone(),
-            offset_uri: None,
-            offset_index: None,
-        });
+        if playing_here {
+            app.actions.push(Action::TogglePlay);
+        } else {
+            app.actions.push(Action::PlayContext {
+                uri: playlist.uri.clone(),
+                offset_uri: None,
+                offset_index: None,
+            });
+        }
     }
     if card.clicked {
         app.actions
@@ -656,8 +671,7 @@ fn show_card(app: &mut App, ui: &mut egui::Ui, show: &crate::api::models::Show) 
         pick_image(&show.images, 640),
         &show.name,
         &show.publisher,
-        false,
-        false,
+        widgets::CardCover::default(),
     );
     if card.clicked {
         app.actions.push(Action::Open(Page::Show(show.id.clone())));
