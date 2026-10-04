@@ -1,4 +1,4 @@
-; The Windows installer, built with Inno Setup 6.3 or later from a release
+﻿; The Windows installer, built with Inno Setup 6.3 or later from a release
 ; binary (the release workflow does this on every tag):
 ;
 ;   iscc /DVersion=0.9.1 /DArch=x86_64 /DBinary=...\spotifast.exe ^
@@ -38,6 +38,7 @@ AppName={#AppName}
 AppVersion={#Version}
 AppVerName={#AppName} {#Version}
 AppPublisher=Carmine Paolino
+AppCopyright=© 2026 Carmine Paolino
 AppPublisherURL=https://spotifast.rocks
 AppSupportURL=https://github.com/crmne/spotifast/issues
 AppUpdatesURL=https://spotifast.rocks/download/
