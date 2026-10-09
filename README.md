@@ -24,6 +24,8 @@ Spotifast is a Spotify client written in Rust with
 [librespot](https://github.com/librespot-org/librespot), typically uses
 100–250 MB of RAM, starts in well under a second, and has no browser engine.
 
+The interface includes complete Spanish, Turkish, and Ukrainian translations.
+
 **Playback needs Spotify Premium.** Free accounts can browse and search, but
 cannot play music through Spotifast.
 
