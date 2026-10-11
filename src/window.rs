@@ -368,26 +368,25 @@ static LINUX_CONTROLS: std::sync::OnceLock<LinuxWindowControls> = std::sync::Onc
 pub(crate) static LINUX_ICONS: std::sync::OnceLock<[Option<Vec<u8>>; 4]> =
     std::sync::OnceLock::new();
 
-/// Read desktop preferences at startup, before any UI is drawn. No GTK
-/// dependency or desktop subprocess is needed while rendering a frame.
+/// Read desktop preferences at startup, before any UI is drawn. They come
+/// through the desktop portal, which answers inside a Flatpak too, and each
+/// read gives up after about a second. No GTK dependency or desktop
+/// subprocess is needed while rendering a frame.
 #[cfg(target_os = "linux")]
 pub fn init_linux_window_controls() {
     LINUX_CONTROLS.get_or_init(|| {
-        let gnome = std::env::var("XDG_CURRENT_DESKTOP")
-            .unwrap_or_default()
-            .split(':')
-            .any(|desktop| desktop.eq_ignore_ascii_case("gnome"));
-        if gnome {
-            let layout = desktop_setting("org.gnome.desktop.wm.preferences", "button-layout")
-                .and_then(|layout| parse_linux_controls(&layout))
-                .filter(|controls| !controls.left.is_empty() || !controls.right.is_empty());
+        if fastframe_desktop::is_gnome() {
+            let layout =
+                fastframe_desktop::setting("org.gnome.desktop.wm.preferences", "button-layout")
+                    .and_then(|layout| parse_linux_controls(&layout))
+                    .filter(|controls| !controls.left.is_empty() || !controls.right.is_empty());
             layout.unwrap_or_else(|| parse_linux_controls(":close").unwrap())
         } else {
             parse_linux_controls(":minimize,maximize,close").unwrap()
         }
     });
     LINUX_ICONS.get_or_init(|| {
-        let theme = desktop_setting("org.gnome.desktop.interface", "icon-theme")
+        let theme = fastframe_desktop::setting("org.gnome.desktop.interface", "icon-theme")
             .map(|theme| theme.trim().trim_matches('\'').to_owned())
             .filter(|theme| !theme.contains('/') && theme != "." && theme != "..")
             .unwrap_or_else(|| "Adwaita".into());
@@ -436,62 +435,6 @@ pub fn init_linux_window_controls() {
             None
         })
     });
-}
-
-/// Optional desktop settings must not hold up startup. Bound both elapsed time
-/// and output, then kill and reap the child on timeout or failure.
-#[cfg(target_os = "linux")]
-fn desktop_setting(schema: &str, key: &str) -> Option<String> {
-    use std::io::Read;
-    use std::os::fd::OwnedFd;
-    use std::os::unix::net::UnixStream;
-    use std::process::{Command, Stdio};
-    use std::time::{Duration, Instant};
-
-    // A nonblocking socket lets us enforce the deadline even if a child keeps
-    // stdout open or fills it before exiting.
-    let (mut reader, writer) = UnixStream::pair().ok()?;
-    reader.set_nonblocking(true).ok()?;
-    let mut child = Command::new("gsettings")
-        .args(["get", schema, key])
-        .stdin(Stdio::null())
-        .stdout(Stdio::from(OwnedFd::from(writer)))
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
-    let result = (|| {
-        let deadline = Instant::now() + Duration::from_millis(500);
-        let mut output = Vec::new();
-        loop {
-            let eof = match reader
-                .by_ref()
-                .take((4097 - output.len()) as u64)
-                .read_to_end(&mut output)
-            {
-                Ok(_) => true,
-                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => false,
-                Err(_) => return None,
-            };
-            if output.len() > 4096 {
-                return None;
-            }
-            if let Some(status) = child.try_wait().ok()?
-                && (!status.success() || eof)
-            {
-                return status
-                    .success()
-                    .then(|| String::from_utf8(output).ok())
-                    .flatten();
-            }
-            if Instant::now() >= deadline {
-                return None;
-            }
-            std::thread::sleep(Duration::from_millis(10));
-        }
-    })();
-    let _ = child.kill();
-    let _ = child.wait();
-    result
 }
 
 #[cfg(target_os = "linux")]
@@ -553,6 +496,23 @@ const fn custom_titlebar_for(supported: bool, chosen: bool) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The portal gives GNOME's button layout as a plain string, where
+    /// gsettings quoted it; both read the same, and a side may be empty.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn gnome_button_layouts_read_with_or_without_quotes() {
+        use WindowButton::*;
+        for layout in ["appmenu:minimize,close", "'appmenu:minimize,close'\n"] {
+            let controls = parse_linux_controls(layout).unwrap();
+            assert!(controls.left.is_empty());
+            assert_eq!(controls.right, [Minimize, Close]);
+        }
+        let controls = parse_linux_controls("close,maximize,close:").unwrap();
+        assert_eq!(controls.left, [Close, Maximize], "each button once");
+        assert!(controls.right.is_empty());
+        assert!(parse_linux_controls("close").is_none(), "no side marker");
+    }
 
     #[test]
     fn supported_platforms_draw_the_custom_title_bar_only_when_chosen() {
