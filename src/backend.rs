@@ -4524,24 +4524,12 @@ fn write_cached_playlist_file(
 ) -> std::io::Result<()> {
     use std::io::Write;
 
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    let temporary = path.with_extension("json.tmp");
-    let file = std::fs::File::create(&temporary)?;
-    let result = (|| {
+    fastframe_file::write_with(path, fastframe_file::Access::Default, |file| {
         // Buffer small serializer writes without retaining the whole JSON file.
         let mut writer = std::io::BufWriter::new(file);
         serde_json::to_writer(&mut writer, cached).map_err(std::io::Error::other)?;
-        writer.flush()?;
-        // Windows requires the temporary file to be closed before replacement.
-        drop(writer);
-        crate::util::replace_file(&temporary, path)
-    })();
-    if result.is_err() {
-        let _ = std::fs::remove_file(&temporary);
-    }
-    result
+        writer.flush()
+    })
 }
 
 /// The manifest stays constant-sized as the row file grows. A reader only
@@ -4880,23 +4868,16 @@ fn write_playlist_manifest(
 ) -> std::io::Result<()> {
     use std::io::Write;
 
-    let target = playlist_manifest_path(path);
-    let temporary = target.with_extension("json.tmp");
-    let result = (|| {
-        let file = std::fs::File::create(&temporary)?;
-        let mut writer = std::io::BufWriter::new(file);
-        serde_json::to_writer(&mut writer, manifest).map_err(std::io::Error::other)?;
-        writer.flush()?;
-        writer
-            .into_inner()
-            .map_err(|error| error.into_error())?
-            .sync_all()?;
-        crate::util::replace_file(&temporary, &target)
-    })();
-    if result.is_err() {
-        let _ = std::fs::remove_file(temporary);
-    }
-    result
+    // The new manifest reaches the disk before it replaces the old one.
+    fastframe_file::write_with(
+        &playlist_manifest_path(path),
+        fastframe_file::Access::Default,
+        |file| {
+            let mut writer = std::io::BufWriter::new(file);
+            serde_json::to_writer(&mut writer, manifest).map_err(std::io::Error::other)?;
+            writer.flush()
+        },
+    )
 }
 
 #[cfg(test)]
@@ -5077,9 +5058,9 @@ mod playlist_header_lookup_tests {
 #[cfg(test)]
 mod playlist_cache_tests {
     use super::{
-        CachedPlaylist, PlaylistCacheRows, playlist_data_path, playlist_manifest_path,
-        read_cached_playlist, read_incremental_playlist_cache_file, read_playlist_cache,
-        read_playlist_manifest, write_cached_playlist, write_incremental_playlist_cache_file,
+        CachedPlaylist, PlaylistCacheRows, playlist_data_path, read_cached_playlist,
+        read_incremental_playlist_cache_file, read_playlist_cache, read_playlist_manifest,
+        write_cached_playlist, write_incremental_playlist_cache_file,
     };
     use crate::api::models::{PlayableItem, PlaylistItem, Track};
 
@@ -5130,18 +5111,22 @@ mod playlist_cache_tests {
             previous_offset: 50,
             items: vec![added.clone()],
         };
-        let temporary = playlist_manifest_path(&path).with_extension("json.tmp");
-        std::fs::create_dir(&temporary).unwrap();
-        assert!(
-            write_incremental_playlist_cache_file(&path, "same".into(), append(), 100, Some(75))
-                .is_err()
-        );
+        // An append whose manifest was never published (the app stopped
+        // between the rows and the manifest) leaves its rows behind.
+        {
+            use std::io::Write;
+            let mut data = std::fs::OpenOptions::new()
+                .append(true)
+                .open(playlist_data_path(&path, initial.data_file))
+                .unwrap();
+            serde_json::to_writer(&mut data, std::slice::from_ref(&added)).unwrap();
+            data.write_all(b"\n").unwrap();
+        }
         assert_eq!(
             read_incremental_playlist_cache_file(&path).unwrap().items,
             first
         );
         assert_eq!(read_playlist_manifest(&path).unwrap().bytes, initial.bytes);
-        std::fs::remove_dir(&temporary).unwrap();
 
         write_incremental_playlist_cache_file(&path, "same".into(), append(), 100, Some(75))
             .unwrap();
@@ -5380,7 +5365,7 @@ mod playlist_cache_tests {
         let text = tokio::fs::read_to_string(&path).await.unwrap();
         let stored: CachedPlaylist = serde_json::from_str(&text).unwrap();
         assert_eq!(stored.snapshot, "second");
-        assert!(!path.with_extension("json.tmp").exists());
+        assert!(crate::util::temporary_files(path.parent().unwrap()).is_empty());
         let _ = std::fs::remove_dir_all(root);
     }
 
@@ -5433,7 +5418,7 @@ mod playlist_cache_tests {
         }
         assert_eq!(restored.total, Some(2_000));
         assert_eq!(restored.next_offset, Some(1_500));
-        assert!(!path.with_extension("json.tmp").exists());
+        assert!(crate::util::temporary_files(path.parent().unwrap()).is_empty());
         std::fs::remove_dir_all(root).unwrap();
     }
 
@@ -5445,29 +5430,28 @@ mod playlist_cache_tests {
             std::thread::current().id()
         ));
         let path = root.join("playlist.json");
-        let temporary = path.with_extension("json.tmp");
         let cached = || CachedPlaylist {
             snapshot: "new".into(),
             items: Vec::new(),
             total: Some(0),
             next_offset: None,
         };
-        std::fs::create_dir_all(&temporary).unwrap();
         let previous = br#"{"snapshot":"old","items":[]}"#;
-        std::fs::write(&path, previous).unwrap();
-
-        assert!(write_cached_playlist(path.clone(), cached()).await.is_err());
-        assert_eq!(std::fs::read(&path).unwrap(), previous);
-        assert!(temporary.is_dir(), "a failed create does not own this path");
+        std::fs::create_dir_all(&path).unwrap();
+        // A file an older version's interrupted write left is not this
+        // write's to remove.
+        let stale = path.with_extension("json.tmp");
+        std::fs::write(&stale, previous).unwrap();
 
         // Force final replacement to fail after serialization and flushing.
-        std::fs::remove_dir(&temporary).unwrap();
-        std::fs::remove_file(&path).unwrap();
-        std::fs::create_dir(&path).unwrap();
         std::fs::write(path.join("preserved"), previous).unwrap();
         assert!(write_cached_playlist(path.clone(), cached()).await.is_err());
         assert_eq!(std::fs::read(path.join("preserved")).unwrap(), previous);
-        assert!(!temporary.exists(), "discard the failed checkpoint");
+        assert_eq!(
+            crate::util::temporary_files(&root),
+            ["playlist.json.tmp"],
+            "discard the failed checkpoint"
+        );
         std::fs::remove_dir_all(root).unwrap();
     }
 }
