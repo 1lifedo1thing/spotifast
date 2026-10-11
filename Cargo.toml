@@ -61,6 +61,10 @@ fastframe-shell = { git = "https://github.com/crmne/fastframe", tag = "v0.5.0" }
 fastframe-macos = { git = "https://github.com/crmne/fastframe", tag = "v0.5.0" }
 # Self-update from GitHub releases, on the reqwest client below.
 fastframe-update = { git = "https://github.com/crmne/fastframe", tag = "v0.5.0", features = ["reqwest"] }
+# The device's power, session and network state: energy saver, battery,
+# display, lock, the internet's reach and cost, sleep and wake, and the App
+# Nap activity local playback holds on macOS.
+fastframe-power = { git = "https://github.com/crmne/fastframe", tag = "v0.5.0" }
 # The audio device stream: it pauses, so a paused player costs no CPU (#636),
 # follows the default output and reopens after a failure. Its cpal 0.18
 # cannot share a build with the cpal 0.16 of librespot's rodio backend (both
@@ -170,10 +174,8 @@ objc2-foundation = { version = "0.3", default-features = false, features = ["std
 
 [target.'cfg(windows)'.dependencies]
 windows-native-keyring-store = { version = "1.1", default-features = false }
-# Message loops, the taskbar thumbnail buttons and window styles. Power,
-# session and network state (src/power/windows.rs): power settings, sleep and
-# wake, the session lock, and the network's reach and cost.
-windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_Globalization", "Win32_Graphics_Gdi", "Win32_NetworkManagement_IpHelper", "Win32_Networking_WinSock", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_LibraryLoader", "Win32_System_Power", "Win32_System_Registry", "Win32_System_RemoteDesktop", "Win32_System_SystemServices", "Win32_System_Threading", "Win32_UI_Accessibility", "Win32_UI_HiDpi", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+# Message loops, the taskbar thumbnail buttons and window styles.
+windows-sys = { version = "0.60", features = ["Win32_Foundation", "Win32_Globalization", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_LibraryLoader", "Win32_System_Registry", "Win32_System_Threading", "Win32_UI_Accessibility", "Win32_UI_HiDpi", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 # Reuses the zbus/Tokio stack already used for desktop integration.

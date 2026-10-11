@@ -901,7 +901,8 @@ pub struct Backend {
     activity: Arc<NetActivity>,
     thread: Option<std::thread::JoinHandle<()>>,
     offline: bool,
-    _reachability: Option<crate::reachability::ReachabilityGuard>,
+    #[cfg(test)]
+    network_statuses: std::sync::Mutex<Vec<bool>>,
     #[cfg(test)]
     playlist_item_requests: std::sync::Mutex<Vec<(String, u32, u64)>>,
     #[cfg(test)]
@@ -981,8 +982,6 @@ impl Backend {
             })
             .expect("unable to start the backend thread");
 
-        let reachability = crate::reachability::watch(command_tx.clone());
-
         Self {
             commands: command_tx,
             events: event_rx,
@@ -990,7 +989,8 @@ impl Backend {
             activity,
             thread: Some(thread),
             offline: false,
-            _reachability: reachability,
+            #[cfg(test)]
+            network_statuses: std::sync::Mutex::new(Vec::new()),
             #[cfg(test)]
             playlist_item_requests: std::sync::Mutex::new(Vec::new()),
             #[cfg(test)]
@@ -1225,8 +1225,25 @@ impl Backend {
         self.send(Command::Player(command));
     }
 
+    /// Whether the system says the internet can be reached. Without it the
+    /// engine waits for it to come back instead of retrying.
     pub fn network_status(&self, reachable: bool) {
+        #[cfg(test)]
+        self.network_statuses
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .push(reachable);
         self.send(Command::NetworkStatus(reachable));
+    }
+
+    #[cfg(test)]
+    pub fn take_network_statuses(&self) -> Vec<bool> {
+        std::mem::take(
+            &mut *self
+                .network_statuses
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()),
+        )
     }
 
     pub(crate) fn album_types(&self, uris: Vec<String>) {
