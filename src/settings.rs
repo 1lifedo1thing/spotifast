@@ -1524,10 +1524,16 @@ pub struct SessionState {
     pub shuffle_on: bool,
     /// Each table's chosen sort, by encoded page, restored at start.
     pub sorts: Vec<(String, crate::model::TableSort)>,
-    /// Last window inner size, to restore on next launch.
+    /// Last window inner size, to restore on next launch. Logical pixels
+    /// (points at zoom 1) since fastframe-shell's `Geometry`; earlier
+    /// versions saved points at the interface zoom, the same at zoom 1.
     pub window_size: Option<[f32; 2]>,
-    /// Last window outer position, to restore on next launch.
+    /// Last window position, to restore on next launch: the outer frame's
+    /// corner, the content's on macOS.
     pub window_pos: Option<[f32; 2]>,
+    /// Whether the window was maximized; `window_size` and `window_pos`
+    /// stay those of the normal window behind it.
+    pub window_maximized: bool,
     /// Whether the queue panel was open.
     pub queue_open: Option<bool>,
     /// Which tab the queue panel showed: `queue` or `recents`.
@@ -1577,6 +1583,20 @@ impl SessionState {
 mod session_tests {
     use super::{CachedRootlist, SessionState};
     use crate::player::RootlistEntry;
+
+    /// A session saved before the maximized state was remembered keeps its
+    /// window size and positions, and reads as an ordinary window.
+    #[test]
+    fn old_sessions_keep_their_window_geometry() {
+        let state: SessionState = serde_json::from_str(
+            r#"{"window_size":[1100.0,700.0],"window_pos":[100.0,150.0],"winamp_pos":[300.0,200.0]}"#,
+        )
+        .unwrap();
+        assert_eq!(state.window_size, Some([1100.0, 700.0]));
+        assert_eq!(state.window_pos, Some([100.0, 150.0]));
+        assert!(!state.window_maximized);
+        assert_eq!(state.winamp_pos, Some([300.0, 200.0]));
+    }
 
     #[test]
     fn old_sessions_without_a_playlist_tree_remain_readable() {
